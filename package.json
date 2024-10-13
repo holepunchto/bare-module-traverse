@@ -1,0 +1,35 @@
+{
+  "name": "bare-module-traverse",
+  "version": "1.0.0",
+  "description": "Low-level module graph traversal for Bare",
+  "exports": {
+    ".": "./index.js",
+    "./package": "./package.json",
+    "./resolve": "./lib/resolve.js"
+  },
+  "files": [
+    "index.js",
+    "lib"
+  ],
+  "scripts": {
+    "test": "standard && bare test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/holepunchto/bare-module-traverse.git"
+  },
+  "author": "Holepunch",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/holepunchto/bare-module-traverse/issues"
+  },
+  "homepage": "https://github.com/holepunchto/bare-module-traverse#readme",
+  "dependencies": {
+    "bare-addon-resolve": "^1.4.2",
+    "bare-module-resolve": "^1.6.2"
+  },
+  "devDependencies": {
+    "brittle": "^3.2.1",
+    "standard": "^17.0.0"
+  }
+}
