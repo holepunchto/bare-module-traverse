@@ -1,7 +1,7 @@
 const test = require('brittle')
 const traverse = require('.')
 
-const { MODULE, ADDON } = traverse.constants
+const { MODULE, ADDON, ASSET } = traverse.constants
 
 const host = 'host'
 
@@ -137,5 +137,29 @@ test('require.addon', (t) => {
   t.alike(result, [
     { url: new URL('file:///package.json'), type: MODULE },
     { url: new URL('file:///prebuilds/host/foo.bare'), type: ADDON }
+  ])
+})
+
+test('require.asset', (t) => {
+  function readModule (url) {
+    if (url.href === 'file:///foo.js') {
+      return 'const bar = require.asset(\'./bar.txt\')'
+    }
+
+    if (url.href === 'file:///bar.txt') {
+      return 'hello world'
+    }
+
+    return null
+  }
+
+  const result = []
+
+  for (const dependency of traverse(new URL('file:///foo.js'), readModule)) {
+    result.push(dependency)
+  }
+
+  t.alike(result, [
+    { url: new URL('file:///bar.txt'), type: ASSET }
   ])
 })
