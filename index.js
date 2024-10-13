@@ -69,8 +69,6 @@ exports.constants = constants
 exports.module = function * (url, module = null, visited = new Set(), opts = {}) {
   const { resolve = defaultResolve } = opts
 
-  if (visited.has(url.href)) return
-
   if (module === null) module = yield { module: url }
 
   if (module) {
@@ -114,6 +112,8 @@ exports.module = function * (url, module = null, visited = new Set(), opts = {})
 
             if (type === constants.MODULE) {
               yield * exports.module(url, module, visited, opts)
+            } else {
+              visited.add(url.href)
             }
 
             break
