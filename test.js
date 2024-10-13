@@ -1,6 +1,8 @@
 const test = require('brittle')
 const traverse = require('.')
 
+const { MODULE } = traverse.constants
+
 test('require', (t) => {
   function readModule (url) {
     if (url.href === 'file:///foo.js') {
@@ -25,8 +27,8 @@ test('require', (t) => {
   }
 
   t.alike(result, [
-    { url: new URL('file:///bar.js') },
-    { url: new URL('file:///baz.js') }
+    { url: new URL('file:///bar.js'), type: MODULE },
+    { url: new URL('file:///baz.js'), type: MODULE }
   ])
 })
 
@@ -54,8 +56,8 @@ test('import', (t) => {
   }
 
   t.alike(result, [
-    { url: new URL('file:///bar.js') },
-    { url: new URL('file:///baz.js') }
+    { url: new URL('file:///bar.js'), type: MODULE },
+    { url: new URL('file:///baz.js'), type: MODULE }
   ])
 })
 
@@ -79,7 +81,7 @@ test('cyclic require', (t) => {
   }
 
   t.alike(result, [
-    { url: new URL('file:///bar.js') }
+    { url: new URL('file:///bar.js'), type: MODULE }
   ])
 })
 
@@ -103,6 +105,6 @@ test('cyclic import', (t) => {
   }
 
   t.alike(result, [
-    { url: new URL('file:///bar.js') }
+    { url: new URL('file:///bar.js'), type: MODULE }
   ])
 })

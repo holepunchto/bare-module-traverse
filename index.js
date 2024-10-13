@@ -1,5 +1,6 @@
 const lex = require('bare-module-lexer')
 const resolve = require('./lib/resolve')
+const constants = require('./lib/constants')
 
 module.exports = exports = function traverse (entry, opts, readModule) {
   if (typeof opts === 'function') {
@@ -63,6 +64,7 @@ function defaultResolve (entry, parentURL, opts) {
 }
 
 exports.resolve = resolve
+exports.constants = constants
 
 exports.module = function * (url, module = null, visited = new Set(), opts = {}) {
   const { resolve = defaultResolve } = opts
@@ -88,7 +90,7 @@ exports.module = function * (url, module = null, visited = new Set(), opts = {})
           const module = yield { module: url }
 
           if (module && !visited.has(url.href)) {
-            yield { dependency: { url } }
+            yield { dependency: { url, type: constants.MODULE } }
           }
 
           next = resolver.next(JSON.parse(module))
@@ -100,9 +102,17 @@ exports.module = function * (url, module = null, visited = new Set(), opts = {})
           const module = yield { module: url }
 
           if (module) {
-            yield { dependency: { url } }
+            let type = constants.MODULE
 
-            if ((entry.type & (lex.constants.ADDON | lex.constants.ASSET)) === 0) {
+            if (entry.type & lex.constants.ADDON) {
+              type = constants.ADDON
+            } else if (entry.type & lex.constants.ASSET) {
+              type = constants.ASSET
+            }
+
+            yield { dependency: { url, type } }
+
+            if (type === constants.MODULE) {
               yield * exports.module(url, module, visited, opts)
             }
 
