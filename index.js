@@ -117,13 +117,13 @@ exports.module = function * (url, module, visited = new Set(), opts = {}) {
 }
 
 function compressImports (imports) {
-  const result = {}
+  const entries = []
 
   for (const [specifier, resolved] of Object.entries(imports)) {
-    result[specifier] = compressImportsEntry(resolved)
+    entries.push([specifier, compressImportsEntry(resolved)])
   }
 
-  return result
+  return Object.fromEntries(entries)
 }
 
 function compressImportsEntry (resolved) {
