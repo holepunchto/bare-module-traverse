@@ -113,20 +113,22 @@ exports.module = function * (url, module, visited = new Set(), opts = {}) {
     }
   }
 
-  yield { dependency: { url, imports: compressImports(imports) } }
+  yield { dependency: { url, imports: compressImportsMap(imports) } }
 }
 
-function compressImports (imports) {
+function compressImportsMap (imports) {
   const entries = []
 
-  for (const [specifier, resolved] of Object.entries(imports)) {
-    entries.push([specifier, compressImportsEntry(resolved)])
+  for (const entry of Object.entries(imports)) {
+    entry[1] = compressImportsMapEntry(entry[1])
+
+    entries.push(entry)
   }
 
   return Object.fromEntries(entries)
 }
 
-function compressImportsEntry (resolved) {
+function compressImportsMapEntry (resolved) {
   if (typeof resolved === 'string') return resolved
 
   const entries = Object.entries(resolved)
