@@ -1,8 +1,6 @@
 const test = require('brittle')
 const traverse = require('.')
 
-const { MODULE, ADDON, ASSET } = traverse.constants
-
 const host = 'host'
 
 test('require', (t) => {
@@ -30,23 +28,20 @@ test('require', (t) => {
 
   t.alike(result, [
     {
-      url: new URL('file:///foo.js'),
-      type: MODULE,
-      imports: {
-        './bar.js': 'file:///bar.js'
-      }
+      url: new URL('file:///baz.js'),
+      imports: {}
     },
     {
       url: new URL('file:///bar.js'),
-      type: MODULE,
       imports: {
         './baz.js': 'file:///baz.js'
       }
     },
     {
-      url: new URL('file:///baz.js'),
-      type: MODULE,
-      imports: {}
+      url: new URL('file:///foo.js'),
+      imports: {
+        './bar.js': 'file:///bar.js'
+      }
     }
   ])
 })
@@ -76,23 +71,20 @@ test('import', (t) => {
 
   t.alike(result, [
     {
-      url: new URL('file:///foo.js'),
-      type: MODULE,
-      imports: {
-        './bar.js': 'file:///bar.js'
-      }
+      url: new URL('file:///baz.js'),
+      imports: {}
     },
     {
       url: new URL('file:///bar.js'),
-      type: MODULE,
       imports: {
         './baz.js': 'file:///baz.js'
       }
     },
     {
-      url: new URL('file:///baz.js'),
-      type: MODULE,
-      imports: {}
+      url: new URL('file:///foo.js'),
+      imports: {
+        './bar.js': 'file:///bar.js'
+      }
     }
   ])
 })
@@ -118,17 +110,15 @@ test('cyclic require', (t) => {
 
   t.alike(result, [
     {
-      url: new URL('file:///foo.js'),
-      type: MODULE,
+      url: new URL('file:///bar.js'),
       imports: {
-        './bar.js': 'file:///bar.js'
+        './foo.js': 'file:///foo.js'
       }
     },
     {
-      url: new URL('file:///bar.js'),
-      type: MODULE,
+      url: new URL('file:///foo.js'),
       imports: {
-        './foo.js': 'file:///foo.js'
+        './bar.js': 'file:///bar.js'
       }
     }
   ])
@@ -155,17 +145,15 @@ test('cyclic import', (t) => {
 
   t.alike(result, [
     {
-      url: new URL('file:///foo.js'),
-      type: MODULE,
+      url: new URL('file:///bar.js'),
       imports: {
-        './bar.js': 'file:///bar.js'
+        './foo.js': 'file:///foo.js'
       }
     },
     {
-      url: new URL('file:///bar.js'),
-      type: MODULE,
+      url: new URL('file:///foo.js'),
       imports: {
-        './foo.js': 'file:///foo.js'
+        './bar.js': 'file:///bar.js'
       }
     }
   ])
@@ -196,24 +184,21 @@ test('require.addon', (t) => {
 
   t.alike(result, [
     {
+      url: new URL('file:///package.json'),
+      imports: {}
+    },
+    {
+      url: new URL('file:///prebuilds/host/foo.bare'),
+      imports: {}
+    },
+    {
       url: new URL('file:///foo.js'),
-      type: MODULE,
       imports: {
         '#package': 'file:///package.json',
         '.': {
           addon: 'file:///prebuilds/host/foo.bare'
         }
       }
-    },
-    {
-      url: new URL('file:///package.json'),
-      type: MODULE,
-      imports: {}
-    },
-    {
-      url: new URL('file:///prebuilds/host/foo.bare'),
-      type: ADDON,
-      imports: {}
     }
   ])
 })
@@ -239,18 +224,16 @@ test('require.asset', (t) => {
 
   t.alike(result, [
     {
+      url: new URL('file:///bar.txt'),
+      imports: {}
+    },
+    {
       url: new URL('file:///foo.js'),
-      type: MODULE,
       imports: {
         './bar.txt': {
           asset: 'file:///bar.txt'
         }
       }
-    },
-    {
-      url: new URL('file:///bar.txt'),
-      type: ASSET,
-      imports: {}
     }
   ])
 })
@@ -276,16 +259,17 @@ test('require + require.asset', (t) => {
 
   t.alike(result, [
     {
-      url: new URL('file:///foo.js'),
-      type: MODULE,
-      imports: {
-        './bar.js': 'file:///bar.js'
-      }
+      url: new URL('file:///bar.js'),
+      imports: {}
     },
     {
-      url: new URL('file:///bar.js'),
-      type: MODULE | ASSET,
-      imports: {}
+      url: new URL('file:///foo.js'),
+      imports: {
+        './bar.js': {
+          asset: 'file:///bar.js',
+          default: 'file:///bar.js'
+        }
+      }
     }
   ])
 })
