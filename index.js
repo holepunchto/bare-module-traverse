@@ -67,6 +67,7 @@ exports.module = function * (url, module, type = constants.MODULE, visited = new
 
   visited.add(url.href)
 
+  const modules = new Map()
   const imports = {}
 
   for (const entry of lex(module).imports) {
@@ -80,38 +81,32 @@ exports.module = function * (url, module, type = constants.MODULE, visited = new
       if (value.package) {
         const url = value.package
 
-        const module = yield { module: url }
+        const module = modules.get(url.href) || (yield { module: url })
 
         if (module) {
-          imports['#package'] = url.href
+          modules.set(url.href, module)
 
-          if (!visited.has(url.href)) {
-            yield { dependency: { url, type: constants.MODULE, imports: {} } }
-          }
+          imports['#package'] = url.href
         }
 
         next = resolver.next(JSON.parse(module))
       } else {
         const url = value.resolution
 
-        const module = yield { module: url }
+        const module = modules.get(url.href) || (yield { module: url })
 
         if (module) {
-          let type = constants.MODULE
+          modules.set(url.href, module)
+
+          let key = 'default'
 
           if (entry.type & lex.constants.ADDON) {
-            type = constants.ADDON
-
-            imports[entry.specifier] = { addon: url.href }
+            key = 'addon'
           } else if (entry.type & lex.constants.ASSET) {
-            type = constants.ASSET
-
-            imports[entry.specifier] = { asset: url.href }
-          } else {
-            imports[entry.specifier] = url.href
+            key = 'asset'
           }
 
-          yield * exports.module(url, module, type, visited, opts)
+          imports[entry.specifier] = { [key]: url.href, ...imports[entry.specifier] }
 
           break
         }
@@ -121,5 +116,47 @@ exports.module = function * (url, module, type = constants.MODULE, visited = new
     }
   }
 
-  yield { dependency: { url, type, imports } }
+  yield { dependency: { url, type, imports: compressImports(imports) } }
+
+  for (const resolved of Object.values(imports)) {
+    if (typeof resolved === 'string') {
+      yield * exports.module(new URL(resolved), modules.get(resolved), constants.MODULE, visited, opts)
+    } else {
+      let type = 0
+
+      if ('default' in resolved) type |= constants.MODULE
+      if ('addon' in resolved) type |= constants.ADDON
+      if ('asset' in resolved) type |= constants.ASSET
+
+      for (const href of Object.values(resolved)) {
+        yield * exports.module(new URL(href), modules.get(href), type, visited, opts)
+      }
+    }
+  }
+}
+
+function compressImports (imports) {
+  const result = {}
+
+  for (const [specifier, resolved] of Object.entries(imports)) {
+    result[specifier] = compressImportsEntry(resolved)
+  }
+
+  return result
+}
+
+function compressImportsEntry (resolved) {
+  if (typeof resolved === 'string') return resolved
+
+  const entries = Object
+    .entries(resolved)
+    .filter(([condition, specifier]) => condition === 'default' || specifier !== resolved.default)
+
+  if (entries.length === 1) {
+    const [condition, specifier] = entries[0]
+
+    if (condition === 'default') return specifier
+  }
+
+  return Object.fromEntries(entries)
 }
