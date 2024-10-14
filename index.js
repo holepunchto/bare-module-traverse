@@ -6,13 +6,11 @@ module.exports = exports = function traverse (entry, opts, readModule) {
   if (typeof opts === 'function') {
     readModule = opts
     opts = {}
-  } else if (typeof readModule !== 'function') {
-    readModule = defaultReadModule
   }
 
   return {
     * [Symbol.iterator] () {
-      const generator = exports.module(entry, null, new Set(), opts)
+      const generator = exports.module(entry, readModule(entry), constants.MODULE, new Set(), opts)
 
       let next = generator.next()
 
@@ -31,7 +29,7 @@ module.exports = exports = function traverse (entry, opts, readModule) {
     },
 
     async * [Symbol.asyncIterator] () {
-      const generator = exports.module(entry, null, new Set(), opts)
+      const generator = exports.module(entry, await readModule(entry), constants.MODULE, new Set(), opts)
 
       let next = generator.next()
 
@@ -51,10 +49,6 @@ module.exports = exports = function traverse (entry, opts, readModule) {
   }
 }
 
-function defaultReadModule () {
-  return null
-}
-
 function defaultResolve (entry, parentURL, opts) {
   if (entry.type & lex.constants.ADDON) {
     return resolve.addon(entry.specifier, parentURL, opts)
@@ -66,62 +60,66 @@ function defaultResolve (entry, parentURL, opts) {
 exports.resolve = resolve
 exports.constants = constants
 
-exports.module = function * (url, module = null, visited = new Set(), opts = {}) {
+exports.module = function * (url, module, type = constants.MODULE, visited = new Set(), opts = {}) {
   const { resolve = defaultResolve } = opts
 
-  if (module === null) module = yield { module: url }
+  if (visited.has(url.href)) return
 
-  if (module) {
-    visited.add(url.href)
+  visited.add(url.href)
 
-    for (const entry of lex(module).imports) {
-      const resolver = resolve(entry, url, opts)
+  const imports = {}
 
-      let next = resolver.next()
+  for (const entry of lex(module).imports) {
+    const resolver = resolve(entry, url, opts)
 
-      while (next.done !== true) {
-        const value = next.value
+    let next = resolver.next()
 
-        if (value.package) {
-          const url = value.package
+    while (next.done !== true) {
+      const value = next.value
 
-          const module = yield { module: url }
+      if (value.package) {
+        const url = value.package
 
-          if (module && !visited.has(url.href)) {
-            yield { dependency: { url, type: constants.MODULE } }
+        const module = yield { module: url }
+
+        if (module) {
+          imports['#package'] = url.href
+
+          if (!visited.has(url.href)) {
+            yield { dependency: { url, type: constants.MODULE, imports: {} } }
           }
-
-          next = resolver.next(JSON.parse(module))
-        } else {
-          const url = value.resolution
-
-          if (visited.has(url.href)) break
-
-          const module = yield { module: url }
-
-          if (module) {
-            let type = constants.MODULE
-
-            if (entry.type & lex.constants.ADDON) {
-              type = constants.ADDON
-            } else if (entry.type & lex.constants.ASSET) {
-              type = constants.ASSET
-            }
-
-            yield { dependency: { url, type } }
-
-            if (type === constants.MODULE) {
-              yield * exports.module(url, module, visited, opts)
-            } else {
-              visited.add(url.href)
-            }
-
-            break
-          }
-
-          next = resolver.next()
         }
+
+        next = resolver.next(JSON.parse(module))
+      } else {
+        const url = value.resolution
+
+        const module = yield { module: url }
+
+        if (module) {
+          let type = constants.MODULE
+
+          if (entry.type & lex.constants.ADDON) {
+            type = constants.ADDON
+
+            imports[entry.specifier] = { addon: url.href }
+          } else if (entry.type & lex.constants.ASSET) {
+            type = constants.ASSET
+
+            imports[entry.specifier] = { asset: url.href }
+          } else {
+            imports[entry.specifier] = url.href
+          }
+
+          yield * exports.module(url, module, type, visited, opts)
+
+          break
+        }
+
+        next = resolver.next()
       }
     }
   }
+
+  yield { dependency: { url, type, imports } }
 }

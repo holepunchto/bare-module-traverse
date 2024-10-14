@@ -29,8 +29,25 @@ test('require', (t) => {
   }
 
   t.alike(result, [
-    { url: new URL('file:///bar.js'), type: MODULE },
-    { url: new URL('file:///baz.js'), type: MODULE }
+    {
+      url: new URL('file:///baz.js'),
+      type: MODULE,
+      imports: {}
+    },
+    {
+      url: new URL('file:///bar.js'),
+      type: MODULE,
+      imports: {
+        './baz.js': 'file:///baz.js'
+      }
+    },
+    {
+      url: new URL('file:///foo.js'),
+      type: MODULE,
+      imports: {
+        './bar.js': 'file:///bar.js'
+      }
+    }
   ])
 })
 
@@ -58,8 +75,25 @@ test('import', (t) => {
   }
 
   t.alike(result, [
-    { url: new URL('file:///bar.js'), type: MODULE },
-    { url: new URL('file:///baz.js'), type: MODULE }
+    {
+      url: new URL('file:///baz.js'),
+      type: MODULE,
+      imports: {}
+    },
+    {
+      url: new URL('file:///bar.js'),
+      type: MODULE,
+      imports: {
+        './baz.js': 'file:///baz.js'
+      }
+    },
+    {
+      url: new URL('file:///foo.js'),
+      type: MODULE,
+      imports: {
+        './bar.js': 'file:///bar.js'
+      }
+    }
   ])
 })
 
@@ -83,7 +117,20 @@ test('cyclic require', (t) => {
   }
 
   t.alike(result, [
-    { url: new URL('file:///bar.js'), type: MODULE }
+    {
+      url: new URL('file:///bar.js'),
+      type: MODULE,
+      imports: {
+        './foo.js': 'file:///foo.js'
+      }
+    },
+    {
+      url: new URL('file:///foo.js'),
+      type: MODULE,
+      imports: {
+        './bar.js': 'file:///bar.js'
+      }
+    }
   ])
 })
 
@@ -107,7 +154,20 @@ test('cyclic import', (t) => {
   }
 
   t.alike(result, [
-    { url: new URL('file:///bar.js'), type: MODULE }
+    {
+      url: new URL('file:///bar.js'),
+      type: MODULE,
+      imports: {
+        './foo.js': 'file:///foo.js'
+      }
+    },
+    {
+      url: new URL('file:///foo.js'),
+      type: MODULE,
+      imports: {
+        './bar.js': 'file:///bar.js'
+      }
+    }
   ])
 })
 
@@ -135,8 +195,26 @@ test('require.addon', (t) => {
   }
 
   t.alike(result, [
-    { url: new URL('file:///package.json'), type: MODULE },
-    { url: new URL('file:///prebuilds/host/foo.bare'), type: ADDON }
+    {
+      url: new URL('file:///package.json'),
+      type: MODULE,
+      imports: {}
+    },
+    {
+      url: new URL('file:///prebuilds/host/foo.bare'),
+      type: ADDON,
+      imports: {}
+    },
+    {
+      url: new URL('file:///foo.js'),
+      type: MODULE,
+      imports: {
+        '#package': 'file:///package.json',
+        '.': {
+          addon: 'file:///prebuilds/host/foo.bare'
+        }
+      }
+    }
   ])
 })
 
@@ -160,6 +238,19 @@ test('require.asset', (t) => {
   }
 
   t.alike(result, [
-    { url: new URL('file:///bar.txt'), type: ASSET }
+    {
+      url: new URL('file:///bar.txt'),
+      type: ASSET,
+      imports: {}
+    },
+    {
+      url: new URL('file:///foo.js'),
+      type: MODULE,
+      imports: {
+        './bar.txt': {
+          asset: 'file:///bar.txt'
+        }
+      }
+    }
   ])
 })
