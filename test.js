@@ -25,16 +25,19 @@ test('require', (t) => {
   t.alike(result.values, [
     {
       url: new URL('file:///baz.js'),
+      source: 'module.exports = 42',
       imports: {}
     },
     {
       url: new URL('file:///bar.js'),
+      source: 'const baz = require(\'./baz.js\')',
       imports: {
         './baz.js': 'file:///baz.js'
       }
     },
     {
       url: new URL('file:///foo.js'),
+      source: 'const bar = require(\'./bar.js\')',
       imports: {
         './bar.js': 'file:///bar.js'
       }
@@ -64,16 +67,19 @@ test('import', (t) => {
   t.alike(result.values, [
     {
       url: new URL('file:///baz.js'),
+      source: 'export default 42',
       imports: {}
     },
     {
       url: new URL('file:///bar.js'),
+      source: 'import \'./baz.js\'',
       imports: {
         './baz.js': 'file:///baz.js'
       }
     },
     {
       url: new URL('file:///foo.js'),
+      source: 'import \'./bar.js\'',
       imports: {
         './bar.js': 'file:///bar.js'
       }
@@ -99,12 +105,14 @@ test('cyclic require', (t) => {
   t.alike(result.values, [
     {
       url: new URL('file:///bar.js'),
+      source: 'require(\'./foo.js\')',
       imports: {
         './foo.js': 'file:///foo.js'
       }
     },
     {
       url: new URL('file:///foo.js'),
+      source: 'require(\'./bar.js\')',
       imports: {
         './bar.js': 'file:///bar.js'
       }
@@ -130,12 +138,14 @@ test('cyclic import', (t) => {
   t.alike(result.values, [
     {
       url: new URL('file:///bar.js'),
+      source: 'import \'./foo.js\'',
       imports: {
         './foo.js': 'file:///foo.js'
       }
     },
     {
       url: new URL('file:///foo.js'),
+      source: 'import \'./bar.js\'',
       imports: {
         './bar.js': 'file:///bar.js'
       }
@@ -165,16 +175,19 @@ test('require.addon', (t) => {
   t.alike(result.values, [
     {
       url: new URL('file:///package.json'),
+      source: '{ "name": "foo" }',
       imports: {}
     },
     {
       url: new URL('file:///prebuilds/host/foo.bare'),
+      source: '<native code>',
       imports: {
         '#package': 'file:///package.json'
       }
     },
     {
       url: new URL('file:///foo.js'),
+      source: 'const bar = require.addon(\'.\')',
       imports: {
         '#package': 'file:///package.json',
         '.': {
@@ -207,10 +220,12 @@ test('require.asset', (t) => {
   t.alike(result.values, [
     {
       url: new URL('file:///bar.txt'),
+      source: 'hello world',
       imports: {}
     },
     {
       url: new URL('file:///foo.js'),
+      source: 'const bar = require.asset(\'./bar.txt\')',
       imports: {
         './bar.txt': {
           asset: 'file:///bar.txt'
@@ -242,10 +257,12 @@ test('require + require.asset', (t) => {
   t.alike(result.values, [
     {
       url: new URL('file:///bar.js'),
+      source: 'module.exports = 42',
       imports: {}
     },
     {
       url: new URL('file:///foo.js'),
+      source: 'require(\'./bar.js\'), require.asset(\'./bar.js\')',
       imports: {
         './bar.js': 'file:///bar.js'
       }
@@ -289,16 +306,19 @@ test('package.json#assets', (t) => {
   t.alike(result.values, [
     {
       url: new URL('file:///package.json'),
+      source: '{ "name": "foo", "assets": ["bar/"] }',
       imports: {}
     },
     {
       url: new URL('file:///bar/baz.txt'),
+      source: 'hello world',
       imports: {
         '#package': 'file:///package.json'
       }
     },
     {
       url: new URL('file:///foo.js'),
+      source: '',
       imports: {
         '#package': 'file:///package.json'
       }
@@ -343,16 +363,19 @@ test('package.json#assets, pattern match', (t) => {
   t.alike(result.values, [
     {
       url: new URL('file:///package.json'),
+      source: '{ "name": "foo", "assets": ["bar/*.txt"] }',
       imports: {}
     },
     {
       url: new URL('file:///bar/baz.txt'),
+      source: 'hello world',
       imports: {
         '#package': 'file:///package.json'
       }
     },
     {
       url: new URL('file:///foo.js'),
+      source: '',
       imports: {
         '#package': 'file:///package.json'
       }
@@ -399,16 +422,19 @@ test('package.json#assets, negate', (t) => {
   t.alike(result.values, [
     {
       url: new URL('file:///package.json'),
+      source: '{ "name": "foo", "assets": ["bar/", "!bar/qux.txt"] }',
       imports: {}
     },
     {
       url: new URL('file:///bar/baz.txt'),
+      source: 'hello world',
       imports: {
         '#package': 'file:///package.json'
       }
     },
     {
       url: new URL('file:///foo.js'),
+      source: '',
       imports: {
         '#package': 'file:///package.json'
       }

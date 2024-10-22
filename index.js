@@ -92,7 +92,7 @@ function add (array, url) {
 
 exports.resolve = resolve
 
-exports.module = function * (url, module, artifacts, visited = new Set(), opts = {}) {
+exports.module = function * (url, source, artifacts, visited = new Set(), opts = {}) {
   const { resolve = defaultResolve } = opts
 
   if (visited.has(url.href)) return artifacts
@@ -102,16 +102,16 @@ exports.module = function * (url, module, artifacts, visited = new Set(), opts =
   const imports = {}
 
   for (const packageURL of lookupPackageScope(url, opts)) {
-    const module = yield { module: packageURL }
+    const source = yield { module: packageURL }
 
-    if (module) {
+    if (source !== null) {
       imports['#package'] = packageURL.href
 
-      yield * exports.package(packageURL, module, artifacts, visited, opts)
+      yield * exports.package(packageURL, source, artifacts, visited, opts)
     }
   }
 
-  for (const entry of lex(module).imports) {
+  for (const entry of lex(source).imports) {
     const resolver = resolve(entry, url, opts)
 
     let next = resolver.next()
@@ -122,15 +122,15 @@ exports.module = function * (url, module, artifacts, visited = new Set(), opts =
       if (value.package) {
         const url = value.package
 
-        const module = yield { module: url }
+        const source = yield { module: url }
 
-        next = resolver.next(JSON.parse(module))
+        next = resolver.next(JSON.parse(source))
       } else {
         const url = value.resolution
 
-        const module = yield { module: url }
+        const source = yield { module: url }
 
-        if (module) {
+        if (source !== null) {
           let key = 'default'
 
           if (entry.type & lex.constants.ADDON) {
@@ -143,7 +143,7 @@ exports.module = function * (url, module, artifacts, visited = new Set(), opts =
 
           imports[entry.specifier] = { [key]: url.href, ...imports[entry.specifier] }
 
-          yield * exports.module(url, module, artifacts, visited, opts)
+          yield * exports.module(url, source, artifacts, visited, opts)
 
           break
         }
@@ -153,23 +153,23 @@ exports.module = function * (url, module, artifacts, visited = new Set(), opts =
     }
   }
 
-  yield { dependency: { url, imports: compressImportsMap(imports) } }
+  yield { dependency: { url, source, imports: compressImportsMap(imports) } }
 
   return artifacts
 }
 
-exports.package = function * (packageURL, module, artifacts, visited = new Set(), opts = {}) {
-  if (visited.has(packageURL.href)) return artifacts
+exports.package = function * (url, source, artifacts, visited = new Set(), opts = {}) {
+  if (visited.has(url.href)) return artifacts
 
-  visited.add(packageURL.href)
+  visited.add(url.href)
 
-  const info = JSON.parse(module)
+  const info = JSON.parse(source)
 
   if (info) {
-    yield { dependency: { url: packageURL, imports: {} } }
+    yield { dependency: { url, source, imports: {} } }
 
     if (info.assets) {
-      yield * exports.assets(info.assets, packageURL, artifacts, visited, opts)
+      yield * exports.assets(info.assets, url, artifacts, visited, opts)
     }
   }
 
@@ -182,12 +182,12 @@ exports.assets = function * (patterns, parentURL, artifacts, visited = new Set()
   for (const href of matches) {
     const url = new URL(href)
 
-    const module = yield { module: url }
+    const source = yield { module: url }
 
-    if (module) {
+    if (source !== null) {
       add(artifacts.assets, url)
 
-      yield * exports.module(url, module, artifacts, visited, opts)
+      yield * exports.module(url, source, artifacts, visited, opts)
     }
   }
 
