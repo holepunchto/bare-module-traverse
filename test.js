@@ -20,13 +20,9 @@ test('require', (t) => {
     return null
   }
 
-  const result = []
+  const result = expand(traverse(new URL('file:///foo.js'), readModule))
 
-  for (const dependency of traverse(new URL('file:///foo.js'), readModule)) {
-    result.push(dependency)
-  }
-
-  t.alike(result, [
+  t.alike(result.values, [
     {
       url: new URL('file:///baz.js'),
       imports: {}
@@ -63,13 +59,9 @@ test('import', (t) => {
     return null
   }
 
-  const result = []
+  const result = expand(traverse(new URL('file:///foo.js'), readModule))
 
-  for (const dependency of traverse(new URL('file:///foo.js'), readModule)) {
-    result.push(dependency)
-  }
-
-  t.alike(result, [
+  t.alike(result.values, [
     {
       url: new URL('file:///baz.js'),
       imports: {}
@@ -102,13 +94,9 @@ test('cyclic require', (t) => {
     return null
   }
 
-  const result = []
+  const result = expand(traverse(new URL('file:///foo.js'), readModule))
 
-  for (const dependency of traverse(new URL('file:///foo.js'), readModule)) {
-    result.push(dependency)
-  }
-
-  t.alike(result, [
+  t.alike(result.values, [
     {
       url: new URL('file:///bar.js'),
       imports: {
@@ -137,13 +125,9 @@ test('cyclic import', (t) => {
     return null
   }
 
-  const result = []
+  const result = expand(traverse(new URL('file:///foo.js'), readModule))
 
-  for (const dependency of traverse(new URL('file:///foo.js'), readModule)) {
-    result.push(dependency)
-  }
-
-  t.alike(result, [
+  t.alike(result.values, [
     {
       url: new URL('file:///bar.js'),
       imports: {
@@ -176,20 +160,18 @@ test('require.addon', (t) => {
     return null
   }
 
-  const result = []
+  const result = expand(traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule))
 
-  for (const dependency of traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule)) {
-    result.push(dependency)
-  }
-
-  t.alike(result, [
+  t.alike(result.values, [
     {
       url: new URL('file:///package.json'),
       imports: {}
     },
     {
       url: new URL('file:///prebuilds/host/foo.bare'),
-      imports: {}
+      imports: {
+        '#package': 'file:///package.json'
+      }
     },
     {
       url: new URL('file:///foo.js'),
@@ -200,6 +182,10 @@ test('require.addon', (t) => {
         }
       }
     }
+  ])
+
+  t.alike(result.return.addons, [
+    new URL('file:///prebuilds/host/foo.bare')
   ])
 })
 
@@ -216,13 +202,9 @@ test('require.asset', (t) => {
     return null
   }
 
-  const result = []
+  const result = expand(traverse(new URL('file:///foo.js'), readModule))
 
-  for (const dependency of traverse(new URL('file:///foo.js'), readModule)) {
-    result.push(dependency)
-  }
-
-  t.alike(result, [
+  t.alike(result.values, [
     {
       url: new URL('file:///bar.txt'),
       imports: {}
@@ -235,6 +217,10 @@ test('require.asset', (t) => {
         }
       }
     }
+  ])
+
+  t.alike(result.return.assets, [
+    new URL('file:///bar.txt')
   ])
 })
 
@@ -251,13 +237,9 @@ test('require + require.asset', (t) => {
     return null
   }
 
-  const result = []
+  const result = expand(traverse(new URL('file:///foo.js'), readModule))
 
-  for (const dependency of traverse(new URL('file:///foo.js'), readModule)) {
-    result.push(dependency)
-  }
-
-  t.alike(result, [
+  t.alike(result.values, [
     {
       url: new URL('file:///bar.js'),
       imports: {}
@@ -265,11 +247,130 @@ test('require + require.asset', (t) => {
     {
       url: new URL('file:///foo.js'),
       imports: {
-        './bar.js': {
-          asset: 'file:///bar.js',
-          default: 'file:///bar.js'
-        }
+        './bar.js': 'file:///bar.js'
+      }
+    }
+  ])
+
+  t.alike(result.return.assets, [
+    new URL('file:///bar.js')
+  ])
+})
+
+test('package.json#assets', (t) => {
+  function readModule (url) {
+    if (url.href === 'file:///foo.js') {
+      return ''
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo", "assets": ["bar/"] }'
+    }
+
+    if (url.href === 'file:///bar/baz.txt') {
+      return 'hello world'
+    }
+
+    return null
+  }
+
+  function listPrefix (url) {
+    if (url.href === 'file:///bar/') {
+      return [
+        new URL('file:///bar/baz.txt')
+      ]
+    }
+
+    return []
+  }
+
+  const result = expand(traverse(new URL('file:///foo.js'), readModule, listPrefix))
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///package.json'),
+      imports: {}
+    },
+    {
+      url: new URL('file:///bar/baz.txt'),
+      imports: {
+        '#package': 'file:///package.json'
+      }
+    },
+    {
+      url: new URL('file:///foo.js'),
+      imports: {
+        '#package': 'file:///package.json'
       }
     }
   ])
 })
+
+test('package.json#assets, pattern match', (t) => {
+  function readModule (url) {
+    if (url.href === 'file:///foo.js') {
+      return ''
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo", "assets": ["bar/*.txt"] }'
+    }
+
+    if (url.href === 'file:///bar/baz.bin') {
+      return '<binary blob>'
+    }
+
+    if (url.href === 'file:///bar/baz.txt') {
+      return 'hello world'
+    }
+
+    return null
+  }
+
+  function listPrefix (url) {
+    if (url.href === 'file:///bar/') {
+      return [
+        new URL('file:///bar/baz.bin'),
+        new URL('file:///bar/baz.txt')
+      ]
+    }
+
+    return []
+  }
+
+  const result = expand(traverse(new URL('file:///foo.js'), readModule, listPrefix))
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///package.json'),
+      imports: {}
+    },
+    {
+      url: new URL('file:///bar/baz.txt'),
+      imports: {
+        '#package': 'file:///package.json'
+      }
+    },
+    {
+      url: new URL('file:///foo.js'),
+      imports: {
+        '#package': 'file:///package.json'
+      }
+    }
+  ])
+})
+
+function expand (iterable) {
+  const iterator = iterable[Symbol.iterator]()
+  const values = []
+
+  let next = iterator.next()
+
+  while (next.done !== true) {
+    values.push(next.value)
+
+    next = iterator.next()
+  }
+
+  return { values, return: next.value }
+}
