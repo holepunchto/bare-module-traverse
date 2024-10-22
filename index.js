@@ -220,7 +220,10 @@ exports.matches = function * (patterns, parentURL, opts = {}) {
     const prefix = new URL(patternBase, parentURL)
 
     for (const url of yield { prefix }) {
-      if (patternIndex === -1 || patternTrailer === '' || url.href.endsWith(patternTrailer)) {
+      if (patternIndex === -1) {
+        if (patternNegate) matches.delete(url.href)
+        else matches.add(url.href)
+      } else if (patternTrailer === '' || url.href.endsWith(patternTrailer)) {
         matches.add(url.href)
       } else if (patternNegate) {
         matches.delete(url.href)

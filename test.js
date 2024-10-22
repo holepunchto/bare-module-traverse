@@ -360,6 +360,62 @@ test('package.json#assets, pattern match', (t) => {
   ])
 })
 
+test('package.json#assets, negate', (t) => {
+  function readModule (url) {
+    if (url.href === 'file:///foo.js') {
+      return ''
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo", "assets": ["bar/", "!bar/qux.txt"] }'
+    }
+
+    if (url.href === 'file:///bar/baz.txt' || url.href === 'file:///bar/qux.txt') {
+      return 'hello world'
+    }
+
+    return null
+  }
+
+  function listPrefix (url) {
+    if (url.href === 'file:///bar/') {
+      return [
+        new URL('file:///bar/baz.txt'),
+        new URL('file:///bar/qux.txt')
+      ]
+    }
+
+    if (url.href === 'file:///bar/qux.txt') {
+      return [
+        new URL('file:///bar/qux.txt')
+      ]
+    }
+
+    return []
+  }
+
+  const result = expand(traverse(new URL('file:///foo.js'), readModule, listPrefix))
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///package.json'),
+      imports: {}
+    },
+    {
+      url: new URL('file:///bar/baz.txt'),
+      imports: {
+        '#package': 'file:///package.json'
+      }
+    },
+    {
+      url: new URL('file:///foo.js'),
+      imports: {
+        '#package': 'file:///package.json'
+      }
+    }
+  ])
+})
+
 function expand (iterable) {
   const iterator = iterable[Symbol.iterator]()
   const values = []
