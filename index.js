@@ -15,7 +15,7 @@ module.exports = exports = function traverse (entry, opts, readModule, listPrefi
 
   return {
     * [Symbol.iterator] () {
-      const generator = exports.module(entry, readModule(entry), { addons: [], assets: [] }, new Set(), opts)
+      const generator = exports.module(entry, readModule(entry), createArtifacts(), new Set(), opts)
 
       let next = generator.next()
 
@@ -36,7 +36,7 @@ module.exports = exports = function traverse (entry, opts, readModule, listPrefi
     },
 
     async * [Symbol.asyncIterator] () {
-      const generator = exports.module(entry, await readModule(entry), { addons: [], assets: [] }, new Set(), opts)
+      const generator = exports.module(entry, await readModule(entry), createArtifacts(), new Set(), opts)
 
       let next = generator.next()
 
@@ -70,7 +70,11 @@ function defaultResolve (entry, parentURL, opts) {
   }
 }
 
-function add (array, url) {
+function createArtifacts () {
+  return { addons: [], assets: [] }
+}
+
+function addURL (array, url) {
   let lo = 0
   let hi = array.length - 1
 
@@ -92,10 +96,13 @@ function add (array, url) {
 
 exports.resolve = resolve
 
-exports.module = function * (url, source, artifacts, visited = new Set(), opts = {}) {
+exports.module = function * (url, source, artifacts = createArtifacts(), visited = new Set(), opts = {}) {
   const { resolve = defaultResolve } = opts
 
   if (visited.has(url.href)) return artifacts
+
+  if (source === undefined) source = yield { module: url }
+  if (source === null) return artifacts
 
   visited.add(url.href)
 
@@ -135,10 +142,10 @@ exports.module = function * (url, source, artifacts, visited = new Set(), opts =
 
           if (entry.type & lex.constants.ADDON) {
             key = 'addon'
-            add(artifacts.addons, url)
+            addURL(artifacts.addons, url)
           } else if (entry.type & lex.constants.ASSET) {
             key = 'asset'
-            add(artifacts.assets, url)
+            addURL(artifacts.assets, url)
           }
 
           imports[entry.specifier] = { [key]: url.href, ...imports[entry.specifier] }
@@ -158,8 +165,11 @@ exports.module = function * (url, source, artifacts, visited = new Set(), opts =
   return artifacts
 }
 
-exports.package = function * (url, source, artifacts, visited = new Set(), opts = {}) {
+exports.package = function * (url, source, artifacts = createArtifacts(), visited = new Set(), opts = {}) {
   if (visited.has(url.href)) return artifacts
+
+  if (source === undefined) source = yield { module: url }
+  if (source === null) return artifacts
 
   visited.add(url.href)
 
@@ -176,7 +186,7 @@ exports.package = function * (url, source, artifacts, visited = new Set(), opts 
   return artifacts
 }
 
-exports.assets = function * (patterns, parentURL, artifacts, visited = new Set(), opts = {}) {
+exports.assets = function * (patterns, parentURL, artifacts = createArtifacts(), visited = new Set(), opts = {}) {
   const matches = yield * exports.matches(patterns, parentURL, opts)
 
   for (const href of matches) {
@@ -185,7 +195,7 @@ exports.assets = function * (patterns, parentURL, artifacts, visited = new Set()
     const source = yield { module: url }
 
     if (source !== null) {
-      add(artifacts.assets, url)
+      addURL(artifacts.assets, url)
 
       yield * exports.module(url, source, artifacts, visited, opts)
     }
@@ -194,7 +204,7 @@ exports.assets = function * (patterns, parentURL, artifacts, visited = new Set()
   return artifacts
 }
 
-exports.matches = function * (patterns, parentURL, opts = {}) {
+exports.matches = function * (patterns, parentURL) {
   const matches = new Set()
 
   for (let pattern of patterns) {
