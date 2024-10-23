@@ -26,6 +26,8 @@ module.exports = exports = function traverse (entry, opts, readModule, listPrefi
           next = generator.next(readModule(value.module))
         } else if (value.prefix) {
           next = generator.next(listPrefix(value.prefix))
+        } else if (value.children) {
+          next = generator.next(value.children)
         } else {
           yield value.dependency
           next = generator.next()
@@ -47,6 +49,8 @@ module.exports = exports = function traverse (entry, opts, readModule, listPrefi
           next = generator.next(await readModule(value.module))
         } else if (value.prefix) {
           next = generator.next(await listPrefix(value.prefix))
+        } else if (value.children) {
+          next = generator.next(value.children)
         } else {
           yield value.dependency
           next = generator.next()
@@ -111,7 +115,7 @@ exports.module = function * (url, source, artifacts, visited, opts = {}) {
     if (source !== null) {
       imports['#package'] = packageURL.href
 
-      yield * exports.package(packageURL, source, artifacts, visited, opts)
+      yield * yield { children: exports.package(packageURL, source, artifacts, visited, opts) }
     }
   }
 
@@ -147,7 +151,7 @@ exports.module = function * (url, source, artifacts, visited, opts = {}) {
 
           imports[entry.specifier] = { [key]: url.href, ...imports[entry.specifier] }
 
-          yield * exports.module(url, source, artifacts, visited, opts)
+          yield * yield { children: exports.module(url, source, artifacts, visited, opts) }
 
           break
         }
@@ -173,7 +177,7 @@ exports.package = function * (url, source, artifacts, visited, opts = {}) {
     yield { dependency: { url, source, imports: {} } }
 
     if (info.assets) {
-      yield * exports.assets(info.assets, url, artifacts, visited, opts)
+      yield * yield { children: exports.assets(info.assets, url, artifacts, visited, opts) }
     }
   }
 
@@ -191,7 +195,7 @@ exports.assets = function * (patterns, parentURL, artifacts, visited, opts = {})
     if (source !== null) {
       addURL(artifacts.assets, url)
 
-      yield * exports.module(url, source, artifacts, visited, opts)
+      yield * yield { children: exports.module(url, source, artifacts, visited, opts) }
     }
   }
 

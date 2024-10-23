@@ -1,6 +1,6 @@
 # bare-module-traverse
 
-Low-level module graph traversal for Bare. The algorithm is implemented as a generator function that yields either modules to be read, prefixes to be listed, or resolved dependencies of the module graph. As a convenience, the main export is a synchronous and asynchronous iterable that relies on modules being read and prefixes being listed by callbacks. For asynchronous iteration, the callbacks may return promises which will be awaited before being passed to the generator.
+Low-level module graph traversal for Bare. The algorithm is implemented as a generator function that yields either modules to be read, prefixes to be listed, child dependencies to be traversed, or resolved dependencies of the module graph. As a convenience, the main export is a synchronous and asynchronous iterable that relies on modules being read and prefixes being listed by callbacks. For asynchronous iteration, the callbacks may return promises which will be awaited before being passed to the generator.
 
 ```
 npm i bare-module-traverse
