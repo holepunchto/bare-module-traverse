@@ -159,37 +159,35 @@ exports.package = function * (url, source, artifacts, visited, opts = {}) {
 exports.preresolved = function * (url, source, resolutions, artifacts, visited, opts = {}) {
   const imports = resolutions[url.href]
 
-  if (typeof imports === 'object' && imports !== null) {
-    for (const [specifier, entry] of Object.entries(imports)) {
-      const stack = [entry]
+  if (typeof imports !== 'object' || imports === null) return false
 
-      while (stack.length > 0) {
-        const entry = stack.pop()
+  for (const [specifier, entry] of Object.entries(imports)) {
+    const stack = [entry]
 
-        if (typeof entry === 'string') {
-          const url = new URL(entry)
+    while (stack.length > 0) {
+      const entry = stack.pop()
 
-          const source = yield { module: url }
+      if (typeof entry === 'string') {
+        const url = new URL(entry)
 
-          if (source === null) continue
+        const source = yield { module: url }
 
-          if (specifier === '#package') {
-            yield * yield { children: exports.package(new URL(entry), source, artifacts, visited, opts) }
-          } else {
-            yield * yield { children: exports.module(new URL(entry), source, artifacts, visited, opts) }
-          }
+        if (source === null) continue
+
+        if (specifier === '#package') {
+          yield * yield { children: exports.package(new URL(entry), source, artifacts, visited, opts) }
         } else {
-          stack.unshift(...Object.values(entry))
+          yield * yield { children: exports.module(new URL(entry), source, artifacts, visited, opts) }
         }
+      } else {
+        stack.unshift(...Object.values(entry))
       }
     }
-
-    yield { dependency: { url, source, imports: compressImportsMap(imports) } }
-
-    return true
   }
 
-  return false
+  yield { dependency: { url, source, imports: compressImportsMap(imports) } }
+
+  return true
 }
 
 exports.imports = function * (url, source, imports, artifacts, visited, opts = {}) {
