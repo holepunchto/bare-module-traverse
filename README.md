@@ -106,6 +106,9 @@ while (queue.length > 0) {
 
 Options are the same as `traverse()` for all functions.
 
+> [!WARNING]
+> These functions are currently subject to change between minor releases. If using them directly, make sure to specify a tilde range (`~1.2.3`) when declaring the module dependency.
+
 #### `const generator = traverse.module(url, source, artifacts, visited[, options])`
 
 #### `const generator = traverse.package(url, source, artifacts, visited[, options])`
