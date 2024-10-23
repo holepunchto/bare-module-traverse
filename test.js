@@ -24,9 +24,11 @@ test('require', (t) => {
 
   t.alike(result.values, [
     {
-      url: new URL('file:///baz.js'),
-      source: 'module.exports = 42',
-      imports: {}
+      url: new URL('file:///foo.js'),
+      source: 'const bar = require(\'./bar.js\')',
+      imports: {
+        './bar.js': 'file:///bar.js'
+      }
     },
     {
       url: new URL('file:///bar.js'),
@@ -36,11 +38,9 @@ test('require', (t) => {
       }
     },
     {
-      url: new URL('file:///foo.js'),
-      source: 'const bar = require(\'./bar.js\')',
-      imports: {
-        './bar.js': 'file:///bar.js'
-      }
+      url: new URL('file:///baz.js'),
+      source: 'module.exports = 42',
+      imports: {}
     }
   ])
 })
@@ -66,9 +66,11 @@ test('import', (t) => {
 
   t.alike(result.values, [
     {
-      url: new URL('file:///baz.js'),
-      source: 'export default 42',
-      imports: {}
+      url: new URL('file:///foo.js'),
+      source: 'import \'./bar.js\'',
+      imports: {
+        './bar.js': 'file:///bar.js'
+      }
     },
     {
       url: new URL('file:///bar.js'),
@@ -78,11 +80,9 @@ test('import', (t) => {
       }
     },
     {
-      url: new URL('file:///foo.js'),
-      source: 'import \'./bar.js\'',
-      imports: {
-        './bar.js': 'file:///bar.js'
-      }
+      url: new URL('file:///baz.js'),
+      source: 'export default 42',
+      imports: {}
     }
   ])
 })
@@ -104,17 +104,17 @@ test('cyclic require', (t) => {
 
   t.alike(result.values, [
     {
-      url: new URL('file:///bar.js'),
-      source: 'require(\'./foo.js\')',
-      imports: {
-        './foo.js': 'file:///foo.js'
-      }
-    },
-    {
       url: new URL('file:///foo.js'),
       source: 'require(\'./bar.js\')',
       imports: {
         './bar.js': 'file:///bar.js'
+      }
+    },
+    {
+      url: new URL('file:///bar.js'),
+      source: 'require(\'./foo.js\')',
+      imports: {
+        './foo.js': 'file:///foo.js'
       }
     }
   ])
@@ -137,17 +137,17 @@ test('cyclic import', (t) => {
 
   t.alike(result.values, [
     {
-      url: new URL('file:///bar.js'),
-      source: 'import \'./foo.js\'',
-      imports: {
-        './foo.js': 'file:///foo.js'
-      }
-    },
-    {
       url: new URL('file:///foo.js'),
       source: 'import \'./bar.js\'',
       imports: {
         './bar.js': 'file:///bar.js'
+      }
+    },
+    {
+      url: new URL('file:///bar.js'),
+      source: 'import \'./foo.js\'',
+      imports: {
+        './foo.js': 'file:///foo.js'
       }
     }
   ])
@@ -174,9 +174,14 @@ test('require.addon', (t) => {
 
   t.alike(result.values, [
     {
-      url: new URL('file:///package.json'),
-      source: '{ "name": "foo" }',
-      imports: {}
+      url: new URL('file:///foo.js'),
+      source: 'const bar = require.addon(\'.\')',
+      imports: {
+        '#package': 'file:///package.json',
+        '.': {
+          addon: 'file:///prebuilds/host/foo.bare'
+        }
+      }
     },
     {
       url: new URL('file:///prebuilds/host/foo.bare'),
@@ -186,14 +191,9 @@ test('require.addon', (t) => {
       }
     },
     {
-      url: new URL('file:///foo.js'),
-      source: 'const bar = require.addon(\'.\')',
-      imports: {
-        '#package': 'file:///package.json',
-        '.': {
-          addon: 'file:///prebuilds/host/foo.bare'
-        }
-      }
+      url: new URL('file:///package.json'),
+      source: '{ "name": "foo" }',
+      imports: {}
     }
   ])
 
@@ -219,11 +219,6 @@ test('require.asset', (t) => {
 
   t.alike(result.values, [
     {
-      url: new URL('file:///bar.txt'),
-      source: 'hello world',
-      imports: {}
-    },
-    {
       url: new URL('file:///foo.js'),
       source: 'const bar = require.asset(\'./bar.txt\')',
       imports: {
@@ -231,6 +226,11 @@ test('require.asset', (t) => {
           asset: 'file:///bar.txt'
         }
       }
+    },
+    {
+      url: new URL('file:///bar.txt'),
+      source: 'hello world',
+      imports: {}
     }
   ])
 
@@ -256,16 +256,16 @@ test('require + require.asset', (t) => {
 
   t.alike(result.values, [
     {
-      url: new URL('file:///bar.js'),
-      source: 'module.exports = 42',
-      imports: {}
-    },
-    {
       url: new URL('file:///foo.js'),
       source: 'require(\'./bar.js\'), require.asset(\'./bar.js\')',
       imports: {
         './bar.js': 'file:///bar.js'
       }
+    },
+    {
+      url: new URL('file:///bar.js'),
+      source: 'module.exports = 42',
+      imports: {}
     }
   ])
 
@@ -305,6 +305,13 @@ test('package.json#assets', (t) => {
 
   t.alike(result.values, [
     {
+      url: new URL('file:///foo.js'),
+      source: '',
+      imports: {
+        '#package': 'file:///package.json'
+      }
+    },
+    {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo", "assets": ["bar/"] }',
       imports: {}
@@ -312,13 +319,6 @@ test('package.json#assets', (t) => {
     {
       url: new URL('file:///bar/baz.txt'),
       source: 'hello world',
-      imports: {
-        '#package': 'file:///package.json'
-      }
-    },
-    {
-      url: new URL('file:///foo.js'),
-      source: '',
       imports: {
         '#package': 'file:///package.json'
       }
@@ -362,6 +362,13 @@ test('package.json#assets, pattern match', (t) => {
 
   t.alike(result.values, [
     {
+      url: new URL('file:///foo.js'),
+      source: '',
+      imports: {
+        '#package': 'file:///package.json'
+      }
+    },
+    {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo", "assets": ["bar/*.txt"] }',
       imports: {}
@@ -369,13 +376,6 @@ test('package.json#assets, pattern match', (t) => {
     {
       url: new URL('file:///bar/baz.txt'),
       source: 'hello world',
-      imports: {
-        '#package': 'file:///package.json'
-      }
-    },
-    {
-      url: new URL('file:///foo.js'),
-      source: '',
       imports: {
         '#package': 'file:///package.json'
       }
@@ -421,6 +421,13 @@ test('package.json#assets, negate', (t) => {
 
   t.alike(result.values, [
     {
+      url: new URL('file:///foo.js'),
+      source: '',
+      imports: {
+        '#package': 'file:///package.json'
+      }
+    },
+    {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo", "assets": ["bar/", "!bar/qux.txt"] }',
       imports: {}
@@ -428,13 +435,6 @@ test('package.json#assets, negate', (t) => {
     {
       url: new URL('file:///bar/baz.txt'),
       source: 'hello world',
-      imports: {
-        '#package': 'file:///package.json'
-      }
-    },
-    {
-      url: new URL('file:///foo.js'),
-      source: '',
       imports: {
         '#package': 'file:///package.json'
       }
@@ -473,9 +473,11 @@ test('resolutions map', (t) => {
 
   t.alike(result.values, [
     {
-      url: new URL('file:///baz.js'),
-      source: 'module.exports = 42',
-      imports: {}
+      url: new URL('file:///foo.js'),
+      source: 'const bar = require(\'./bar.js\')',
+      imports: {
+        './bar.js': 'file:///bar.js'
+      }
     },
     {
       url: new URL('file:///bar.js'),
@@ -485,11 +487,9 @@ test('resolutions map', (t) => {
       }
     },
     {
-      url: new URL('file:///foo.js'),
-      source: 'const bar = require(\'./bar.js\')',
-      imports: {
-        './bar.js': 'file:///bar.js'
-      }
+      url: new URL('file:///baz.js'),
+      source: 'module.exports = 42',
+      imports: {}
     }
   ])
 })
@@ -522,9 +522,11 @@ test('resolutions map, partial', (t) => {
 
   t.alike(result.values, [
     {
-      url: new URL('file:///baz.js'),
-      source: 'module.exports = 42',
-      imports: {}
+      url: new URL('file:///foo.js'),
+      source: 'const bar = require(\'./bar.js\')',
+      imports: {
+        './bar.js': 'file:///bar.js'
+      }
     },
     {
       url: new URL('file:///bar.js'),
@@ -534,11 +536,9 @@ test('resolutions map, partial', (t) => {
       }
     },
     {
-      url: new URL('file:///foo.js'),
-      source: 'const bar = require(\'./bar.js\')',
-      imports: {
-        './bar.js': 'file:///bar.js'
-      }
+      url: new URL('file:///baz.js'),
+      source: 'module.exports = 42',
+      imports: {}
     }
   ])
 })

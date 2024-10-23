@@ -73,27 +73,33 @@ Asynchronously iterate the module graph. If one or both of `readModule` or `list
 The following generator functions implement the traversal algorithm. To drive the generator functions, a loop like the following can be used:
 
 ```js
-const generator = traverse.module(url, source, artifacts, visited)
+const queue = [traverse.module(url, source, artifacts, visited)]
 
-let next = generator.next()
+while (queue.length > 0) {
+  const generator = queue.pop()
 
-while (next.done !== true) {
-  const value = next.value
+  let next = generator.next()
 
-  if (value.module) {
-    const source = /* Read `value.module` if it exists, otherwise `null` */;
+  while (next.done !== true) {
+    const value = next.value
 
-    next = generator.next(source)
-  } else if (value.prefix) {
-    const modules = /* List the modules that have `value.prefix` as a prefix */;
+    if (value.module) {
+      const source = /* Read `value.module` if it exists, otherwise `null` */;
 
-    next = generator.next(modules)
-  } else if (value.children) {
-    next = generator.next(value.children)
-  } else {
-    const dependency = value.dependency
+      next = generator.next(source)
+    } else if (value.prefix) {
+      const modules = /* List the modules that have `value.prefix` as a prefix */;
 
-    next = generator.next()
+      next = generator.next(modules)
+    } else {
+      if (value.children) {
+        queue.push(value.children)
+      } else {
+        const dependency = value.dependency
+      }
+
+      next = generator.next()
+    }
   }
 }
 ```
