@@ -169,15 +169,14 @@ exports.preresolved = function * (url, source, resolutions, artifacts, visited, 
 
       if (typeof entry === 'string') {
         const url = new URL(entry)
-
         const source = yield { module: url }
 
         if (source === null) continue
 
         if (specifier === '#package') {
-          yield * yield { children: exports.package(new URL(entry), source, artifacts, visited, opts) }
+          yield * yield { children: exports.package(url, source, artifacts, visited, opts) }
         } else {
-          yield * yield { children: exports.module(new URL(entry), source, artifacts, visited, opts) }
+          yield * yield { children: exports.module(url, source, artifacts, visited, opts) }
         }
       } else {
         stack.unshift(...Object.values(entry))
@@ -203,13 +202,11 @@ exports.imports = function * (url, source, imports, artifacts, visited, opts = {
 
       if (value.package) {
         const url = value.package
-
         const source = yield { module: url }
 
         next = resolver.next(JSON.parse(source))
       } else {
         const url = value.resolution
-
         const source = yield { module: url }
 
         if (source !== null) {
@@ -243,7 +240,6 @@ exports.assets = function * (patterns, parentURL, artifacts, visited, opts = {})
 
   for (const href of matches) {
     const url = new URL(href)
-
     const source = yield { module: url }
 
     if (source !== null) {
