@@ -88,6 +88,8 @@ while (next.done !== true) {
     const modules = /* List the modules that have `value.prefix` as a prefix */;
 
     next = generator.next(modules)
+  } else if (value.children) {
+    next = generator.next(value.children)
   } else {
     const dependency = value.dependency
 
