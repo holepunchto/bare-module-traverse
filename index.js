@@ -96,13 +96,10 @@ function addURL (array, url) {
 
 exports.resolve = resolve
 
-exports.module = function * (url, source, artifacts = createArtifacts(), visited = new Set(), opts = {}) {
+exports.module = function * (url, source, artifacts, visited, opts = {}) {
   const { resolve = defaultResolve } = opts
 
   if (visited.has(url.href)) return artifacts
-
-  if (source === undefined) source = yield { module: url }
-  if (source === null) return artifacts
 
   visited.add(url.href)
 
@@ -165,11 +162,8 @@ exports.module = function * (url, source, artifacts = createArtifacts(), visited
   return artifacts
 }
 
-exports.package = function * (url, source, artifacts = createArtifacts(), visited = new Set(), opts = {}) {
+exports.package = function * (url, source, artifacts, visited, opts = {}) {
   if (visited.has(url.href)) return artifacts
-
-  if (source === undefined) source = yield { module: url }
-  if (source === null) return artifacts
 
   visited.add(url.href)
 
@@ -186,7 +180,7 @@ exports.package = function * (url, source, artifacts = createArtifacts(), visite
   return artifacts
 }
 
-exports.assets = function * (patterns, parentURL, artifacts = createArtifacts(), visited = new Set(), opts = {}) {
+exports.assets = function * (patterns, parentURL, artifacts, visited, opts = {}) {
   const matches = yield * exports.matches(patterns, parentURL, opts)
 
   for (const href of matches) {
