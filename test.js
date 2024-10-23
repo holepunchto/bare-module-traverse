@@ -442,6 +442,107 @@ test('package.json#assets, negate', (t) => {
   ])
 })
 
+test('resolutions map', (t) => {
+  function readModule (url) {
+    if (url.href === 'file:///foo.js') {
+      return 'const bar = require(\'./bar.js\')'
+    }
+
+    if (url.href === 'file:///bar.js') {
+      return 'const baz = require(\'./baz.js\')'
+    }
+
+    if (url.href === 'file:///baz.js') {
+      return 'module.exports = 42'
+    }
+
+    return null
+  }
+
+  const resolutions = {
+    'file:///foo.js': {
+      './bar.js': 'file:///bar.js'
+    },
+    'file:///bar.js': {
+      './baz.js': 'file:///baz.js'
+    },
+    'file:///baz.js': {}
+  }
+
+  const result = expand(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///baz.js'),
+      source: 'module.exports = 42',
+      imports: {}
+    },
+    {
+      url: new URL('file:///bar.js'),
+      source: 'const baz = require(\'./baz.js\')',
+      imports: {
+        './baz.js': 'file:///baz.js'
+      }
+    },
+    {
+      url: new URL('file:///foo.js'),
+      source: 'const bar = require(\'./bar.js\')',
+      imports: {
+        './bar.js': 'file:///bar.js'
+      }
+    }
+  ])
+})
+
+test('resolutions map, partial', (t) => {
+  function readModule (url) {
+    if (url.href === 'file:///foo.js') {
+      return 'const bar = require(\'./bar.js\')'
+    }
+
+    if (url.href === 'file:///bar.js') {
+      return 'const baz = require(\'./baz.js\')'
+    }
+
+    if (url.href === 'file:///baz.js') {
+      return 'module.exports = 42'
+    }
+
+    return null
+  }
+
+  const resolutions = {
+    'file:///foo.js': {
+      './bar.js': 'file:///bar.js'
+    },
+    'file:///baz.js': {}
+  }
+
+  const result = expand(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///baz.js'),
+      source: 'module.exports = 42',
+      imports: {}
+    },
+    {
+      url: new URL('file:///bar.js'),
+      source: 'const baz = require(\'./baz.js\')',
+      imports: {
+        './baz.js': 'file:///baz.js'
+      }
+    },
+    {
+      url: new URL('file:///foo.js'),
+      source: 'const bar = require(\'./bar.js\')',
+      imports: {
+        './bar.js': 'file:///bar.js'
+      }
+    }
+  ])
+})
+
 function expand (iterable) {
   const iterator = iterable[Symbol.iterator]()
   const values = []

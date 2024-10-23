@@ -15,7 +15,9 @@ module.exports = exports = function traverse (entry, opts, readModule, listPrefi
 
   return {
     * [Symbol.iterator] () {
-      const generator = exports.module(entry, readModule(entry), createArtifacts(), new Set(), opts)
+      const artifacts = createArtifacts()
+
+      const generator = exports.module(entry, readModule(entry), artifacts, new Set(), opts)
 
       let next = generator.next()
 
@@ -34,11 +36,13 @@ module.exports = exports = function traverse (entry, opts, readModule, listPrefi
         }
       }
 
-      return next.value
+      return artifacts
     },
 
     async * [Symbol.asyncIterator] () {
-      const generator = exports.module(entry, await readModule(entry), createArtifacts(), new Set(), opts)
+      const artifacts = createArtifacts()
+
+      const generator = exports.module(entry, await readModule(entry), artifacts, new Set(), opts)
 
       let next = generator.next()
 
@@ -57,7 +61,7 @@ module.exports = exports = function traverse (entry, opts, readModule, listPrefi
         }
       }
 
-      return next.value
+      return artifacts
     }
   }
 }
@@ -101,11 +105,17 @@ function addURL (array, url) {
 exports.resolve = resolve
 
 exports.module = function * (url, source, artifacts, visited, opts = {}) {
-  const { resolve = defaultResolve } = opts
+  const { resolutions = null } = opts
 
-  if (visited.has(url.href)) return artifacts
+  if (visited.has(url.href)) return false
 
   visited.add(url.href)
+
+  if (resolutions) {
+    if (yield * exports.preresolved(url, source, resolutions, artifacts, visited, opts)) {
+      return true
+    }
+  }
 
   const imports = {}
 
@@ -118,6 +128,72 @@ exports.module = function * (url, source, artifacts, visited, opts = {}) {
       yield * yield { children: exports.package(packageURL, source, artifacts, visited, opts) }
     }
   }
+
+  yield * exports.imports(url, source, imports, artifacts, visited, opts)
+
+  yield { dependency: { url, source, imports: compressImportsMap(imports) } }
+
+  return true
+}
+
+exports.package = function * (url, source, artifacts, visited, opts = {}) {
+  if (visited.has(url.href)) return false
+
+  visited.add(url.href)
+
+  const info = JSON.parse(source)
+
+  if (info) {
+    yield { dependency: { url, source, imports: {} } }
+
+    if (info.assets) {
+      yield * yield { children: exports.assets(info.assets, url, artifacts, visited, opts) }
+    }
+
+    return true
+  }
+
+  return false
+}
+
+exports.preresolved = function * (url, source, resolutions, artifacts, visited, opts = {}) {
+  const imports = resolutions[url.href]
+
+  if (typeof imports === 'object' && imports !== null) {
+    for (const [specifier, entry] of Object.entries(imports)) {
+      const stack = [entry]
+
+      while (stack.length > 0) {
+        const entry = stack.pop()
+
+        if (typeof entry === 'string') {
+          const url = new URL(entry)
+
+          const source = yield { module: url }
+
+          if (source === null) continue
+
+          if (specifier === '#package') {
+            yield * yield { children: exports.package(new URL(entry), source, artifacts, visited, opts) }
+          } else {
+            yield * yield { children: exports.module(new URL(entry), source, artifacts, visited, opts) }
+          }
+        } else {
+          stack.unshift(...Object.values(entry))
+        }
+      }
+    }
+
+    yield { dependency: { url, source, imports: compressImportsMap(imports) } }
+
+    return true
+  }
+
+  return false
+}
+
+exports.imports = function * (url, source, imports, artifacts, visited, opts = {}) {
+  const { resolve = defaultResolve } = opts
 
   for (const entry of lex(source).imports) {
     const resolver = resolve(entry, url, opts)
@@ -160,32 +236,12 @@ exports.module = function * (url, source, artifacts, visited, opts = {}) {
       }
     }
   }
-
-  yield { dependency: { url, source, imports: compressImportsMap(imports) } }
-
-  return artifacts
-}
-
-exports.package = function * (url, source, artifacts, visited, opts = {}) {
-  if (visited.has(url.href)) return artifacts
-
-  visited.add(url.href)
-
-  const info = JSON.parse(source)
-
-  if (info) {
-    yield { dependency: { url, source, imports: {} } }
-
-    if (info.assets) {
-      yield * yield { children: exports.assets(info.assets, url, artifacts, visited, opts) }
-    }
-  }
-
-  return artifacts
 }
 
 exports.assets = function * (patterns, parentURL, artifacts, visited, opts = {}) {
   const matches = yield * exports.matches(patterns, parentURL, opts)
+
+  let yielded = false
 
   for (const href of matches) {
     const url = new URL(href)
@@ -195,11 +251,13 @@ exports.assets = function * (patterns, parentURL, artifacts, visited, opts = {})
     if (source !== null) {
       addURL(artifacts.assets, url)
 
-      yield * yield { children: exports.module(url, source, artifacts, visited, opts) }
+      if (yield * yield { children: exports.module(url, source, artifacts, visited, opts) }) {
+        yielded = true
+      }
     }
   }
 
-  return artifacts
+  return yielded
 }
 
 exports.matches = function * (patterns, parentURL) {

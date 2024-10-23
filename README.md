@@ -104,6 +104,10 @@ Options are the same as `traverse()` for all functions.
 
 #### `const generator = traverse.package(url, source, artifacts, visited[, options])`
 
+#### `const generator = traverse.preresolved(url, source, resolutions, artifacts, visited[, options])`
+
+#### `const generator = traverse.imports(url, source, imports, artifacts, visited[, options])`
+
 #### `const generator = traverse.assets(patterns, parentURL, artifacts, visited[, options])`
 
 ## License
