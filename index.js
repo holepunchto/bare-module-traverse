@@ -309,14 +309,23 @@ function compressImportsMap (imports) {
 function compressImportsMapEntry (resolved) {
   if (typeof resolved === 'string') return resolved
 
-  const entries = Object
-    .entries(resolved)
-    .filter(([condition, specifier]) => condition === 'default' || specifier !== resolved.default)
+  let entries = []
+  let primary = null
+
+  for (const entry of Object.entries(resolved)) {
+    entry[1] = compressImportsMapEntry(entry[1])
+
+    entries.push(entry)
+
+    if (entry[0] === 'default') primary = entry[1]
+  }
+
+  entries = entries.filter(([condition, resolved]) => condition === 'default' || resolved !== primary)
 
   if (entries.length === 1) {
-    const [condition, specifier] = entries[0]
+    const [condition, resolved] = entries[0]
 
-    if (condition === 'default') return specifier
+    if (condition === 'default') return resolved
   }
 
   return Object.fromEntries(entries)
