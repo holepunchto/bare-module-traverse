@@ -1,6 +1,7 @@
 const { lookupPackageScope } = require('bare-module-resolve')
 const lex = require('bare-module-lexer')
 const resolve = require('./lib/resolve')
+const errors = require('./lib/errors')
 
 module.exports = exports = function traverse (entry, opts, readModule, listPrefix) {
   if (typeof opts === 'function') {
@@ -17,7 +18,7 @@ module.exports = exports = function traverse (entry, opts, readModule, listPrefi
     * [Symbol.iterator] () {
       const artifacts = createArtifacts()
 
-      const queue = [exports.module(entry, readModule(entry), artifacts, new Set(), opts)]
+      const queue = [exports.module(entry, null, artifacts, new Set(), opts)]
 
       while (queue.length > 0) {
         const generator = queue.pop()
@@ -46,7 +47,7 @@ module.exports = exports = function traverse (entry, opts, readModule, listPrefi
     async * [Symbol.asyncIterator] () {
       const artifacts = createArtifacts()
 
-      const queue = [exports.module(entry, await readModule(entry), artifacts, new Set(), opts)]
+      const queue = [exports.module(entry, null, artifacts, new Set(), opts)]
 
       while (queue.length > 0) {
         const generator = queue.pop()
@@ -117,6 +118,14 @@ exports.module = function * (url, source, artifacts, visited, opts = {}) {
 
   if (visited.has(url.href)) return false
 
+  if (source === null) {
+    source = yield { module: url }
+
+    if (source === null) {
+      throw errors.MODULE_NOT_FOUND(`Cannot find module '${url.href}'`)
+    }
+  }
+
   visited.add(url.href)
 
   if (resolutions) {
@@ -177,14 +186,11 @@ exports.preresolved = function * (url, source, resolutions, artifacts, visited, 
 
       if (typeof entry === 'string') {
         const url = new URL(entry)
-        const source = yield { module: url }
-
-        if (source === null) continue
 
         if (specifier === '#package') {
-          yield { children: exports.package(url, source, artifacts, visited, opts) }
+          yield { children: exports.package(url, null, artifacts, visited, opts) }
         } else {
-          yield { children: exports.module(url, source, artifacts, visited, opts) }
+          yield { children: exports.module(url, null, artifacts, visited, opts) }
         }
       } else {
         stack.unshift(...Object.values(entry))
@@ -197,13 +203,16 @@ exports.preresolved = function * (url, source, resolutions, artifacts, visited, 
   return true
 }
 
-exports.imports = function * (url, source, imports, artifacts, visited, opts = {}) {
+exports.imports = function * (parentURL, source, imports, artifacts, visited, opts = {}) {
   const { resolve = defaultResolve } = opts
 
+  let yielded = false
+
   for (const entry of lex(source).imports) {
-    const resolver = resolve(entry, url, opts)
+    const resolver = resolve(entry, parentURL, opts)
 
     let next = resolver.next()
+    let resolved = false
 
     while (next.done !== true) {
       const value = next.value
@@ -232,13 +241,21 @@ exports.imports = function * (url, source, imports, artifacts, visited, opts = {
 
           yield { children: exports.module(url, source, artifacts, visited, opts) }
 
+          resolved = yielded = true
+
           break
         }
 
         next = resolver.next()
       }
     }
+
+    if (!resolved) {
+      throw errors.MODULE_NOT_FOUND(`Cannot find module '${entry.specifier}' imported from '${parentURL.href}'`)
+    }
   }
+
+  return yielded
 }
 
 exports.assets = function * (patterns, parentURL, artifacts, visited, opts = {}) {

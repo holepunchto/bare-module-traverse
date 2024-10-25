@@ -153,6 +153,23 @@ test('cyclic import', (t) => {
   ])
 })
 
+test('require, module missing', (t) => {
+  function readModule (url) {
+    if (url.href === 'file:///foo.js') {
+      return 'const bar = require(\'./bar.js\')'
+    }
+
+    return null
+  }
+
+  try {
+    expand(traverse(new URL('file:///foo.js'), readModule))
+    t.fail()
+  } catch (err) {
+    t.comment(err.message)
+  }
+})
+
 test('require.addon', (t) => {
   function readModule (url) {
     if (url.href === 'file:///foo.js') {
@@ -541,6 +558,29 @@ test('resolutions map, partial', (t) => {
       imports: {}
     }
   ])
+})
+
+test('resolutions map, module missing', (t) => {
+  function readModule (url) {
+    if (url.href === 'file:///foo.js') {
+      return 'const bar = require(\'./bar.js\')'
+    }
+
+    return null
+  }
+
+  const resolutions = {
+    'file:///foo.js': {
+      './bar.js': 'file:///bar.js'
+    }
+  }
+
+  try {
+    expand(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
+    t.fail()
+  } catch (err) {
+    t.comment(err.message)
+  }
 })
 
 function expand (iterable) {
