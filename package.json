@@ -11,6 +11,12 @@
     "index.js",
     "lib"
   ],
+  "imports": {
+    "#runtime": {
+      "bare": "./lib/runtime/bare.js",
+      "node": "./lib/runtime/node.js"
+    }
+  },
   "scripts": {
     "test": "standard && bare test.js"
   },

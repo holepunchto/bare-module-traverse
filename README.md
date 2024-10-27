@@ -50,6 +50,16 @@ for await (const dependency of traverse(new URL('file:///directory/file.js'), re
 
 Traverse the module graph rooted at `url`, which must be a WHATWG `URL` instance. `readModule` is called with a `URL` instance for every module to be read and must either return the module source, if it exists, or `null`. `listPrefix` is called with a `URL` instance of every prefix to be listed and must return a list of `URL` instances that have the specified `URL` as a prefix. If not provided, prefixes won't be traversed. If one or both of `readModule` or `listPrefix` returns a promise, synchronous iteration is not supported.
 
+Options include:
+
+```js
+{
+  resolve: resolve.default
+}
+```
+
+Options supported by <https://github.com/holepunchto/bare-module-resolve> and <https://github.com/holepunchto/bare-addon-resolve> may also be specified.
+
 #### `for (const dependency of dependencies)`
 
 Synchronously iterate the module graph. Each yielded dependency has the following shape:
@@ -67,6 +77,28 @@ Synchronously iterate the module graph. Each yielded dependency has the followin
 #### `for await (const dependency of dependencies)`
 
 Asynchronously iterate the module graph. If one or both of `readModule` or `listPrefix` returns promises, these will be awaited. The same comments as `for (const dependency of dependencies)` apply.
+
+### Resolution
+
+#### `resolve.module`
+
+Convenience export from <https://github.com/holepunchto/bare-module-resolve>.
+
+#### `resolve.addon`
+
+Convenience export from <https://github.com/holepunchto/bare-addon-resolve>.
+
+#### `resolve.default`
+
+The default resolver, which simply forwards to <https://github.com/holepunchto/bare-module-resolve> and <https://github.com/holepunchto/bare-addon-resolve> with the literal options passed by the caller.
+
+#### `resolve.bare`
+
+The Bare resolver, which matches the options used by the Bare module system.
+
+#### `resolve.node`
+
+The Node.js resolver, which matches the options used by the Node.js module system.
 
 ### Algorithm
 

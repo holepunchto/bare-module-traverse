@@ -16,7 +16,7 @@ module.exports = exports = function traverse (entry, opts, readModule, listPrefi
 
   return {
     * [Symbol.iterator] () {
-      const artifacts = createArtifacts()
+      const artifacts = { addons: [], assets: [] }
 
       const queue = [exports.module(entry, null, artifacts, new Set(), opts)]
 
@@ -45,7 +45,7 @@ module.exports = exports = function traverse (entry, opts, readModule, listPrefi
     },
 
     async * [Symbol.asyncIterator] () {
-      const artifacts = createArtifacts()
+      const artifacts = { addons: [], assets: [] }
 
       const queue = [exports.module(entry, null, artifacts, new Set(), opts)]
 
@@ -77,18 +77,6 @@ module.exports = exports = function traverse (entry, opts, readModule, listPrefi
 
 function defaultListPrefix () {
   return []
-}
-
-function defaultResolve (entry, parentURL, opts) {
-  if (entry.type & lex.constants.ADDON) {
-    return resolve.addon(entry.specifier, parentURL, opts)
-  } else {
-    return resolve.module(entry.specifier, parentURL, opts)
-  }
-}
-
-function createArtifacts () {
-  return { addons: [], assets: [] }
 }
 
 function addURL (array, url) {
@@ -204,7 +192,7 @@ exports.preresolved = function * (url, source, resolutions, artifacts, visited, 
 }
 
 exports.imports = function * (parentURL, source, imports, artifacts, visited, opts = {}) {
-  const { resolve = defaultResolve } = opts
+  const { resolve = exports.resolve.default } = opts
 
   let yielded = false
 
