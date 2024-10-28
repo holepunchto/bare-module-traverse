@@ -247,7 +247,7 @@ exports.imports = function * (parentURL, source, imports, artifacts, visited, op
 }
 
 exports.assets = function * (patterns, parentURL, artifacts, visited, opts = {}) {
-  const matches = yield * exports.matches(patterns, parentURL, opts)
+  const matches = yield * exports.patternMatches(patterns, parentURL, opts)
 
   let yielded = false
 
@@ -267,10 +267,20 @@ exports.assets = function * (patterns, parentURL, artifacts, visited, opts = {})
   return yielded
 }
 
-exports.matches = function * (patterns, parentURL) {
+exports.patternMatches = function * (patterns, parentURL, opts = {}) {
   const matches = new Set()
 
-  for (let pattern of patterns) {
+  for (const pattern of patterns) {
+    yield * exports.matchPattern(pattern, parentURL, matches, opts)
+  }
+
+  return matches
+}
+
+exports.matchPattern = function * (pattern, parentURL, matches, opts = {}) {
+  const { conditions = [] } = opts
+
+  if (typeof pattern === 'string') {
     let patternNegate = false
     let patternBase
     let patternTrailer
@@ -302,9 +312,17 @@ exports.matches = function * (patterns, parentURL) {
         matches.delete(url.href)
       }
     }
-  }
+  } else if (typeof pattern === 'object' && pattern !== null) {
+    const keys = Object.keys(pattern)
 
-  return matches
+    for (const p of keys) {
+      if (p === 'default' || conditions.includes(p)) {
+        const patternValue = pattern[p]
+
+        return yield * exports.matchPattern(patternValue, parentURL, matches, opts)
+      }
+    }
+  }
 }
 
 function compressImportsMap (imports) {
