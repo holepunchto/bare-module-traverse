@@ -291,6 +291,70 @@ test('require + require.asset', (t) => {
   ])
 })
 
+test.solo('package.json#addon', (t) => {
+  function readModule (url) {
+    if (url.href === 'file:///foo.js') {
+      return ''
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo", "addon": true }'
+    }
+
+    if (url.href === 'file:///prebuilds/darwin-arm64/foo.bare') {
+      return '<native code>'
+    }
+
+    if (url.href === 'file:///prebuilds/linux-arm64/foo.bare') {
+      return '<native code>'
+    }
+
+    return null
+  }
+
+  function listPrefix (url) {
+    if (url.href === 'file:///prebuilds/') {
+      return [
+        new URL('file:///prebuilds/darwin-arm64/foo.bare'),
+        new URL('file:///prebuilds/linux-arm64/foo.bare')
+      ]
+    }
+
+    return []
+  }
+
+  const result = expand(traverse(new URL('file:///foo.js'), readModule, listPrefix))
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.js'),
+      source: '',
+      imports: {
+        '#package': 'file:///package.json'
+      }
+    },
+    {
+      url: new URL('file:///package.json'),
+      source: '{ "name": "foo", "addon": true }',
+      imports: {}
+    },
+    {
+      url: new URL('file:///prebuilds/linux-arm64/foo.bare'),
+      source: '<native code>',
+      imports: {
+        '#package': 'file:///package.json'
+      }
+    },
+    {
+      url: new URL('file:///prebuilds/darwin-arm64/foo.bare'),
+      source: '<native code>',
+      imports: {
+        '#package': 'file:///package.json'
+      }
+    }
+  ])
+})
+
 test('package.json#assets', (t) => {
   function readModule (url) {
     if (url.href === 'file:///foo.js') {

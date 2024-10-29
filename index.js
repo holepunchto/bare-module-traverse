@@ -171,6 +171,10 @@ exports.package = function * (url, source, artifacts, visited, opts = {}) {
   if (info) {
     yield { dependency: { url, source, imports: {} } }
 
+    if (info.addon) {
+      yield { children: exports.prebuilds(url, artifacts, visited, opts) }
+    }
+
     if (info.assets) {
       yield { children: exports.assets(info.assets, url, artifacts, visited, opts) }
     }
@@ -260,6 +264,26 @@ exports.imports = function * (parentURL, source, imports, artifacts, visited, op
 
     if (!resolved) {
       throw errors.MODULE_NOT_FOUND(`Cannot find module '${entry.specifier}' imported from '${parentURL.href}'`)
+    }
+  }
+
+  return yielded
+}
+
+exports.prebuilds = function * (packageURL, artifacts, visited, opts = {}) {
+  const prefix = new URL('prebuilds/', packageURL)
+
+  let yielded = false
+
+  for (const url of yield { prefix }) {
+    const source = yield { module: url }
+
+    if (source !== null) {
+      addURL(artifacts.addons, url)
+
+      yield { children: exports.module(url, source, artifacts, visited, opts) }
+
+      yielded = true
     }
   }
 
