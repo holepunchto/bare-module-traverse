@@ -99,6 +99,26 @@ function addURL (array, url) {
   array.splice(lo, 0, url)
 }
 
+function removeURL (array, url) {
+  let lo = 0
+  let hi = array.length - 1
+
+  while (lo <= hi) {
+    const mid = lo + ((hi - lo) >> 1)
+    const found = array[mid]
+
+    if (found.href === url.href) break
+
+    if (found.href < url.href) {
+      lo = mid + 1
+    } else {
+      hi = mid - 1
+    }
+  }
+
+  if (array[lo].href === url.href) array.splice(lo, 1)
+}
+
 exports.resolve = resolve
 
 exports.module = function * (url, source, artifacts, visited, opts = {}) {
@@ -247,12 +267,11 @@ exports.imports = function * (parentURL, source, imports, artifacts, visited, op
 }
 
 exports.assets = function * (patterns, parentURL, artifacts, visited, opts = {}) {
-  const matches = yield * exports.matches(patterns, parentURL, opts)
+  const matches = yield * exports.patternMatches(patterns, parentURL, [], opts)
 
   let yielded = false
 
-  for (const href of matches) {
-    const url = new URL(href)
+  for (const url of matches) {
     const source = yield { module: url }
 
     if (source !== null) {
@@ -267,10 +286,10 @@ exports.assets = function * (patterns, parentURL, artifacts, visited, opts = {})
   return yielded
 }
 
-exports.matches = function * (patterns, parentURL) {
-  const matches = new Set()
+exports.patternMatches = function * (pattern, parentURL, matches, opts = {}) {
+  const { conditions = [] } = opts
 
-  for (let pattern of patterns) {
+  if (typeof pattern === 'string') {
     let patternNegate = false
     let patternBase
     let patternTrailer
@@ -294,12 +313,26 @@ exports.matches = function * (patterns, parentURL) {
 
     for (const url of yield { prefix }) {
       if (patternIndex === -1) {
-        if (patternNegate) matches.delete(url.href)
-        else matches.add(url.href)
+        if (patternNegate) removeURL(matches, url)
+        else addURL(matches, url)
       } else if (patternTrailer === '' || url.href.endsWith(patternTrailer)) {
-        matches.add(url.href)
+        addURL(matches, url)
       } else if (patternNegate) {
-        matches.delete(url.href)
+        removeURL(matches, url)
+      }
+    }
+  } else if (Array.isArray(pattern)) {
+    for (const patternValue of pattern) {
+      yield * exports.patternMatches(patternValue, parentURL, matches, opts)
+    }
+  } else if (typeof pattern === 'object' && pattern !== null) {
+    const keys = Object.keys(pattern)
+
+    for (const p of keys) {
+      if (p === 'default' || conditions.includes(p)) {
+        const patternValue = pattern[p]
+
+        return yield * exports.patternMatches(patternValue, parentURL, matches, opts)
       }
     }
   }

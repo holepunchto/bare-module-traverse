@@ -459,6 +459,95 @@ test('package.json#assets, negate', (t) => {
   ])
 })
 
+test('package.json#assets, conditional pattern', (t) => {
+  function readModule (url) {
+    if (url.href === 'file:///foo.js') {
+      return ''
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo", "assets": [{ "darwin": "darwin/", "linux": "linux/" }] }'
+    }
+
+    if (url.href === 'file:///darwin/baz.txt') {
+      return 'hello darwin'
+    }
+
+    if (url.href === 'file:///linux/baz.txt') {
+      return 'hello linux'
+    }
+
+    return null
+  }
+
+  function listPrefix (url) {
+    if (url.href === 'file:///darwin/') {
+      return [
+        new URL('file:///darwin/baz.txt')
+      ]
+    }
+
+    if (url.href === 'file:///linux/') {
+      return [
+        new URL('file:///linux/baz.txt')
+      ]
+    }
+
+    return []
+  }
+
+  {
+    const result = expand(traverse(new URL('file:///foo.js'), { conditions: ['darwin'] }, readModule, listPrefix))
+
+    t.alike(result.values, [
+      {
+        url: new URL('file:///foo.js'),
+        source: '',
+        imports: {
+          '#package': 'file:///package.json'
+        }
+      },
+      {
+        url: new URL('file:///package.json'),
+        source: '{ "name": "foo", "assets": [{ "darwin": "darwin/", "linux": "linux/" }] }',
+        imports: {}
+      },
+      {
+        url: new URL('file:///darwin/baz.txt'),
+        source: 'hello darwin',
+        imports: {
+          '#package': 'file:///package.json'
+        }
+      }
+    ])
+  }
+  {
+    const result = expand(traverse(new URL('file:///foo.js'), { conditions: ['linux'] }, readModule, listPrefix))
+
+    t.alike(result.values, [
+      {
+        url: new URL('file:///foo.js'),
+        source: '',
+        imports: {
+          '#package': 'file:///package.json'
+        }
+      },
+      {
+        url: new URL('file:///package.json'),
+        source: '{ "name": "foo", "assets": [{ "darwin": "darwin/", "linux": "linux/" }] }',
+        imports: {}
+      },
+      {
+        url: new URL('file:///linux/baz.txt'),
+        source: 'hello linux',
+        imports: {
+          '#package': 'file:///package.json'
+        }
+      }
+    ])
+  }
+})
+
 test('resolutions map', (t) => {
   function readModule (url) {
     if (url.href === 'file:///foo.js') {
