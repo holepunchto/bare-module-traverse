@@ -291,7 +291,7 @@ test('require + require.asset', (t) => {
   ])
 })
 
-test.solo('package.json#addon', (t) => {
+test('package.json#addon', (t) => {
   function readModule (url) {
     if (url.href === 'file:///foo.js') {
       return ''
