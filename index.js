@@ -1,4 +1,5 @@
 const { lookupPackageScope } = require('bare-module-resolve')
+const { lookupPrebuildsScope } = require('bare-addon-resolve')
 const lex = require('bare-module-lexer')
 const resolve = require('./lib/resolve')
 const errors = require('./lib/errors')
@@ -271,7 +272,9 @@ exports.imports = function * (parentURL, source, imports, artifacts, visited, op
 }
 
 exports.prebuilds = function * (packageURL, artifacts, visited, opts = {}) {
-  const prefix = new URL('prebuilds/', packageURL)
+  const [prefix = null] = lookupPrebuildsScope(packageURL, opts)
+
+  if (prefix === null) return
 
   let yielded = false
 
