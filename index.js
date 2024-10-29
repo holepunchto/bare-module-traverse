@@ -274,7 +274,7 @@ exports.imports = function * (parentURL, source, imports, artifacts, visited, op
 exports.prebuilds = function * (packageURL, artifacts, visited, opts = {}) {
   const [prefix = null] = lookupPrebuildsScope(packageURL, opts)
 
-  if (prefix === null) return
+  if (prefix === null) return false
 
   let yielded = false
 
