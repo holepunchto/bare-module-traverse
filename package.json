@@ -5,7 +5,10 @@
   "exports": {
     ".": "./index.js",
     "./package": "./package.json",
-    "./resolve": "./lib/resolve.js"
+    "./resolve": "./lib/resolve.js",
+    "./resolve/default": "./lib/resolve/default.js",
+    "./resolve/bare": "./lib/resolve/bare.js",
+    "./resolve/node": "./lib/resolve/node.js"
   },
   "files": [
     "index.js",
