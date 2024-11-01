@@ -32,7 +32,13 @@ module.exports = exports = function traverse (entry, opts, readModule, listPrefi
           if (value.module) {
             next = generator.next(readModule(value.module))
           } else if (value.prefix) {
-            next = generator.next(listPrefix(value.prefix))
+            const result = []
+
+            for (const url of listPrefix(value.prefix)) {
+              result.push(url)
+            }
+
+            next = generator.next(result)
           } else {
             if (value.children) queue.push(value.children)
             else yield value.dependency
@@ -61,7 +67,13 @@ module.exports = exports = function traverse (entry, opts, readModule, listPrefi
           if (value.module) {
             next = generator.next(await readModule(value.module))
           } else if (value.prefix) {
-            next = generator.next(await listPrefix(value.prefix))
+            const result = []
+
+            for await (const url of listPrefix(value.prefix)) {
+              result.push(url)
+            }
+
+            next = generator.next(result)
           } else {
             if (value.children) queue.push(value.children)
             else yield value.dependency

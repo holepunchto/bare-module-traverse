@@ -17,8 +17,8 @@ function readModule (url) {
   // Read `url` if it exists, otherwise `null`
 }
 
-function listPrefix (url) {
-  // Return a list of URLs that have `url` as a prefix. The list may be empty.
+function * listPrefix (url) {
+  // Yield URLs that have `url` as a prefix. The list may be empty.
 }
 
 for (const dependency of traverse(new URL('file:///directory/file.js'), readModule, listPrefix)) {
@@ -35,8 +35,8 @@ async function readModule (url) {
   // Read `url` if it exists, otherwise `null`
 }
 
-async function listPrefix (url) {
-  // Return a list of URLs that have `url` as a prefix. The list may be empty.
+async function * listPrefix (url) {
+  // Yield URLs that have `url` as a prefix. The list may be empty.
 }
 
 for await (const dependency of traverse(new URL('file:///directory/file.js'), readModule, listPrefix)) {
@@ -48,7 +48,7 @@ for await (const dependency of traverse(new URL('file:///directory/file.js'), re
 
 #### `const dependencies = traverse(url[, options], readModule[, listPrefix])`
 
-Traverse the module graph rooted at `url`, which must be a WHATWG `URL` instance. `readModule` is called with a `URL` instance for every module to be read and must either return the module source, if it exists, or `null`. `listPrefix` is called with a `URL` instance of every prefix to be listed and must return a list of `URL` instances that have the specified `URL` as a prefix. If not provided, prefixes won't be traversed. If one or both of `readModule` or `listPrefix` returns a promise, synchronous iteration is not supported.
+Traverse the module graph rooted at `url`, which must be a WHATWG `URL` instance. `readModule` is called with a `URL` instance for every module to be read and must either return the module source, if it exists, or `null`. `listPrefix` is called with a `URL` instance of every prefix to be listed and must return a list of `URL` instances that have the specified `URL` as a prefix. If not provided, prefixes won't be traversed. If `readModule` returns a promise or `listPrefix` returns a promise generator, synchronous iteration is not supported.
 
 Options include:
 
@@ -76,7 +76,7 @@ Synchronously iterate the module graph. Each yielded dependency has the followin
 
 #### `for await (const dependency of dependencies)`
 
-Asynchronously iterate the module graph. If one or both of `readModule` or `listPrefix` returns promises, these will be awaited. The same comments as `for (const dependency of dependencies)` apply.
+Asynchronously iterate the module graph. If `readModule` returns a promise or `listPrefix` returns a promise generator, these will be awaited. The same comments as `for (const dependency of dependencies)` apply.
 
 ### Resolution
 
