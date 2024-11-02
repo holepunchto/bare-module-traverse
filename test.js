@@ -219,6 +219,76 @@ test('require.addon', (t) => {
   ])
 })
 
+test('require.addon, addon missing', (t) => {
+  function readModule (url) {
+    if (url.href === 'file:///foo.js') {
+      return 'const bar = require.addon(\'.\')'
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    return null
+  }
+
+  try {
+    expand(traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule))
+    t.fail()
+  } catch (err) {
+    t.comment(err.message)
+  }
+})
+
+test('require.addon, default specifier', (t) => {
+  function readModule (url) {
+    if (url.href === 'file:///foo.js') {
+      return 'const bar = require.addon()'
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    if (url.href === 'file:///prebuilds/host/foo.bare') {
+      return '<native code>'
+    }
+
+    return null
+  }
+
+  const result = expand(traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule))
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.js'),
+      source: 'const bar = require.addon()',
+      imports: {
+        '#package': 'file:///package.json',
+        '.': {
+          addon: 'file:///prebuilds/host/foo.bare'
+        }
+      }
+    },
+    {
+      url: new URL('file:///prebuilds/host/foo.bare'),
+      source: '<native code>',
+      imports: {
+        '#package': 'file:///package.json'
+      }
+    },
+    {
+      url: new URL('file:///package.json'),
+      source: '{ "name": "foo" }',
+      imports: {}
+    }
+  ])
+
+  t.alike(result.return.addons, [
+    new URL('file:///prebuilds/host/foo.bare')
+  ])
+})
+
 test('require.asset', (t) => {
   function readModule (url) {
     if (url.href === 'file:///foo.js') {

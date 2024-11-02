@@ -238,6 +238,15 @@ exports.imports = function * (parentURL, source, imports, artifacts, visited, op
 
     let next = resolver.next()
     let resolved = false
+    let specifier = entry.specifier
+    let key = 'default'
+
+    if (entry.type & lex.constants.ADDON) {
+      specifier = specifier || '.'
+      key = 'addon'
+    } else if (entry.type & lex.constants.ASSET) {
+      key = 'asset'
+    }
 
     while (next.done !== true) {
       const value = next.value
@@ -252,17 +261,10 @@ exports.imports = function * (parentURL, source, imports, artifacts, visited, op
         const source = yield { module: url }
 
         if (source !== null) {
-          let key = 'default'
+          if (key === 'addon') addURL(artifacts.addons, url)
+          else if (key === 'asset') addURL(artifacts.assets, url)
 
-          if (entry.type & lex.constants.ADDON) {
-            key = 'addon'
-            addURL(artifacts.addons, url)
-          } else if (entry.type & lex.constants.ASSET) {
-            key = 'asset'
-            addURL(artifacts.assets, url)
-          }
-
-          imports[entry.specifier] = { [key]: url.href, ...imports[entry.specifier] }
+          imports[specifier] = { [key]: url.href, ...imports[specifier] }
 
           yield { children: exports.module(url, source, artifacts, visited, opts) }
 
@@ -276,7 +278,14 @@ exports.imports = function * (parentURL, source, imports, artifacts, visited, op
     }
 
     if (!resolved) {
-      throw errors.MODULE_NOT_FOUND(`Cannot find module '${entry.specifier}' imported from '${parentURL.href}'`)
+      switch (key) {
+        case 'addon':
+          throw errors.ADDON_NOT_FOUND(`Cannot find addon '${specifier}' imported from '${parentURL.href}'`)
+        case 'asset':
+          throw errors.ASSET_NOT_FOUND(`Cannot find asset '${specifier}' imported from '${parentURL.href}'`)
+        default:
+          throw errors.MODULE_NOT_FOUND(`Cannot find module '${specifier}' imported from '${parentURL.href}'`)
+      }
     }
   }
 
