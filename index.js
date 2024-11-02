@@ -229,7 +229,7 @@ exports.preresolved = function * (url, source, resolutions, artifacts, visited, 
 }
 
 exports.imports = function * (parentURL, source, imports, artifacts, visited, opts = {}) {
-  const { resolve = exports.resolve.default } = opts
+  const { resolve = exports.resolve.default, builtinProtocol = 'builtin:', linkedProtocol = 'linked:' } = opts
 
   let yielded = false
 
@@ -252,12 +252,21 @@ exports.imports = function * (parentURL, source, imports, artifacts, visited, op
       const value = next.value
 
       if (value.package) {
-        const url = value.package
-        const source = yield { module: url }
-
-        next = resolver.next(JSON.parse(source))
+        next = resolver.next(JSON.parse(yield { module: value.package }))
       } else {
         const url = value.resolution
+
+        if (url.protocol === builtinProtocol || url.protocol === linkedProtocol) {
+          if (key === 'addon') addURL(artifacts.addons, url)
+          else if (key === 'asset') addURL(artifacts.assets, url)
+
+          imports[specifier] = { [key]: url.href, ...imports[specifier] }
+
+          resolved = yielded = true
+
+          break
+        }
+
         const source = yield { module: url }
 
         if (source !== null) {

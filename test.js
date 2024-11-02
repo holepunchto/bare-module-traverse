@@ -289,6 +289,82 @@ test('require.addon, default specifier', (t) => {
   ])
 })
 
+test('require.addon, builtin', (t) => {
+  function readModule (url) {
+    if (url.href === 'file:///foo.js') {
+      return 'const bar = require.addon(\'.\')'
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    return null
+  }
+
+  const result = expand(traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'], builtins: ['foo'] }, readModule))
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.js'),
+      source: 'const bar = require.addon(\'.\')',
+      imports: {
+        '#package': 'file:///package.json',
+        '.': {
+          addon: 'builtin:foo'
+        }
+      }
+    },
+    {
+      url: new URL('file:///package.json'),
+      source: '{ "name": "foo" }',
+      imports: {}
+    }
+  ])
+
+  t.alike(result.return.addons, [
+    new URL('builtin:foo')
+  ])
+})
+
+test('require.addon, linked', (t) => {
+  function readModule (url) {
+    if (url.href === 'file:///foo.js') {
+      return 'const bar = require.addon(\'.\')'
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    return null
+  }
+
+  const result = expand(traverse(new URL('file:///foo.js'), { host: 'darwin-arm64', extensions: ['.bare'] }, readModule))
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.js'),
+      source: 'const bar = require.addon(\'.\')',
+      imports: {
+        '#package': 'file:///package.json',
+        '.': {
+          addon: 'linked:libfoo.dylib'
+        }
+      }
+    },
+    {
+      url: new URL('file:///package.json'),
+      source: '{ "name": "foo" }',
+      imports: {}
+    }
+  ])
+
+  t.alike(result.return.addons, [
+    new URL('linked:libfoo.dylib')
+  ])
+})
+
 test('require.asset', (t) => {
   function readModule (url) {
     if (url.href === 'file:///foo.js') {
