@@ -88,9 +88,7 @@ module.exports = exports = function traverse (entry, opts, readModule, listPrefi
   }
 }
 
-function defaultListPrefix () {
-  return []
-}
+function * defaultListPrefix () {}
 
 function addURL (array, url) {
   let lo = 0
