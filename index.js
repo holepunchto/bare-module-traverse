@@ -162,6 +162,8 @@ exports.module = function * (url, source, artifacts, visited, opts = {}) {
       imports['#package'] = packageURL.href
 
       yield { children: exports.package(packageURL, source, artifacts, visited, opts) }
+
+      break
     }
   }
 
