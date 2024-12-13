@@ -61,7 +61,7 @@ Traverse the module graph rooted at `url`, which must be a WHATWG `URL` instance
 Options include:
 
 ```js
-{
+options = {
   resolve: resolve.default
 }
 ```
@@ -73,7 +73,7 @@ Options supported by <https://github.com/holepunchto/bare-module-resolve> and <h
 Synchronously iterate the module graph. Each yielded dependency has the following shape:
 
 ```js
-{
+dependency = {
   url: URL,
   source: 'string' | Buffer, // Source as returned by `readModule()`
   imports: {
