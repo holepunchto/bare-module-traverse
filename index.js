@@ -1,4 +1,4 @@
-const { lookupPackageScope } = require('bare-module-resolve')
+const { lookupPackageScope, conditionMatches } = require('bare-module-resolve')
 const { lookupPrebuildsScope } = require('bare-addon-resolve')
 const lex = require('bare-module-lexer')
 const resolve = require('./lib/resolve')
@@ -332,20 +332,9 @@ exports.imports = function* (
     }
 
     if (!resolved) {
-      switch (key) {
-        case 'addon':
-          throw errors.ADDON_NOT_FOUND(
-            `Cannot find addon '${specifier}' imported from '${parentURL.href}'`
-          )
-        case 'asset':
-          throw errors.ASSET_NOT_FOUND(
-            `Cannot find asset '${specifier}' imported from '${parentURL.href}'`
-          )
-        default:
-          throw errors.MODULE_NOT_FOUND(
-            `Cannot find module '${specifier}' imported from '${parentURL.href}'`
-          )
-      }
+      throw errors.ADDON_NOT_FOUND(
+        `Cannot find ${key === 'default' ? 'module' : key} '${specifier}' imported from '${parentURL.href}'`
+      )
     }
   }
 
@@ -353,22 +342,40 @@ exports.imports = function* (
 }
 
 exports.prebuilds = function* (packageURL, artifacts, visited, opts = {}) {
-  const [prefix = null] = lookupPrebuildsScope(packageURL, opts)
+  const {
+    host = null, // Shorthand for single host resolution
+    hosts = host !== null ? [host] : [],
+    matchedConditions = []
+  } = opts
 
-  if (prefix === null) return false
+  const [prebuildsURL = null] = lookupPrebuildsScope(packageURL, opts)
+
+  if (prebuildsURL === null) return false
 
   let yielded = false
 
-  for (const url of yield { prefix }) {
-    const source = yield { module: url }
+  for (const host of hosts) {
+    const prefix = new URL(host + '/', prebuildsURL)
 
-    if (source !== null) {
-      addURL(artifacts.addons, url)
+    const conditions = host.split('-')
 
-      yield { children: exports.module(url, source, artifacts, visited, opts) }
+    matchedConditions.push(...conditions)
 
-      yielded = true
+    for (const url of yield { prefix }) {
+      const source = yield { module: url }
+
+      if (source !== null) {
+        addURL(artifacts.addons, url)
+
+        yield {
+          children: exports.module(url, source, artifacts, visited, opts)
+        }
+
+        yielded = true
+      }
     }
+
+    for (const _ of conditions) matchedConditions.pop()
   }
 
   return yielded
@@ -400,8 +407,13 @@ exports.assets = function* (
   return yielded
 }
 
-exports.patternMatches = function* (pattern, parentURL, matches, opts = {}) {
-  const { conditions = [] } = opts
+exports.patternMatches = function* patternMatches(
+  pattern,
+  parentURL,
+  matches,
+  opts = {}
+) {
+  const { conditions = [], matchedConditions = [] } = opts
 
   if (typeof pattern === 'string') {
     let patternNegate = false
@@ -437,23 +449,31 @@ exports.patternMatches = function* (pattern, parentURL, matches, opts = {}) {
     }
   } else if (Array.isArray(pattern)) {
     for (const patternValue of pattern) {
-      yield* exports.patternMatches(patternValue, parentURL, matches, opts)
+      yield* patternMatches(patternValue, parentURL, matches, opts)
     }
   } else if (typeof pattern === 'object' && pattern !== null) {
-    const keys = Object.keys(pattern)
+    let yielded = false
 
-    for (const p of keys) {
-      if (p === 'default' || conditions.includes(p)) {
-        const patternValue = pattern[p]
+    for (const [condition, patternValue, subset] of conditionMatches(
+      pattern,
+      conditions,
+      opts
+    )) {
+      matchedConditions.push(condition)
 
-        return yield* exports.patternMatches(
-          patternValue,
-          parentURL,
-          matches,
-          opts
-        )
+      if (
+        yield* patternMatches(patternValue, parentURL, matches, {
+          ...opts,
+          conditions: subset
+        })
+      ) {
+        yielded = true
       }
+
+      matchedConditions.pop()
     }
+
+    if (yielded) return true
   }
 
   return matches
