@@ -10,36 +10,44 @@ npm i bare-module-traverse
 
 For synchronous traversal:
 
-``` js
+```js
 const traverse = require('bare-module-traverse')
 
-function readModule (url) {
+function readModule(url) {
   // Read `url` if it exists, otherwise `null`
 }
 
-function * listPrefix (url) {
+function* listPrefix(url) {
   // Yield URLs that have `url` as a prefix. The list may be empty.
 }
 
-for (const dependency of traverse(new URL('file:///directory/file.js'), readModule, listPrefix)) {
+for (const dependency of traverse(
+  new URL('file:///directory/file.js'),
+  readModule,
+  listPrefix
+)) {
   console.log(dependency)
 }
 ```
 
 For asynchronous traversal:
 
-``` js
+```js
 const traverse = require('bare-module-traverse')
 
-async function readModule (url) {
+async function readModule(url) {
   // Read `url` if it exists, otherwise `null`
 }
 
-async function * listPrefix (url) {
+async function* listPrefix(url) {
   // Yield URLs that have `url` as a prefix. The list may be empty.
 }
 
-for await (const dependency of traverse(new URL('file:///directory/file.js'), readModule, listPrefix)) {
+for await (const dependency of traverse(
+  new URL('file:///directory/file.js'),
+  readModule,
+  listPrefix
+)) {
   console.log(dependency)
 }
 ```

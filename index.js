@@ -4,7 +4,12 @@ const lex = require('bare-module-lexer')
 const resolve = require('./lib/resolve')
 const errors = require('./lib/errors')
 
-module.exports = exports = function traverse (entry, opts, readModule, listPrefix) {
+module.exports = exports = function traverse(
+  entry,
+  opts,
+  readModule,
+  listPrefix
+) {
   if (typeof opts === 'function') {
     listPrefix = readModule
     readModule = opts
@@ -16,7 +21,7 @@ module.exports = exports = function traverse (entry, opts, readModule, listPrefi
   }
 
   return {
-    * [Symbol.iterator] () {
+    *[Symbol.iterator]() {
       const artifacts = { addons: [], assets: [] }
 
       const queue = [exports.module(entry, null, artifacts, new Set(), opts)]
@@ -51,7 +56,7 @@ module.exports = exports = function traverse (entry, opts, readModule, listPrefi
       return artifacts
     },
 
-    async * [Symbol.asyncIterator] () {
+    async *[Symbol.asyncIterator]() {
       const artifacts = { addons: [], assets: [] }
 
       const queue = [exports.module(entry, null, artifacts, new Set(), opts)]
@@ -88,9 +93,9 @@ module.exports = exports = function traverse (entry, opts, readModule, listPrefi
   }
 }
 
-function * defaultListPrefix () {}
+function* defaultListPrefix() {}
 
-function addURL (array, url) {
+function addURL(array, url) {
   let lo = 0
   let hi = array.length - 1
 
@@ -110,7 +115,7 @@ function addURL (array, url) {
   array.splice(lo, 0, url)
 }
 
-function removeURL (array, url) {
+function removeURL(array, url) {
   let lo = 0
   let hi = array.length - 1
 
@@ -132,7 +137,7 @@ function removeURL (array, url) {
 
 exports.resolve = resolve
 
-exports.module = function * (url, source, artifacts, visited, opts = {}) {
+exports.module = function* (url, source, artifacts, visited, opts = {}) {
   const { resolutions = null } = opts
 
   if (visited.has(url.href)) return false
@@ -148,7 +153,16 @@ exports.module = function * (url, source, artifacts, visited, opts = {}) {
   visited.add(url.href)
 
   if (resolutions) {
-    if (yield * exports.preresolved(url, source, resolutions, artifacts, visited, opts)) {
+    if (
+      yield* exports.preresolved(
+        url,
+        source,
+        resolutions,
+        artifacts,
+        visited,
+        opts
+      )
+    ) {
       return true
     }
   }
@@ -161,20 +175,22 @@ exports.module = function * (url, source, artifacts, visited, opts = {}) {
     if (source !== null) {
       imports['#package'] = packageURL.href
 
-      yield { children: exports.package(packageURL, source, artifacts, visited, opts) }
+      yield {
+        children: exports.package(packageURL, source, artifacts, visited, opts)
+      }
 
       break
     }
   }
 
-  yield * exports.imports(url, source, imports, artifacts, visited, opts)
+  yield* exports.imports(url, source, imports, artifacts, visited, opts)
 
   yield { dependency: { url, source, imports: compressImportsMap(imports) } }
 
   return true
 }
 
-exports.package = function * (url, source, artifacts, visited, opts = {}) {
+exports.package = function* (url, source, artifacts, visited, opts = {}) {
   if (visited.has(url.href)) return false
 
   visited.add(url.href)
@@ -189,7 +205,9 @@ exports.package = function * (url, source, artifacts, visited, opts = {}) {
     }
 
     if (info.assets) {
-      yield { children: exports.assets(info.assets, url, artifacts, visited, opts) }
+      yield {
+        children: exports.assets(info.assets, url, artifacts, visited, opts)
+      }
     }
 
     return true
@@ -198,7 +216,14 @@ exports.package = function * (url, source, artifacts, visited, opts = {}) {
   return false
 }
 
-exports.preresolved = function * (url, source, resolutions, artifacts, visited, opts = {}) {
+exports.preresolved = function* (
+  url,
+  source,
+  resolutions,
+  artifacts,
+  visited,
+  opts = {}
+) {
   const imports = resolutions[url.href]
 
   if (typeof imports !== 'object' || imports === null) return false
@@ -213,9 +238,13 @@ exports.preresolved = function * (url, source, resolutions, artifacts, visited, 
         const url = new URL(entry)
 
         if (specifier === '#package') {
-          yield { children: exports.package(url, null, artifacts, visited, opts) }
+          yield {
+            children: exports.package(url, null, artifacts, visited, opts)
+          }
         } else {
-          yield { children: exports.module(url, null, artifacts, visited, opts) }
+          yield {
+            children: exports.module(url, null, artifacts, visited, opts)
+          }
         }
       } else {
         stack.unshift(...Object.values(entry))
@@ -228,8 +257,19 @@ exports.preresolved = function * (url, source, resolutions, artifacts, visited, 
   return true
 }
 
-exports.imports = function * (parentURL, source, imports, artifacts, visited, opts = {}) {
-  const { resolve = exports.resolve.default, builtinProtocol = 'builtin:', linkedProtocol = 'linked:' } = opts
+exports.imports = function* (
+  parentURL,
+  source,
+  imports,
+  artifacts,
+  visited,
+  opts = {}
+) {
+  const {
+    resolve = exports.resolve.default,
+    builtinProtocol = 'builtin:',
+    linkedProtocol = 'linked:'
+  } = opts
 
   let yielded = false
 
@@ -256,7 +296,10 @@ exports.imports = function * (parentURL, source, imports, artifacts, visited, op
       } else {
         const url = value.resolution
 
-        if (url.protocol === builtinProtocol || url.protocol === linkedProtocol) {
+        if (
+          url.protocol === builtinProtocol ||
+          url.protocol === linkedProtocol
+        ) {
           if (key === 'addon') addURL(artifacts.addons, url)
           else if (key === 'asset') addURL(artifacts.assets, url)
 
@@ -275,7 +318,9 @@ exports.imports = function * (parentURL, source, imports, artifacts, visited, op
 
           imports[specifier] = { [key]: url.href, ...imports[specifier] }
 
-          yield { children: exports.module(url, source, artifacts, visited, opts) }
+          yield {
+            children: exports.module(url, source, artifacts, visited, opts)
+          }
 
           resolved = yielded = true
 
@@ -289,11 +334,17 @@ exports.imports = function * (parentURL, source, imports, artifacts, visited, op
     if (!resolved) {
       switch (key) {
         case 'addon':
-          throw errors.ADDON_NOT_FOUND(`Cannot find addon '${specifier}' imported from '${parentURL.href}'`)
+          throw errors.ADDON_NOT_FOUND(
+            `Cannot find addon '${specifier}' imported from '${parentURL.href}'`
+          )
         case 'asset':
-          throw errors.ASSET_NOT_FOUND(`Cannot find asset '${specifier}' imported from '${parentURL.href}'`)
+          throw errors.ASSET_NOT_FOUND(
+            `Cannot find asset '${specifier}' imported from '${parentURL.href}'`
+          )
         default:
-          throw errors.MODULE_NOT_FOUND(`Cannot find module '${specifier}' imported from '${parentURL.href}'`)
+          throw errors.MODULE_NOT_FOUND(
+            `Cannot find module '${specifier}' imported from '${parentURL.href}'`
+          )
       }
     }
   }
@@ -301,7 +352,7 @@ exports.imports = function * (parentURL, source, imports, artifacts, visited, op
   return yielded
 }
 
-exports.prebuilds = function * (packageURL, artifacts, visited, opts = {}) {
+exports.prebuilds = function* (packageURL, artifacts, visited, opts = {}) {
   const [prefix = null] = lookupPrebuildsScope(packageURL, opts)
 
   if (prefix === null) return false
@@ -323,8 +374,14 @@ exports.prebuilds = function * (packageURL, artifacts, visited, opts = {}) {
   return yielded
 }
 
-exports.assets = function * (patterns, parentURL, artifacts, visited, opts = {}) {
-  const matches = yield * exports.patternMatches(patterns, parentURL, [], opts)
+exports.assets = function* (
+  patterns,
+  parentURL,
+  artifacts,
+  visited,
+  opts = {}
+) {
+  const matches = yield* exports.patternMatches(patterns, parentURL, [], opts)
 
   let yielded = false
 
@@ -343,7 +400,7 @@ exports.assets = function * (patterns, parentURL, artifacts, visited, opts = {})
   return yielded
 }
 
-exports.patternMatches = function * (pattern, parentURL, matches, opts = {}) {
+exports.patternMatches = function* (pattern, parentURL, matches, opts = {}) {
   const { conditions = [] } = opts
 
   if (typeof pattern === 'string') {
@@ -380,7 +437,7 @@ exports.patternMatches = function * (pattern, parentURL, matches, opts = {}) {
     }
   } else if (Array.isArray(pattern)) {
     for (const patternValue of pattern) {
-      yield * exports.patternMatches(patternValue, parentURL, matches, opts)
+      yield* exports.patternMatches(patternValue, parentURL, matches, opts)
     }
   } else if (typeof pattern === 'object' && pattern !== null) {
     const keys = Object.keys(pattern)
@@ -389,7 +446,12 @@ exports.patternMatches = function * (pattern, parentURL, matches, opts = {}) {
       if (p === 'default' || conditions.includes(p)) {
         const patternValue = pattern[p]
 
-        return yield * exports.patternMatches(patternValue, parentURL, matches, opts)
+        return yield* exports.patternMatches(
+          patternValue,
+          parentURL,
+          matches,
+          opts
+        )
       }
     }
   }
@@ -397,7 +459,7 @@ exports.patternMatches = function * (pattern, parentURL, matches, opts = {}) {
   return matches
 }
 
-function compressImportsMap (imports) {
+function compressImportsMap(imports) {
   const entries = []
 
   for (const entry of Object.entries(imports)) {
@@ -409,7 +471,7 @@ function compressImportsMap (imports) {
   return Object.fromEntries(entries)
 }
 
-function compressImportsMapEntry (resolved) {
+function compressImportsMapEntry(resolved) {
   if (typeof resolved === 'string') return resolved
 
   let entries = []
@@ -423,7 +485,9 @@ function compressImportsMapEntry (resolved) {
     if (entry[0] === 'default') primary = entry[1]
   }
 
-  entries = entries.filter(([condition, resolved]) => condition === 'default' || resolved !== primary)
+  entries = entries.filter(
+    ([condition, resolved]) => condition === 'default' || resolved !== primary
+  )
 
   if (entries.length === 1) {
     const [condition, resolved] = entries[0]

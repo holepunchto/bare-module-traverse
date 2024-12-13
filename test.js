@@ -4,13 +4,13 @@ const traverse = require('.')
 const host = 'host'
 
 test('require', (t) => {
-  function readModule (url) {
+  function readModule(url) {
     if (url.href === 'file:///foo.js') {
-      return 'const bar = require(\'./bar.js\')'
+      return "const bar = require('./bar.js')"
     }
 
     if (url.href === 'file:///bar.js') {
-      return 'const baz = require(\'./baz.js\')'
+      return "const baz = require('./baz.js')"
     }
 
     if (url.href === 'file:///baz.js') {
@@ -25,14 +25,14 @@ test('require', (t) => {
   t.alike(result.values, [
     {
       url: new URL('file:///foo.js'),
-      source: 'const bar = require(\'./bar.js\')',
+      source: "const bar = require('./bar.js')",
       imports: {
         './bar.js': 'file:///bar.js'
       }
     },
     {
       url: new URL('file:///bar.js'),
-      source: 'const baz = require(\'./baz.js\')',
+      source: "const baz = require('./baz.js')",
       imports: {
         './baz.js': 'file:///baz.js'
       }
@@ -46,13 +46,13 @@ test('require', (t) => {
 })
 
 test('import', (t) => {
-  function readModule (url) {
+  function readModule(url) {
     if (url.href === 'file:///foo.js') {
-      return 'import \'./bar.js\''
+      return "import './bar.js'"
     }
 
     if (url.href === 'file:///bar.js') {
-      return 'import \'./baz.js\''
+      return "import './baz.js'"
     }
 
     if (url.href === 'file:///baz.js') {
@@ -67,14 +67,14 @@ test('import', (t) => {
   t.alike(result.values, [
     {
       url: new URL('file:///foo.js'),
-      source: 'import \'./bar.js\'',
+      source: "import './bar.js'",
       imports: {
         './bar.js': 'file:///bar.js'
       }
     },
     {
       url: new URL('file:///bar.js'),
-      source: 'import \'./baz.js\'',
+      source: "import './baz.js'",
       imports: {
         './baz.js': 'file:///baz.js'
       }
@@ -88,13 +88,13 @@ test('import', (t) => {
 })
 
 test('cyclic require', (t) => {
-  function readModule (url) {
+  function readModule(url) {
     if (url.href === 'file:///foo.js') {
-      return 'require(\'./bar.js\')'
+      return "require('./bar.js')"
     }
 
     if (url.href === 'file:///bar.js') {
-      return 'require(\'./foo.js\')'
+      return "require('./foo.js')"
     }
 
     return null
@@ -105,14 +105,14 @@ test('cyclic require', (t) => {
   t.alike(result.values, [
     {
       url: new URL('file:///foo.js'),
-      source: 'require(\'./bar.js\')',
+      source: "require('./bar.js')",
       imports: {
         './bar.js': 'file:///bar.js'
       }
     },
     {
       url: new URL('file:///bar.js'),
-      source: 'require(\'./foo.js\')',
+      source: "require('./foo.js')",
       imports: {
         './foo.js': 'file:///foo.js'
       }
@@ -121,13 +121,13 @@ test('cyclic require', (t) => {
 })
 
 test('cyclic import', (t) => {
-  function readModule (url) {
+  function readModule(url) {
     if (url.href === 'file:///foo.js') {
-      return 'import \'./bar.js\''
+      return "import './bar.js'"
     }
 
     if (url.href === 'file:///bar.js') {
-      return 'import \'./foo.js\''
+      return "import './foo.js'"
     }
 
     return null
@@ -138,14 +138,14 @@ test('cyclic import', (t) => {
   t.alike(result.values, [
     {
       url: new URL('file:///foo.js'),
-      source: 'import \'./bar.js\'',
+      source: "import './bar.js'",
       imports: {
         './bar.js': 'file:///bar.js'
       }
     },
     {
       url: new URL('file:///bar.js'),
-      source: 'import \'./foo.js\'',
+      source: "import './foo.js'",
       imports: {
         './foo.js': 'file:///foo.js'
       }
@@ -154,9 +154,9 @@ test('cyclic import', (t) => {
 })
 
 test('require, module missing', (t) => {
-  function readModule (url) {
+  function readModule(url) {
     if (url.href === 'file:///foo.js') {
-      return 'const bar = require(\'./bar.js\')'
+      return "const bar = require('./bar.js')"
     }
 
     return null
@@ -171,9 +171,9 @@ test('require, module missing', (t) => {
 })
 
 test('require.addon', (t) => {
-  function readModule (url) {
+  function readModule(url) {
     if (url.href === 'file:///foo.js') {
-      return 'const bar = require.addon(\'.\')'
+      return "const bar = require.addon('.')"
     }
 
     if (url.href === 'file:///package.json') {
@@ -187,12 +187,18 @@ test('require.addon', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule))
+  const result = expand(
+    traverse(
+      new URL('file:///foo.js'),
+      { host, extensions: ['.bare'] },
+      readModule
+    )
+  )
 
   t.alike(result.values, [
     {
       url: new URL('file:///foo.js'),
-      source: 'const bar = require.addon(\'.\')',
+      source: "const bar = require.addon('.')",
       imports: {
         '#package': 'file:///package.json',
         '.': {
@@ -214,15 +220,13 @@ test('require.addon', (t) => {
     }
   ])
 
-  t.alike(result.return.addons, [
-    new URL('file:///prebuilds/host/foo.bare')
-  ])
+  t.alike(result.return.addons, [new URL('file:///prebuilds/host/foo.bare')])
 })
 
 test('require.addon, addon missing', (t) => {
-  function readModule (url) {
+  function readModule(url) {
     if (url.href === 'file:///foo.js') {
-      return 'const bar = require.addon(\'.\')'
+      return "const bar = require.addon('.')"
     }
 
     if (url.href === 'file:///package.json') {
@@ -233,7 +237,13 @@ test('require.addon, addon missing', (t) => {
   }
 
   try {
-    expand(traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule))
+    expand(
+      traverse(
+        new URL('file:///foo.js'),
+        { host, extensions: ['.bare'] },
+        readModule
+      )
+    )
     t.fail()
   } catch (err) {
     t.comment(err.message)
@@ -241,7 +251,7 @@ test('require.addon, addon missing', (t) => {
 })
 
 test('require.addon, default specifier', (t) => {
-  function readModule (url) {
+  function readModule(url) {
     if (url.href === 'file:///foo.js') {
       return 'const bar = require.addon()'
     }
@@ -257,7 +267,13 @@ test('require.addon, default specifier', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule))
+  const result = expand(
+    traverse(
+      new URL('file:///foo.js'),
+      { host, extensions: ['.bare'] },
+      readModule
+    )
+  )
 
   t.alike(result.values, [
     {
@@ -284,15 +300,13 @@ test('require.addon, default specifier', (t) => {
     }
   ])
 
-  t.alike(result.return.addons, [
-    new URL('file:///prebuilds/host/foo.bare')
-  ])
+  t.alike(result.return.addons, [new URL('file:///prebuilds/host/foo.bare')])
 })
 
 test('require.addon, builtin', (t) => {
-  function readModule (url) {
+  function readModule(url) {
     if (url.href === 'file:///foo.js') {
-      return 'const bar = require.addon(\'.\')'
+      return "const bar = require.addon('.')"
     }
 
     if (url.href === 'file:///package.json') {
@@ -302,12 +316,18 @@ test('require.addon, builtin', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'], builtins: ['foo'] }, readModule))
+  const result = expand(
+    traverse(
+      new URL('file:///foo.js'),
+      { host, extensions: ['.bare'], builtins: ['foo'] },
+      readModule
+    )
+  )
 
   t.alike(result.values, [
     {
       url: new URL('file:///foo.js'),
-      source: 'const bar = require.addon(\'.\')',
+      source: "const bar = require.addon('.')",
       imports: {
         '#package': 'file:///package.json',
         '.': {
@@ -322,15 +342,13 @@ test('require.addon, builtin', (t) => {
     }
   ])
 
-  t.alike(result.return.addons, [
-    new URL('builtin:foo')
-  ])
+  t.alike(result.return.addons, [new URL('builtin:foo')])
 })
 
 test('require.addon, linked', (t) => {
-  function readModule (url) {
+  function readModule(url) {
     if (url.href === 'file:///foo.js') {
-      return 'const bar = require.addon(\'.\')'
+      return "const bar = require.addon('.')"
     }
 
     if (url.href === 'file:///package.json') {
@@ -340,12 +358,18 @@ test('require.addon, linked', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), { host: 'darwin-arm64', extensions: ['.bare'] }, readModule))
+  const result = expand(
+    traverse(
+      new URL('file:///foo.js'),
+      { host: 'darwin-arm64', extensions: ['.bare'] },
+      readModule
+    )
+  )
 
   t.alike(result.values, [
     {
       url: new URL('file:///foo.js'),
-      source: 'const bar = require.addon(\'.\')',
+      source: "const bar = require.addon('.')",
       imports: {
         '#package': 'file:///package.json',
         '.': {
@@ -360,15 +384,13 @@ test('require.addon, linked', (t) => {
     }
   ])
 
-  t.alike(result.return.addons, [
-    new URL('linked:libfoo.dylib')
-  ])
+  t.alike(result.return.addons, [new URL('linked:libfoo.dylib')])
 })
 
 test('require.asset', (t) => {
-  function readModule (url) {
+  function readModule(url) {
     if (url.href === 'file:///foo.js') {
-      return 'const bar = require.asset(\'./bar.txt\')'
+      return "const bar = require.asset('./bar.txt')"
     }
 
     if (url.href === 'file:///bar.txt') {
@@ -383,7 +405,7 @@ test('require.asset', (t) => {
   t.alike(result.values, [
     {
       url: new URL('file:///foo.js'),
-      source: 'const bar = require.asset(\'./bar.txt\')',
+      source: "const bar = require.asset('./bar.txt')",
       imports: {
         './bar.txt': {
           asset: 'file:///bar.txt'
@@ -397,15 +419,13 @@ test('require.asset', (t) => {
     }
   ])
 
-  t.alike(result.return.assets, [
-    new URL('file:///bar.txt')
-  ])
+  t.alike(result.return.assets, [new URL('file:///bar.txt')])
 })
 
 test('require + require.asset', (t) => {
-  function readModule (url) {
+  function readModule(url) {
     if (url.href === 'file:///foo.js') {
-      return 'require(\'./bar.js\'), require.asset(\'./bar.js\')'
+      return "require('./bar.js'), require.asset('./bar.js')"
     }
 
     if (url.href === 'file:///bar.js') {
@@ -420,7 +440,7 @@ test('require + require.asset', (t) => {
   t.alike(result.values, [
     {
       url: new URL('file:///foo.js'),
-      source: 'require(\'./bar.js\'), require.asset(\'./bar.js\')',
+      source: "require('./bar.js'), require.asset('./bar.js')",
       imports: {
         './bar.js': 'file:///bar.js'
       }
@@ -432,13 +452,11 @@ test('require + require.asset', (t) => {
     }
   ])
 
-  t.alike(result.return.assets, [
-    new URL('file:///bar.js')
-  ])
+  t.alike(result.return.assets, [new URL('file:///bar.js')])
 })
 
 test('package.json#addon', (t) => {
-  function readModule (url) {
+  function readModule(url) {
     if (url.href === 'file:///foo.js') {
       return ''
     }
@@ -458,24 +476,27 @@ test('package.json#addon', (t) => {
     return null
   }
 
-  function listPrefix (url) {
+  function listPrefix(url) {
     if (url.href === 'file:///prebuilds/darwin-arm64/') {
-      return [
-        new URL('file:///prebuilds/darwin-arm64/foo.bare')
-      ]
+      return [new URL('file:///prebuilds/darwin-arm64/foo.bare')]
     }
 
     if (url.href === 'file:///prebuilds/linux-arm64/') {
-      return [
-        new URL('file:///prebuilds/linux-arm64/foo.bare')
-      ]
+      return [new URL('file:///prebuilds/linux-arm64/foo.bare')]
     }
 
     return []
   }
 
   {
-    const result = expand(traverse(new URL('file:///foo.js'), { host: 'darwin-arm64' }, readModule, listPrefix))
+    const result = expand(
+      traverse(
+        new URL('file:///foo.js'),
+        { host: 'darwin-arm64' },
+        readModule,
+        listPrefix
+      )
+    )
 
     t.alike(result.values, [
       {
@@ -500,7 +521,14 @@ test('package.json#addon', (t) => {
     ])
   }
   {
-    const result = expand(traverse(new URL('file:///foo.js'), { host: 'linux-arm64' }, readModule, listPrefix))
+    const result = expand(
+      traverse(
+        new URL('file:///foo.js'),
+        { host: 'linux-arm64' },
+        readModule,
+        listPrefix
+      )
+    )
 
     t.alike(result.values, [
       {
@@ -527,7 +555,7 @@ test('package.json#addon', (t) => {
 })
 
 test('package.json#assets', (t) => {
-  function readModule (url) {
+  function readModule(url) {
     if (url.href === 'file:///foo.js') {
       return ''
     }
@@ -543,17 +571,17 @@ test('package.json#assets', (t) => {
     return null
   }
 
-  function listPrefix (url) {
+  function listPrefix(url) {
     if (url.href === 'file:///bar/') {
-      return [
-        new URL('file:///bar/baz.txt')
-      ]
+      return [new URL('file:///bar/baz.txt')]
     }
 
     return []
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule, listPrefix))
+  const result = expand(
+    traverse(new URL('file:///foo.js'), readModule, listPrefix)
+  )
 
   t.alike(result.values, [
     {
@@ -579,7 +607,7 @@ test('package.json#assets', (t) => {
 })
 
 test('package.json#assets, pattern match', (t) => {
-  function readModule (url) {
+  function readModule(url) {
     if (url.href === 'file:///foo.js') {
       return ''
     }
@@ -599,18 +627,17 @@ test('package.json#assets, pattern match', (t) => {
     return null
   }
 
-  function listPrefix (url) {
+  function listPrefix(url) {
     if (url.href === 'file:///bar/') {
-      return [
-        new URL('file:///bar/baz.bin'),
-        new URL('file:///bar/baz.txt')
-      ]
+      return [new URL('file:///bar/baz.bin'), new URL('file:///bar/baz.txt')]
     }
 
     return []
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule, listPrefix))
+  const result = expand(
+    traverse(new URL('file:///foo.js'), readModule, listPrefix)
+  )
 
   t.alike(result.values, [
     {
@@ -636,7 +663,7 @@ test('package.json#assets, pattern match', (t) => {
 })
 
 test('package.json#assets, negate', (t) => {
-  function readModule (url) {
+  function readModule(url) {
     if (url.href === 'file:///foo.js') {
       return ''
     }
@@ -645,31 +672,31 @@ test('package.json#assets, negate', (t) => {
       return '{ "name": "foo", "assets": ["bar/", "!bar/qux.txt"] }'
     }
 
-    if (url.href === 'file:///bar/baz.txt' || url.href === 'file:///bar/qux.txt') {
+    if (
+      url.href === 'file:///bar/baz.txt' ||
+      url.href === 'file:///bar/qux.txt'
+    ) {
       return 'hello world'
     }
 
     return null
   }
 
-  function listPrefix (url) {
+  function listPrefix(url) {
     if (url.href === 'file:///bar/') {
-      return [
-        new URL('file:///bar/baz.txt'),
-        new URL('file:///bar/qux.txt')
-      ]
+      return [new URL('file:///bar/baz.txt'), new URL('file:///bar/qux.txt')]
     }
 
     if (url.href === 'file:///bar/qux.txt') {
-      return [
-        new URL('file:///bar/qux.txt')
-      ]
+      return [new URL('file:///bar/qux.txt')]
     }
 
     return []
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule, listPrefix))
+  const result = expand(
+    traverse(new URL('file:///foo.js'), readModule, listPrefix)
+  )
 
   t.alike(result.values, [
     {
@@ -695,7 +722,7 @@ test('package.json#assets, negate', (t) => {
 })
 
 test('package.json#assets, conditional pattern', (t) => {
-  function readModule (url) {
+  function readModule(url) {
     if (url.href === 'file:///foo.js') {
       return ''
     }
@@ -715,24 +742,27 @@ test('package.json#assets, conditional pattern', (t) => {
     return null
   }
 
-  function listPrefix (url) {
+  function listPrefix(url) {
     if (url.href === 'file:///darwin/') {
-      return [
-        new URL('file:///darwin/baz.txt')
-      ]
+      return [new URL('file:///darwin/baz.txt')]
     }
 
     if (url.href === 'file:///linux/') {
-      return [
-        new URL('file:///linux/baz.txt')
-      ]
+      return [new URL('file:///linux/baz.txt')]
     }
 
     return []
   }
 
   {
-    const result = expand(traverse(new URL('file:///foo.js'), { conditions: ['darwin'] }, readModule, listPrefix))
+    const result = expand(
+      traverse(
+        new URL('file:///foo.js'),
+        { conditions: ['darwin'] },
+        readModule,
+        listPrefix
+      )
+    )
 
     t.alike(result.values, [
       {
@@ -744,7 +774,8 @@ test('package.json#assets, conditional pattern', (t) => {
       },
       {
         url: new URL('file:///package.json'),
-        source: '{ "name": "foo", "assets": [{ "darwin": "darwin/", "linux": "linux/" }] }',
+        source:
+          '{ "name": "foo", "assets": [{ "darwin": "darwin/", "linux": "linux/" }] }',
         imports: {}
       },
       {
@@ -757,7 +788,14 @@ test('package.json#assets, conditional pattern', (t) => {
     ])
   }
   {
-    const result = expand(traverse(new URL('file:///foo.js'), { conditions: ['linux'] }, readModule, listPrefix))
+    const result = expand(
+      traverse(
+        new URL('file:///foo.js'),
+        { conditions: ['linux'] },
+        readModule,
+        listPrefix
+      )
+    )
 
     t.alike(result.values, [
       {
@@ -769,7 +807,8 @@ test('package.json#assets, conditional pattern', (t) => {
       },
       {
         url: new URL('file:///package.json'),
-        source: '{ "name": "foo", "assets": [{ "darwin": "darwin/", "linux": "linux/" }] }',
+        source:
+          '{ "name": "foo", "assets": [{ "darwin": "darwin/", "linux": "linux/" }] }',
         imports: {}
       },
       {
@@ -784,13 +823,13 @@ test('package.json#assets, conditional pattern', (t) => {
 })
 
 test('resolutions map', (t) => {
-  function readModule (url) {
+  function readModule(url) {
     if (url.href === 'file:///foo.js') {
-      return 'const bar = require(\'./bar.js\')'
+      return "const bar = require('./bar.js')"
     }
 
     if (url.href === 'file:///bar.js') {
-      return 'const baz = require(\'./baz.js\')'
+      return "const baz = require('./baz.js')"
     }
 
     if (url.href === 'file:///baz.js') {
@@ -810,19 +849,21 @@ test('resolutions map', (t) => {
     'file:///baz.js': {}
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
+  const result = expand(
+    traverse(new URL('file:///foo.js'), { resolutions }, readModule)
+  )
 
   t.alike(result.values, [
     {
       url: new URL('file:///foo.js'),
-      source: 'const bar = require(\'./bar.js\')',
+      source: "const bar = require('./bar.js')",
       imports: {
         './bar.js': 'file:///bar.js'
       }
     },
     {
       url: new URL('file:///bar.js'),
-      source: 'const baz = require(\'./baz.js\')',
+      source: "const baz = require('./baz.js')",
       imports: {
         './baz.js': 'file:///baz.js'
       }
@@ -836,13 +877,13 @@ test('resolutions map', (t) => {
 })
 
 test('resolutions map, partial', (t) => {
-  function readModule (url) {
+  function readModule(url) {
     if (url.href === 'file:///foo.js') {
-      return 'const bar = require(\'./bar.js\')'
+      return "const bar = require('./bar.js')"
     }
 
     if (url.href === 'file:///bar.js') {
-      return 'const baz = require(\'./baz.js\')'
+      return "const baz = require('./baz.js')"
     }
 
     if (url.href === 'file:///baz.js') {
@@ -859,19 +900,21 @@ test('resolutions map, partial', (t) => {
     'file:///baz.js': {}
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
+  const result = expand(
+    traverse(new URL('file:///foo.js'), { resolutions }, readModule)
+  )
 
   t.alike(result.values, [
     {
       url: new URL('file:///foo.js'),
-      source: 'const bar = require(\'./bar.js\')',
+      source: "const bar = require('./bar.js')",
       imports: {
         './bar.js': 'file:///bar.js'
       }
     },
     {
       url: new URL('file:///bar.js'),
-      source: 'const baz = require(\'./baz.js\')',
+      source: "const baz = require('./baz.js')",
       imports: {
         './baz.js': 'file:///baz.js'
       }
@@ -885,9 +928,9 @@ test('resolutions map, partial', (t) => {
 })
 
 test('resolutions map, module missing', (t) => {
-  function readModule (url) {
+  function readModule(url) {
     if (url.href === 'file:///foo.js') {
-      return 'const bar = require(\'./bar.js\')'
+      return "const bar = require('./bar.js')"
     }
 
     return null
@@ -907,7 +950,7 @@ test('resolutions map, module missing', (t) => {
   }
 })
 
-function expand (iterable) {
+function expand(iterable) {
   const iterator = iterable[Symbol.iterator]()
   const values = []
 
