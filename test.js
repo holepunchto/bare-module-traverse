@@ -201,9 +201,7 @@ test('require.addon', (t) => {
       source: "const bar = require.addon('.')",
       imports: {
         '#package': 'file:///package.json',
-        '.': {
-          addon: 'file:///prebuilds/host/foo.bare'
-        }
+        '.': 'file:///prebuilds/host/foo.bare'
       }
     },
     {
@@ -281,9 +279,7 @@ test('require.addon, default specifier', (t) => {
       source: 'const bar = require.addon()',
       imports: {
         '#package': 'file:///package.json',
-        '.': {
-          addon: 'file:///prebuilds/host/foo.bare'
-        }
+        '.': 'file:///prebuilds/host/foo.bare'
       }
     },
     {
@@ -330,9 +326,7 @@ test('require.addon, builtin', (t) => {
       source: "const bar = require.addon('.')",
       imports: {
         '#package': 'file:///package.json',
-        '.': {
-          addon: 'builtin:foo'
-        }
+        '.': 'builtin:foo'
       }
     },
     {
@@ -372,9 +366,7 @@ test('require.addon, linked', (t) => {
       source: "const bar = require.addon('.')",
       imports: {
         '#package': 'file:///package.json',
-        '.': {
-          addon: 'linked:libfoo.dylib'
-        }
+        '.': 'linked:libfoo.dylib'
       }
     },
     {
@@ -385,6 +377,206 @@ test('require.addon, linked', (t) => {
   ])
 
   t.alike(result.return.addons, [new URL('linked:libfoo.dylib')])
+})
+
+test('require.addon, hosts list', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "module.exports = require.addon('.')"
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    if (url.href === 'file:///prebuilds/host-a/foo.bare') {
+      return '<native code a>'
+    }
+
+    if (url.href === 'file:///prebuilds/host-b/foo.bare') {
+      return '<native code b>'
+    }
+
+    return null
+  }
+
+  const result = expand(
+    traverse(
+      new URL('file:///foo.js'),
+      { hosts: ['host-a', 'host-b'], extensions: ['.bare'] },
+      readModule
+    )
+  )
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.js'),
+      source: "module.exports = require.addon('.')",
+      imports: {
+        '#package': 'file:///package.json',
+        '.': {
+          a: 'file:///prebuilds/host-a/foo.bare',
+          b: 'file:///prebuilds/host-b/foo.bare'
+        }
+      }
+    },
+    {
+      url: new URL('file:///prebuilds/host-b/foo.bare'),
+      source: '<native code b>',
+      imports: {
+        '#package': 'file:///package.json'
+      }
+    },
+    {
+      url: new URL('file:///package.json'),
+      source: '{ "name": "foo" }',
+      imports: {}
+    },
+    {
+      url: new URL('file:///prebuilds/host-a/foo.bare'),
+      source: '<native code a>',
+      imports: {
+        '#package': 'file:///package.json'
+      }
+    }
+  ])
+
+  t.alike(result.return.addons, [
+    new URL('file:///prebuilds/host-a/foo.bare'),
+    new URL('file:///prebuilds/host-b/foo.bare')
+  ])
+})
+
+test('require.addon, hosts list, host variants', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "module.exports = require.addon('.')"
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    if (url.href === 'file:///prebuilds/host/foo.bare') {
+      return '<native code>'
+    }
+
+    if (url.href === 'file:///prebuilds/host-a/foo.bare') {
+      return '<native code a>'
+    }
+
+    if (url.href === 'file:///prebuilds/host-a-b/foo.bare') {
+      return '<native code a b>'
+    }
+
+    return null
+  }
+
+  const result = expand(
+    traverse(
+      new URL('file:///foo.js'),
+      { hosts: ['host', 'host-a', 'host-a-b'], extensions: ['.bare'] },
+      readModule
+    )
+  )
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.js'),
+      source: "module.exports = require.addon('.')",
+      imports: {
+        '#package': 'file:///package.json',
+        '.': {
+          a: {
+            b: 'file:///prebuilds/host-a-b/foo.bare',
+            default: 'file:///prebuilds/host-a/foo.bare'
+          },
+          default: 'file:///prebuilds/host/foo.bare'
+        }
+      }
+    },
+    {
+      url: new URL('file:///prebuilds/host-a-b/foo.bare'),
+      source: '<native code a b>',
+      imports: {
+        '#package': 'file:///package.json'
+      }
+    },
+    {
+      url: new URL('file:///package.json'),
+      source: '{ "name": "foo" }',
+      imports: {}
+    },
+    {
+      url: new URL('file:///prebuilds/host-a/foo.bare'),
+      source: '<native code a>',
+      imports: {
+        '#package': 'file:///package.json'
+      }
+    },
+    {
+      url: new URL('file:///prebuilds/host/foo.bare'),
+      source: '<native code>',
+      imports: {
+        '#package': 'file:///package.json'
+      }
+    }
+  ])
+
+  t.alike(result.return.addons, [
+    new URL('file:///prebuilds/host-a-b/foo.bare'),
+    new URL('file:///prebuilds/host-a/foo.bare'),
+    new URL('file:///prebuilds/host/foo.bare')
+  ])
+})
+
+test('require.addon, hosts list, linked', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "module.exports = require.addon('.')"
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    return null
+  }
+
+  const result = expand(
+    traverse(
+      new URL('file:///foo.js'),
+      {
+        hosts: ['darwin-arm64', 'darwin-x64', 'linux-arm64', 'linux-x64'],
+        extensions: ['.bare']
+      },
+      readModule
+    )
+  )
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.js'),
+      source: "module.exports = require.addon('.')",
+      imports: {
+        '#package': 'file:///package.json',
+        '.': {
+          darwin: 'linked:libfoo.dylib',
+          linux: 'linked:libfoo.so'
+        }
+      }
+    },
+    {
+      url: new URL('file:///package.json'),
+      source: '{ "name": "foo" }',
+      imports: {}
+    }
+  ])
+
+  t.alike(result.return.addons, [
+    new URL('linked:libfoo.dylib'),
+    new URL('linked:libfoo.so')
+  ])
 })
 
 test('require.asset', (t) => {
@@ -407,9 +599,7 @@ test('require.asset', (t) => {
       url: new URL('file:///foo.js'),
       source: "const bar = require.asset('./bar.txt')",
       imports: {
-        './bar.txt': {
-          asset: 'file:///bar.txt'
-        }
+        './bar.txt': 'file:///bar.txt'
       }
     },
     {
@@ -948,6 +1138,74 @@ test('resolutions map, module missing', (t) => {
   } catch (err) {
     t.comment(err.message)
   }
+})
+
+test('conditional imports, conditions matrix', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require('#bar')"
+    }
+
+    if (url.href === 'file:///a.js') {
+      return "module.exports = 'a'"
+    }
+
+    if (url.href === 'file:///b.js') {
+      return "module.exports = 'b'"
+    }
+
+    if (url.href === 'file:///c.js') {
+      return "module.exports = 'c'"
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo", "imports": { "#bar": { "a": "./a.js", "b": "./b.js", "c": "./c.js" } } }'
+    }
+
+    return null
+  }
+
+  const result = expand(
+    traverse(
+      new URL('file:///foo.js'),
+      { conditions: [['a'], ['b']] },
+      readModule
+    )
+  )
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.js'),
+      source: "const bar = require('#bar')",
+      imports: {
+        '#package': 'file:///package.json',
+        '#bar': {
+          a: 'file:///a.js',
+          b: 'file:///b.js'
+        }
+      }
+    },
+    {
+      url: new URL('file:///b.js'),
+      source: "module.exports = 'b'",
+      imports: {
+        '#package': 'file:///package.json'
+      }
+    },
+    {
+      url: new URL('file:///package.json'),
+      source:
+        '{ "name": "foo", "imports": { "#bar": { "a": "./a.js", "b": "./b.js", "c": "./c.js" } } }',
+      imports: {}
+    },
+    {
+      url: new URL('file:///a.js'),
+      source: "module.exports = 'a'",
+      imports: {
+        '#package': 'file:///package.json'
+      }
+    }
+  ])
 })
 
 function expand(iterable) {
