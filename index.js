@@ -95,46 +95,6 @@ module.exports = exports = function traverse(
 
 function* defaultListPrefix() {}
 
-function addURL(array, url) {
-  let lo = 0
-  let hi = array.length - 1
-
-  while (lo <= hi) {
-    const mid = lo + ((hi - lo) >> 1)
-    const found = array[mid]
-
-    if (found.href === url.href) return
-
-    if (found.href < url.href) {
-      lo = mid + 1
-    } else {
-      hi = mid - 1
-    }
-  }
-
-  array.splice(lo, 0, url)
-}
-
-function removeURL(array, url) {
-  let lo = 0
-  let hi = array.length - 1
-
-  while (lo <= hi) {
-    const mid = lo + ((hi - lo) >> 1)
-    const found = array[mid]
-
-    if (found.href === url.href) break
-
-    if (found.href < url.href) {
-      lo = mid + 1
-    } else {
-      hi = mid - 1
-    }
-  }
-
-  if (array[lo].href === url.href) array.splice(lo, 1)
-}
-
 exports.resolve = resolve
 
 exports.module = function* (url, source, artifacts, visited, opts = {}) {
@@ -290,36 +250,32 @@ exports.imports = function* (
     const resolver = resolve(entry, parentURL, { ...opts, matchedConditions })
 
     let next = resolver.next()
-    let resolved = false
+    let resolutions = 0
 
     while (next.done !== true) {
       const value = next.value
 
       if (value.package) {
         next = resolver.next(JSON.parse(yield { module: value.package }))
-      } else if (existsInImportsMap(imports, specifier, matchedConditions)) {
-        next = resolver.next()
+      } else if (hasResolution(imports, specifier, matchedConditions)) {
+        next = resolver.next(false)
       } else {
         const url = value.resolution
+
+        let resolved = false
 
         if (
           url.protocol === builtinProtocol ||
           url.protocol === linkedProtocol
         ) {
-          if (addToImportsMap(imports, specifier, matchedConditions, url)) {
-            if (condition === 'addon') addURL(artifacts.addons, url)
-            else if (condition === 'asset') addURL(artifacts.assets, url)
-
+          if (addResolution(imports, specifier, matchedConditions, url)) {
             resolved = yielded = true
           }
         } else {
           const source = yield { module: url }
 
           if (source !== null) {
-            if (addToImportsMap(imports, specifier, matchedConditions, url)) {
-              if (condition === 'addon') addURL(artifacts.addons, url)
-              else if (condition === 'asset') addURL(artifacts.assets, url)
-
+            if (addResolution(imports, specifier, matchedConditions, url)) {
               yield {
                 children: exports.module(url, source, artifacts, visited, opts)
               }
@@ -329,13 +285,20 @@ exports.imports = function* (
           }
         }
 
-        next = resolver.next()
+        if (resolved) {
+          if (condition === 'addon') addURL(artifacts.addons, url)
+          else if (condition === 'asset') addURL(artifacts.assets, url)
+
+          resolutions++
+        }
+
+        next = resolver.next(resolved)
       }
     }
 
     matchedConditions.pop()
 
-    if (!resolved) {
+    if (resolutions === 0) {
       throw errors.ADDON_NOT_FOUND(
         `Cannot find ${condition === 'default' ? 'module' : condition} '${specifier}' imported from '${parentURL.href}'`
       )
@@ -483,7 +446,47 @@ exports.patternMatches = function* patternMatches(
   return matches
 }
 
-function existsInImportsMap(imports, specifier, conditions) {
+function addURL(array, url) {
+  let lo = 0
+  let hi = array.length - 1
+
+  while (lo <= hi) {
+    const mid = lo + ((hi - lo) >> 1)
+    const found = array[mid]
+
+    if (found.href === url.href) return
+
+    if (found.href < url.href) {
+      lo = mid + 1
+    } else {
+      hi = mid - 1
+    }
+  }
+
+  array.splice(lo, 0, url)
+}
+
+function removeURL(array, url) {
+  let lo = 0
+  let hi = array.length - 1
+
+  while (lo <= hi) {
+    const mid = lo + ((hi - lo) >> 1)
+    const found = array[mid]
+
+    if (found.href === url.href) break
+
+    if (found.href < url.href) {
+      lo = mid + 1
+    } else {
+      hi = mid - 1
+    }
+  }
+
+  if (array[lo].href === url.href) array.splice(lo, 1)
+}
+
+function hasResolution(imports, specifier, conditions) {
   if (specifier in imports === false) return false
 
   let current = imports[specifier]
@@ -499,7 +502,7 @@ function existsInImportsMap(imports, specifier, conditions) {
   return true
 }
 
-function addToImportsMap(imports, specifier, conditions, url) {
+function addResolution(imports, specifier, conditions, url) {
   imports[specifier] = imports[specifier] || {}
 
   let current = imports[specifier]

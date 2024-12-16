@@ -366,7 +366,7 @@ test('require.addon, linked', (t) => {
       source: "const bar = require.addon('.')",
       imports: {
         '#package': 'file:///package.json',
-        '.': 'linked:libfoo.dylib'
+        '.': 'linked:foo.framework/foo'
       }
     },
     {
@@ -376,7 +376,7 @@ test('require.addon, linked', (t) => {
     }
   ])
 
-  t.alike(result.return.addons, [new URL('linked:libfoo.dylib')])
+  t.alike(result.return.addons, [new URL('linked:foo.framework/foo')])
 })
 
 test('require.addon, hosts list', (t) => {
@@ -561,7 +561,7 @@ test('require.addon, hosts list, linked', (t) => {
       imports: {
         '#package': 'file:///package.json',
         '.': {
-          darwin: 'linked:libfoo.dylib',
+          darwin: 'linked:foo.framework/foo',
           linux: 'linked:libfoo.so'
         }
       }
@@ -574,7 +574,7 @@ test('require.addon, hosts list, linked', (t) => {
   ])
 
   t.alike(result.return.addons, [
-    new URL('linked:libfoo.dylib'),
+    new URL('linked:foo.framework/foo'),
     new URL('linked:libfoo.so')
   ])
 })
