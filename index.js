@@ -95,46 +95,6 @@ module.exports = exports = function traverse(
 
 function* defaultListPrefix() {}
 
-function addURL(array, url) {
-  let lo = 0
-  let hi = array.length - 1
-
-  while (lo <= hi) {
-    const mid = lo + ((hi - lo) >> 1)
-    const found = array[mid]
-
-    if (found.href === url.href) return
-
-    if (found.href < url.href) {
-      lo = mid + 1
-    } else {
-      hi = mid - 1
-    }
-  }
-
-  array.splice(lo, 0, url)
-}
-
-function removeURL(array, url) {
-  let lo = 0
-  let hi = array.length - 1
-
-  while (lo <= hi) {
-    const mid = lo + ((hi - lo) >> 1)
-    const found = array[mid]
-
-    if (found.href === url.href) break
-
-    if (found.href < url.href) {
-      lo = mid + 1
-    } else {
-      hi = mid - 1
-    }
-  }
-
-  if (array[lo].href === url.href) array.splice(lo, 1)
-}
-
 exports.resolve = resolve
 
 exports.module = function* (url, source, artifacts, visited, opts = {}) {
@@ -268,72 +228,79 @@ exports.imports = function* (
   const {
     resolve = exports.resolve.default,
     builtinProtocol = 'builtin:',
-    linkedProtocol = 'linked:'
+    linkedProtocol = 'linked:',
+    matchedConditions = []
   } = opts
 
   let yielded = false
 
   for (const entry of lex(source).imports) {
-    const resolver = resolve(entry, parentURL, opts)
-
-    let next = resolver.next()
-    let resolved = false
     let specifier = entry.specifier
-    let key = 'default'
+    let condition = 'default'
 
     if (entry.type & lex.constants.ADDON) {
       specifier = specifier || '.'
-      key = 'addon'
+      condition = 'addon'
     } else if (entry.type & lex.constants.ASSET) {
-      key = 'asset'
+      condition = 'asset'
     }
+
+    matchedConditions.push(condition)
+
+    const resolver = resolve(entry, parentURL, { ...opts, matchedConditions })
+
+    let next = resolver.next()
+    let resolutions = 0
 
     while (next.done !== true) {
       const value = next.value
 
       if (value.package) {
         next = resolver.next(JSON.parse(yield { module: value.package }))
+      } else if (hasResolution(imports, specifier, matchedConditions)) {
+        next = resolver.next(false)
       } else {
         const url = value.resolution
+
+        let resolved = false
 
         if (
           url.protocol === builtinProtocol ||
           url.protocol === linkedProtocol
         ) {
-          if (key === 'addon') addURL(artifacts.addons, url)
-          else if (key === 'asset') addURL(artifacts.assets, url)
-
-          imports[specifier] = { [key]: url.href, ...imports[specifier] }
-
-          resolved = yielded = true
-
-          break
-        }
-
-        const source = yield { module: url }
-
-        if (source !== null) {
-          if (key === 'addon') addURL(artifacts.addons, url)
-          else if (key === 'asset') addURL(artifacts.assets, url)
-
-          imports[specifier] = { [key]: url.href, ...imports[specifier] }
-
-          yield {
-            children: exports.module(url, source, artifacts, visited, opts)
+          if (addResolution(imports, specifier, matchedConditions, url)) {
+            resolved = yielded = true
           }
+        } else {
+          const source = yield { module: url }
 
-          resolved = yielded = true
+          if (source !== null) {
+            if (addResolution(imports, specifier, matchedConditions, url)) {
+              yield {
+                children: exports.module(url, source, artifacts, visited, opts)
+              }
 
-          break
+              resolved = yielded = true
+            }
+          }
         }
 
-        next = resolver.next()
+        if (resolved) {
+          if (condition === 'addon') addURL(artifacts.addons, url)
+          else if (condition === 'asset') addURL(artifacts.assets, url)
+
+          resolutions++
+        }
+
+        next = resolver.next(resolved)
       }
     }
 
-    if (!resolved) {
+    matchedConditions.pop()
+
+    if (resolutions === 0) {
       throw errors.ADDON_NOT_FOUND(
-        `Cannot find ${key === 'default' ? 'module' : key} '${specifier}' imported from '${parentURL.href}'`
+        `Cannot find ${condition === 'default' ? 'module' : condition} '${specifier}' imported from '${parentURL.href}'`
       )
     }
   }
@@ -479,6 +446,96 @@ exports.patternMatches = function* patternMatches(
   return matches
 }
 
+function addURL(array, url) {
+  let lo = 0
+  let hi = array.length - 1
+
+  while (lo <= hi) {
+    const mid = lo + ((hi - lo) >> 1)
+    const found = array[mid]
+
+    if (found.href === url.href) return
+
+    if (found.href < url.href) {
+      lo = mid + 1
+    } else {
+      hi = mid - 1
+    }
+  }
+
+  array.splice(lo, 0, url)
+}
+
+function removeURL(array, url) {
+  let lo = 0
+  let hi = array.length - 1
+
+  while (lo <= hi) {
+    const mid = lo + ((hi - lo) >> 1)
+    const found = array[mid]
+
+    if (found.href === url.href) break
+
+    if (found.href < url.href) {
+      lo = mid + 1
+    } else {
+      hi = mid - 1
+    }
+  }
+
+  if (array[lo].href === url.href) array.splice(lo, 1)
+}
+
+function hasResolution(imports, specifier, conditions) {
+  if (specifier in imports === false) return false
+
+  let current = imports[specifier]
+
+  for (const key of conditions) {
+    if (key in current === false || typeof current[key] !== 'object') {
+      return false
+    }
+
+    current = current[key]
+  }
+
+  return true
+}
+
+function addResolution(imports, specifier, conditions, url) {
+  imports[specifier] = imports[specifier] || {}
+
+  let current = imports[specifier]
+
+  for (let i = 0, n = conditions.length - 1; i < n; i++) {
+    const key = conditions[i]
+
+    if (key in current === false) {
+      current[key] = {}
+    } else if (typeof current[key] !== 'object') {
+      current[key] = { default: current[key] }
+    }
+
+    current = current[key]
+  }
+
+  const last = conditions[conditions.length - 1]
+
+  if (last in current) return false
+
+  current[last] = url.href
+
+  if ('default' in current) {
+    const value = current.default
+
+    delete current.default
+
+    current.default = value
+  }
+
+  return true
+}
+
 function compressImportsMap(imports) {
   const entries = []
 
@@ -509,11 +566,7 @@ function compressImportsMapEntry(resolved) {
     ([condition, resolved]) => condition === 'default' || resolved !== primary
   )
 
-  if (entries.length === 1) {
-    const [condition, resolved] = entries[0]
-
-    if (condition === 'default') return resolved
-  }
+  if (entries.length === 1) return entries[0][1]
 
   return Object.fromEntries(entries)
 }

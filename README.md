@@ -88,6 +88,8 @@ Asynchronously iterate the module graph. If `readModule` returns a promise or `l
 
 ### Resolution
 
+Module and addon resolution is configurable by providing a resolver function. A resolver function is a generator function that yields values matching the shapes defined by <https://github.com/holepunchto/bare-module-resolve#algorithm>. Several resolvers are provided out of the box to support the most common use cases.
+
 #### `resolve.module`
 
 Convenience export from <https://github.com/holepunchto/bare-module-resolve>.
@@ -102,15 +104,73 @@ The default resolver, which simply forwards to <https://github.com/holepunchto/b
 
 #### `resolve.bare`
 
-The Bare resolver, which matches the options used by the Bare module system.
+The Bare resolver, which matches the options used by the Bare module system. The resolver accepts the following additional options:
+
+```js
+options = {
+  platform: Bare.platform,
+  arch: Bare.arch,
+  simulator: false,
+  host: `${platform}-${arch}${simulator ? '-simulator' : ''}`,
+  target: [host]
+}
+```
+
+For single target traversal it is sufficient to pass `platform`, `arch`, `simulator`, and/or `host`. For multi target target traversal pass a list of `target` identifiers instead.
 
 #### `resolve.node`
 
-The Node.js resolver, which matches the options used by the Node.js module system.
+The Node.js resolver, which matches the options used by the Node.js module system. The resolver accepts the following additional options:
+
+```js
+options = {
+  platform: process.platform,
+  arch: process.arch,
+  simulator: false,
+  host: `${platform}-${arch}${simulator ? '-simulator' : ''}`,
+  target: [host]
+}
+```
+
+For single target traversal it is sufficient to pass `platform`, `arch`, `simulator`, and/or `host`. For multi target target traversal pass a list of `target` identifiers instead.
 
 ### Algorithm
 
-The following generator functions implement the traversal algorithm. To drive the generator functions, a loop like the following can be used:
+The following generator functions implement the traversal algorithm. The yielded values have the following shape:
+
+**Source module**
+
+```js
+next.value = {
+  module: URL
+}
+```
+
+**File prefix**
+
+```js
+next.value = {
+  prefix: URL
+}
+```
+
+**Dependency subgraph**
+
+```js
+next.value = {
+  children: URL
+}
+```
+
+**Dependency node**
+
+```js
+next.value = {
+  dependency: URL
+}
+```
+
+To drive the generator functions, a loop like the following can be used:
 
 ```js
 const queue = [traverse.module(url, source, artifacts, visited)]
@@ -124,11 +184,13 @@ while (queue.length > 0) {
     const value = next.value
 
     if (value.module) {
-      const source = /* Read `value.module` if it exists, otherwise `null` */;
+      // Read `value.module` if it exists, otherwise `null`
+      let source
 
       next = generator.next(source)
     } else if (value.prefix) {
-      const modules = /* List the modules that have `value.prefix` as a prefix */;
+      // List the modules that have `value.prefix` as a prefix
+      let modules
 
       next = generator.next(modules)
     } else {
