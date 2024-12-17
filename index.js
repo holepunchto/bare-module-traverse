@@ -299,9 +299,20 @@ exports.imports = function* (
     matchedConditions.pop()
 
     if (resolutions === 0) {
-      throw errors.ADDON_NOT_FOUND(
-        `Cannot find ${condition === 'default' ? 'module' : condition} '${specifier}' imported from '${parentURL.href}'`
-      )
+      switch (condition) {
+        case 'addon':
+          throw errors.ADDON_NOT_FOUND(
+            `Cannot find addon '${specifier}' imported from '${parentURL.href}'`
+          )
+        case 'asset':
+          throw errors.ASSET_NOT_FOUND(
+            `Cannot find asset '${specifier}' imported from '${parentURL.href}'`
+          )
+        default:
+          throw errors.MODULE_NOT_FOUND(
+            `Cannot find module '${specifier}' imported from '${parentURL.href}'`
+          )
+      }
     }
   }
 
