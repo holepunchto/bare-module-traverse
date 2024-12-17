@@ -257,8 +257,6 @@ exports.imports = function* (
 
       if (value.package) {
         next = resolver.next(JSON.parse(yield { module: value.package }))
-      } else if (hasResolution(imports, specifier, matchedConditions)) {
-        next = resolver.next(false)
       } else {
         const url = value.resolution
 
@@ -495,22 +493,6 @@ function removeURL(array, url) {
   }
 
   if (array[lo].href === url.href) array.splice(lo, 1)
-}
-
-function hasResolution(imports, specifier, conditions) {
-  if (specifier in imports === false) return false
-
-  let current = imports[specifier]
-
-  for (const key of conditions) {
-    if (key in current === false || typeof current[key] !== 'object') {
-      return false
-    }
-
-    current = current[key]
-  }
-
-  return true
 }
 
 function addResolution(imports, specifier, conditions, url) {

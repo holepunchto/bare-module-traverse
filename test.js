@@ -170,6 +170,37 @@ test('require, module missing', (t) => {
   }
 })
 
+test('require, same module twice', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "require('./bar.js'), require('./bar.js')"
+    }
+
+    if (url.href === 'file:///bar.js') {
+      return 'module.exports = 42'
+    }
+
+    return null
+  }
+
+  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.js'),
+      source: "require('./bar.js'), require('./bar.js')",
+      imports: {
+        './bar.js': 'file:///bar.js'
+      }
+    },
+    {
+      url: new URL('file:///bar.js'),
+      source: 'module.exports = 42',
+      imports: {}
+    }
+  ])
+})
+
 test('require.addon', (t) => {
   function readModule(url) {
     if (url.href === 'file:///foo.js') {
