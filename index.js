@@ -268,20 +268,20 @@ exports.imports = function* (
           url.protocol === builtinProtocol ||
           url.protocol === linkedProtocol
         ) {
-          if (addResolution(imports, specifier, matchedConditions, url)) {
-            resolved = yielded = true
-          }
+          addResolution(imports, specifier, matchedConditions, url)
+
+          resolved = yielded = true
         } else {
           const source = yield { module: url }
 
           if (source !== null) {
-            if (addResolution(imports, specifier, matchedConditions, url)) {
-              yield {
-                children: exports.module(url, source, artifacts, visited, opts)
-              }
+            addResolution(imports, specifier, matchedConditions, url)
 
-              resolved = yielded = true
+            yield {
+              children: exports.module(url, source, artifacts, visited, opts)
             }
+
+            resolved = yielded = true
           }
         }
 
@@ -532,8 +532,6 @@ function addResolution(imports, specifier, conditions, url) {
 
   const last = conditions[conditions.length - 1]
 
-  if (last in current) return false
-
   current[last] = url.href
 
   if ('default' in current) {
@@ -543,8 +541,6 @@ function addResolution(imports, specifier, conditions, url) {
 
     current.default = value
   }
-
-  return true
 }
 
 function compressImportsMap(imports) {
