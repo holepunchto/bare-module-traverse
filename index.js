@@ -16,10 +16,6 @@ module.exports = exports = function traverse(
     opts = {}
   }
 
-  if (typeof listPrefix !== 'function') {
-    listPrefix = defaultListPrefix
-  }
-
   return {
     *[Symbol.iterator]() {
       const artifacts = { addons: [], assets: [] }
@@ -39,8 +35,14 @@ module.exports = exports = function traverse(
           } else if (value.prefix) {
             const result = []
 
-            for (const url of listPrefix(value.prefix)) {
-              result.push(url)
+            if (typeof listPrefix === 'function') {
+              for (const url of listPrefix(value.prefix)) {
+                result.push(url)
+              }
+            } else {
+              if (readModule(value.prefix) !== null) {
+                result.push(value.prefix)
+              }
             }
 
             next = generator.next(result)
@@ -74,8 +76,14 @@ module.exports = exports = function traverse(
           } else if (value.prefix) {
             const result = []
 
-            for await (const url of listPrefix(value.prefix)) {
-              result.push(url)
+            if (typeof listPrefix === 'function') {
+              for await (const url of listPrefix(value.prefix)) {
+                result.push(url)
+              }
+            } else {
+              if ((await readModule(value.prefix)) !== null) {
+                result.push(value.prefix)
+              }
             }
 
             next = generator.next(result)
@@ -92,8 +100,6 @@ module.exports = exports = function traverse(
     }
   }
 }
-
-function* defaultListPrefix() {}
 
 exports.resolve = resolve
 
@@ -269,6 +275,20 @@ exports.imports = function* (
           addResolution(imports, specifier, matchedConditions, url)
 
           resolved = yielded = true
+        } else if (condition === 'asset') {
+          const prefix = yield { prefix: url }
+
+          if (prefix.length !== 0) {
+            addResolution(imports, specifier, matchedConditions, url)
+
+            for (const url of prefix) {
+              yield {
+                children: exports.module(url, null, artifacts, visited, opts)
+              }
+            }
+
+            resolved = yielded = true
+          }
         } else {
           const source = yield { module: url }
 

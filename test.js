@@ -676,6 +676,58 @@ test('require + require.asset', (t) => {
   t.alike(result.return.assets, [new URL('file:///bar.js')])
 })
 
+test('require.asset, directory', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require.asset('./bar')"
+    }
+
+    if (url.href === 'file:///bar/a.txt') {
+      return 'hello world'
+    }
+
+    if (url.href === 'file:///bar/b.txt') {
+      return 'hello world'
+    }
+
+    return null
+  }
+
+  function listPrefix(url) {
+    if (url.href === 'file:///bar') {
+      return [new URL('file:///bar/a.txt'), new URL('file:///bar/b.txt')]
+    }
+
+    return []
+  }
+
+  const result = expand(
+    traverse(new URL('file:///foo.js'), readModule, listPrefix)
+  )
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.js'),
+      source: "const bar = require.asset('./bar')",
+      imports: {
+        './bar': 'file:///bar'
+      }
+    },
+    {
+      url: new URL('file:///bar/a.txt'),
+      source: 'hello world',
+      imports: {}
+    },
+    {
+      url: new URL('file:///bar/b.txt'),
+      source: 'hello world',
+      imports: {}
+    }
+  ])
+
+  t.alike(result.return.assets, [new URL('file:///bar.txt')])
+})
+
 test('package.json#addon', (t) => {
   function readModule(url) {
     if (url.href === 'file:///foo.js') {
