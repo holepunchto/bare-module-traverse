@@ -285,6 +285,8 @@ exports.imports = function* (
               yield {
                 children: exports.module(url, null, artifacts, visited, opts)
               }
+
+              addURL(artifacts.assets, url)
             }
 
             resolved = yielded = true
@@ -305,7 +307,6 @@ exports.imports = function* (
 
         if (resolved) {
           if (condition === 'addon') addURL(artifacts.addons, url)
-          else if (condition === 'asset') addURL(artifacts.assets, url)
 
           resolutions++
         }

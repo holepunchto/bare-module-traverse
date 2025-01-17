@@ -683,11 +683,11 @@ test('require.asset, directory', (t) => {
     }
 
     if (url.href === 'file:///bar/a.txt') {
-      return 'hello world'
+      return 'hello a'
     }
 
     if (url.href === 'file:///bar/b.txt') {
-      return 'hello world'
+      return 'hello b'
     }
 
     return null
@@ -714,18 +714,21 @@ test('require.asset, directory', (t) => {
       }
     },
     {
-      url: new URL('file:///bar/a.txt'),
-      source: 'hello world',
+      url: new URL('file:///bar/b.txt'),
+      source: 'hello b',
       imports: {}
     },
     {
-      url: new URL('file:///bar/b.txt'),
-      source: 'hello world',
+      url: new URL('file:///bar/a.txt'),
+      source: 'hello a',
       imports: {}
     }
   ])
 
-  t.alike(result.return.assets, [new URL('file:///bar.txt')])
+  t.alike(result.return.assets, [
+    new URL('file:///bar/a.txt'),
+    new URL('file:///bar/b.txt')
+  ])
 })
 
 test('package.json#addon', (t) => {
