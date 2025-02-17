@@ -3,15 +3,31 @@
   "version": "1.4.0",
   "description": "Low-level module graph traversal for Bare",
   "exports": {
-    ".": "./index.js",
-    "./package": "./package.json",
-    "./resolve": "./lib/resolve.js",
-    "./resolve/default": "./lib/resolve/default.js",
-    "./resolve/bare": "./lib/resolve/bare.js",
-    "./resolve/node": "./lib/resolve/node.js"
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
+    "./resolve": {
+      "types": "./lib/resolve.d.ts",
+      "default": "./lib/resolve.js"
+    },
+    "./resolve/default": {
+      "types": "./lib/resolve/default.d.ts",
+      "default": "./lib/resolve/default.js"
+    },
+    "./resolve/bare": {
+      "types": "./lib/resolve/bare.d.ts",
+      "default": "./lib/resolve/bare.js"
+    },
+    "./resolve/node": {
+      "types": "./lib/resolve/node.d.ts",
+      "default": "./lib/resolve/node.js"
+    },
+    "./package": "./package.json"
   },
   "files": [
     "index.js",
+    "index.d.ts",
     "lib"
   ],
   "imports": {
@@ -42,8 +58,22 @@
     "bare-module-resolve": "^1.7.0"
   },
   "devDependencies": {
+    "bare-buffer": "^3.0.2",
+    "bare-url": "^2.1.3",
     "brittle": "^3.2.1",
     "prettier": "^3.4.2",
     "prettier-config-standard": "^7.0.0"
+  },
+  "peerDependencies": {
+    "bare-buffer": "*",
+    "bare-url": "*"
+  },
+  "peerDependenciesMeta": {
+    "bare-buffer": {
+      "optional": true
+    },
+    "bare-url": {
+      "optional": true
+    }
   }
 }
