@@ -8,7 +8,11 @@ import {
 import { type ResolveOptions, type Resolver } from 'bare-addon-resolve'
 import { type Import } from 'bare-module-lexer'
 
-type Dependency = { url: URL; source: string | Buffer; imports: ImportsMap }
+interface Dependency {
+  url: URL
+  source: string | Buffer
+  imports: ImportsMap
+}
 
 interface TraverseOptions extends ResolveOptions {
   resolve?: (entry: Import, parentURL: URL, opts?: ResolveOptions) => Resolver
@@ -16,41 +20,48 @@ interface TraverseOptions extends ResolveOptions {
 
 declare function traverse(
   entry: URL,
-  readModule: (url: URL) => string | null,
-  listPrefix?: (url: URL) => Generator<URL> | URL[]
+  readModule: (url: URL) => Buffer | string | null,
+  listPrefix?: (url: URL) => Iterable<URL>
 ): Iterable<Dependency>
 
 declare function traverse(
   entry: URL,
-  readModule: (url: URL) => Promise<string | null>,
-  listPrefix?: (url: URL) => AsyncGenerator<URL>
+  readModule: (url: URL) => Promise<Buffer | string | null>,
+  listPrefix?: (url: URL) => AsyncIterable<URL>
 ): AsyncIterable<Dependency>
 
 declare function traverse(
   entry: URL,
   opts: TraverseOptions,
-  readModule: (url: URL) => string | null,
-  listPrefix?: (url: URL) => Generator<URL> | URL[]
+  readModule: (url: URL) => Buffer | string | null,
+  listPrefix?: (url: URL) => Iterable<URL>
 ): Iterable<Dependency>
 
 declare function traverse(
   entry: URL,
   opts: TraverseOptions,
-  readModule: (url: URL) => Promise<string | null>,
-  listPrefix?: (url: URL) => AsyncGenerator<URL>
+  readModule: (url: URL) => Promise<Buffer | string | null>,
+  listPrefix?: (url: URL) => AsyncIterable<URL>
 ): AsyncIterable<Dependency>
 
 declare namespace traverse {
   export { type TraverseOptions }
 
   export type Traversal = Generator<
-    { module: URL } | { prefix: URL } | { children: URL } | { dependency: URL }
+    { module: URL } | { prefix: URL } | { children: URL } | { dependency: URL },
+    boolean,
+    void | URL[] | Buffer | string | null
   >
+
+  export interface Artifacts {
+    addons: URL[]
+    assets: URL[]
+  }
 
   export function module(
     url: URL,
     source: string | Buffer,
-    artifacts: { addons: URL[]; assets: URL[] },
+    artifacts: Artifacts,
     visited: Set<string>,
     opts?: TraverseOptions
   ): Traversal
@@ -58,7 +69,7 @@ declare namespace traverse {
   export function package(
     url: URL,
     source: string | Buffer,
-    artifacts: { addons: URL[]; assets: URL[] },
+    artifacts: Artifacts,
     visited: Set<string>,
     opts?: TraverseOptions
   ): Traversal
@@ -67,7 +78,7 @@ declare namespace traverse {
     url: URL,
     source: string | Buffer,
     resolution: ResolutionsMap,
-    artifacts: { addons: URL[]; assets: URL[] },
+    artifacts: Artifacts,
     visited: Set<string>,
     opts?: TraverseOptions
   ): Traversal
@@ -76,14 +87,14 @@ declare namespace traverse {
     parentURL: URL,
     source: string | Buffer,
     imports: ImportsMap,
-    artifacts: { addons: URL[]; assets: URL[] },
+    artifacts: Artifacts,
     visited: Set<string>,
     opts?: TraverseOptions
   ): Traversal
 
   export function prebuilds(
     packageURL: URL,
-    artifacts: { addons: URL[]; assets: URL[] },
+    artifacts: Artifacts,
     visited: Set<string>,
     opts?: TraverseOptions
   ): Traversal
@@ -91,7 +102,7 @@ declare namespace traverse {
   export function assets(
     patterns: ConditionalSpecifier,
     packageURL: URL,
-    artifacts: { addons: URL[]; assets: URL[] },
+    artifacts: Artifacts,
     visited: Set<string>,
     opts?: TraverseOptions
   ): Traversal
