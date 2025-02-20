@@ -252,6 +252,57 @@ test('require.addon', (t) => {
   t.alike(result.return.addons, [new URL('file:///prebuilds/host/foo.bare')])
 })
 
+test('require.addon, referrer', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require.addon('.', __filename)"
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    if (url.href === 'file:///prebuilds/host/foo.bare') {
+      return '<native code>'
+    }
+
+    return null
+  }
+
+  const result = expand(
+    traverse(
+      new URL('file:///foo.js'),
+      { host, extensions: ['.bare'] },
+      readModule
+    )
+  )
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.js'),
+      source: "const bar = require.addon('.', __filename)",
+      imports: {
+        '#package': 'file:///package.json',
+        '.': 'file:///prebuilds/host/foo.bare'
+      }
+    },
+    {
+      url: new URL('file:///prebuilds/host/foo.bare'),
+      source: '<native code>',
+      imports: {
+        '#package': 'file:///package.json'
+      }
+    },
+    {
+      url: new URL('file:///package.json'),
+      source: '{ "name": "foo" }',
+      imports: {}
+    }
+  ])
+
+  t.alike(result.return.addons, [new URL('file:///prebuilds/host/foo.bare')])
+})
+
 test('require.addon, addon missing', (t) => {
   function readModule(url) {
     if (url.href === 'file:///foo.js') {
@@ -629,6 +680,39 @@ test('require.asset', (t) => {
     {
       url: new URL('file:///foo.js'),
       source: "const bar = require.asset('./bar.txt')",
+      imports: {
+        './bar.txt': 'file:///bar.txt'
+      }
+    },
+    {
+      url: new URL('file:///bar.txt'),
+      source: 'hello world',
+      imports: {}
+    }
+  ])
+
+  t.alike(result.return.assets, [new URL('file:///bar.txt')])
+})
+
+test('require.asset, referrer', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require.asset('./bar.txt', __filename)"
+    }
+
+    if (url.href === 'file:///bar.txt') {
+      return 'hello world'
+    }
+
+    return null
+  }
+
+  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.js'),
+      source: "const bar = require.asset('./bar.txt', __filename)",
       imports: {
         './bar.txt': 'file:///bar.txt'
       }
