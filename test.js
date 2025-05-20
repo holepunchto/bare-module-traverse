@@ -1310,6 +1310,97 @@ test('resolutions map, module missing', (t) => {
   }
 })
 
+test('imports map', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require('bar')"
+    }
+
+    if (url.href === 'file:///bar.js') {
+      return "const baz = require('baz')"
+    }
+
+    if (url.href === 'file:///baz.js') {
+      return 'module.exports = 42'
+    }
+
+    return null
+  }
+
+  const imports = {
+    bar: 'file:///bar.js',
+    baz: 'file:///baz.js'
+  }
+
+  const result = expand(
+    traverse(new URL('file:///foo.js'), { imports }, readModule)
+  )
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.js'),
+      source: "const bar = require('bar')",
+      imports: {
+        bar: 'file:///bar.js'
+      }
+    },
+    {
+      url: new URL('file:///bar.js'),
+      source: "const baz = require('baz')",
+      imports: {
+        baz: 'file:///baz.js'
+      }
+    },
+    {
+      url: new URL('file:///baz.js'),
+      source: 'module.exports = 42',
+      imports: {}
+    }
+  ])
+})
+
+test('imports map, deferred', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require('bar')"
+    }
+
+    if (url.href === 'file:///bar.js') {
+      return "const baz = require('baz')"
+    }
+
+    return null
+  }
+
+  const imports = {
+    bar: 'file:///bar.js',
+    baz: 'qux'
+  }
+
+  const defer = ['qux']
+
+  const result = expand(
+    traverse(new URL('file:///foo.js'), { imports, defer }, readModule)
+  )
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.js'),
+      source: "const bar = require('bar')",
+      imports: {
+        bar: 'file:///bar.js'
+      }
+    },
+    {
+      url: new URL('file:///bar.js'),
+      source: "const baz = require('baz')",
+      imports: {
+        baz: 'deferred:qux'
+      }
+    }
+  ])
+})
+
 test('conditional imports, conditions matrix', (t) => {
   function readModule(url) {
     if (url.href === 'file:///foo.js') {

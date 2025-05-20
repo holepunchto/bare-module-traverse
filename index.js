@@ -235,6 +235,7 @@ exports.imports = function* (
     resolve = exports.resolve.default,
     builtinProtocol = 'builtin:',
     linkedProtocol = 'linked:',
+    deferredProtocol = 'deferred:',
     matchedConditions = []
   } = opts
 
@@ -270,7 +271,8 @@ exports.imports = function* (
 
         if (
           url.protocol === builtinProtocol ||
-          url.protocol === linkedProtocol
+          url.protocol === linkedProtocol ||
+          url.protocol === deferredProtocol
         ) {
           addResolution(imports, specifier, matchedConditions, url)
 
