@@ -1469,6 +1469,59 @@ test('conditional imports, conditions matrix', (t) => {
   ])
 })
 
+test('imports attribute', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require('./bar.js', { with: { imports: './imports.json' } })"
+    }
+
+    if (url.href === 'file:///bar.js') {
+      return "const baz = require('baz')"
+    }
+
+    if (url.href === 'file:///baz.js') {
+      return 'module.exports = 42'
+    }
+
+    if (url.href === 'file:///imports.json') {
+      return '{ "baz": "/baz.js" }'
+    }
+
+    return null
+  }
+
+  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.js'),
+      source:
+        "const bar = require('./bar.js', { with: { imports: './imports.json' } })",
+      imports: {
+        './bar.js': 'file:///bar.js',
+        './imports.json': 'file:///imports.json'
+      }
+    },
+    {
+      url: new URL('file:///bar.js'),
+      source: "const baz = require('baz')",
+      imports: {
+        baz: 'file:///baz.js'
+      }
+    },
+    {
+      url: new URL('file:///baz.js'),
+      source: 'module.exports = 42',
+      imports: {}
+    },
+    {
+      url: new URL('file:///imports.json'),
+      source: '{ "baz": "/baz.js" }',
+      imports: {}
+    }
+  ])
+})
+
 function expand(iterable) {
   const iterator = iterable[Symbol.iterator]()
   const values = []

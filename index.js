@@ -20,7 +20,9 @@ module.exports = exports = function traverse(
     *[Symbol.iterator]() {
       const artifacts = { addons: [], assets: [] }
 
-      const queue = [exports.module(entry, null, artifacts, new Set(), opts)]
+      const queue = [
+        exports.module(entry, null, {}, artifacts, new Set(), opts)
+      ]
 
       while (queue.length > 0) {
         const generator = queue.pop()
@@ -61,7 +63,9 @@ module.exports = exports = function traverse(
     async *[Symbol.asyncIterator]() {
       const artifacts = { addons: [], assets: [] }
 
-      const queue = [exports.module(entry, null, artifacts, new Set(), opts)]
+      const queue = [
+        exports.module(entry, null, {}, artifacts, new Set(), opts)
+      ]
 
       while (queue.length > 0) {
         const generator = queue.pop()
@@ -103,7 +107,14 @@ module.exports = exports = function traverse(
 
 exports.resolve = resolve
 
-exports.module = function* (url, source, artifacts, visited, opts = {}) {
+exports.module = function* (
+  url,
+  source,
+  attributes,
+  artifacts,
+  visited,
+  opts = {}
+) {
   const { resolutions = null } = opts
 
   if (visited.has(url.href)) return false
@@ -146,6 +157,23 @@ exports.module = function* (url, source, artifacts, visited, opts = {}) {
       }
 
       break
+    }
+  }
+
+  if (
+    typeof attributes === 'object' &&
+    attributes !== null &&
+    typeof attributes.imports === 'string'
+  ) {
+    const url = new URL(attributes.imports)
+
+    const source = yield { module: url }
+
+    if (source !== null) {
+      opts = {
+        ...opts,
+        imports: mixinImports(opts.imports, JSON.parse(source), url)
+      }
     }
   }
 
@@ -209,7 +237,7 @@ exports.preresolved = function* (
           }
         } else {
           yield {
-            children: exports.module(url, null, artifacts, visited, opts)
+            children: exports.module(url, null, {}, artifacts, visited, opts)
           }
         }
       } else {
@@ -241,6 +269,8 @@ exports.imports = function* (
 
   let yielded = false
 
+  const queue = []
+
   for (const entry of lex(source).imports) {
     let specifier = entry.specifier
     let condition = 'default'
@@ -251,6 +281,28 @@ exports.imports = function* (
     } else if (entry.type & lex.constants.ASSET) {
       condition = 'asset'
     }
+
+    if (entry.attributes.imports) {
+      const specifier = entry.attributes.imports
+
+      queue.push({
+        entry: {
+          type: 0,
+          specifier,
+          names: [],
+          attributes: {},
+          position: [0, 0, 0]
+        },
+        specifier,
+        condition: 'default'
+      })
+    }
+
+    queue.push({ entry, specifier, condition })
+  }
+
+  while (queue.length > 0) {
+    const { entry, specifier, condition } = queue.shift()
 
     matchedConditions.push(condition)
 
@@ -285,7 +337,14 @@ exports.imports = function* (
 
             for (const url of prefix) {
               yield {
-                children: exports.module(url, null, artifacts, visited, opts)
+                children: exports.module(
+                  url,
+                  null,
+                  {},
+                  artifacts,
+                  visited,
+                  opts
+                )
               }
 
               addURL(artifacts.assets, url)
@@ -299,8 +358,21 @@ exports.imports = function* (
           if (source !== null) {
             addResolution(imports, specifier, matchedConditions, url)
 
+            const attributes = entry.attributes
+
+            if (attributes.imports) {
+              attributes.imports = imports[attributes.imports].default
+            }
+
             yield {
-              children: exports.module(url, source, artifacts, visited, opts)
+              children: exports.module(
+                url,
+                source,
+                attributes,
+                artifacts,
+                visited,
+                opts
+              )
             }
 
             resolved = yielded = true
@@ -367,7 +439,7 @@ exports.prebuilds = function* (packageURL, artifacts, visited, opts = {}) {
         addURL(artifacts.addons, url)
 
         yield {
-          children: exports.module(url, source, artifacts, visited, opts)
+          children: exports.module(url, source, {}, artifacts, visited, opts)
         }
 
         yielded = true
@@ -397,7 +469,9 @@ exports.assets = function* (
     if (source !== null) {
       addURL(artifacts.assets, url)
 
-      yield { children: exports.module(url, source, artifacts, visited, opts) }
+      yield {
+        children: exports.module(url, source, {}, artifacts, visited, opts)
+      }
 
       yielded = true
     }
@@ -581,4 +655,18 @@ function compressImportsMapEntry(resolved) {
   if (entries.length === 1) return entries[0][1]
 
   return Object.fromEntries(entries)
+}
+
+function mixinImports(target, imports, url) {
+  if (typeof imports === 'object' && imports !== null && 'imports' in imports) {
+    imports = imports.imports
+  }
+
+  if (typeof imports !== 'object' || imports === null) {
+    throw errors.INVALID_IMPORTS_MAP(
+      `Imports map at '${url.href}' is not valid`
+    )
+  }
+
+  return { ...target, ...imports }
 }
