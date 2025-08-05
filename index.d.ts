@@ -61,6 +61,7 @@ declare namespace traverse {
   export function module(
     url: URL,
     source: string | Buffer,
+    attributes: Record<string, string> | null,
     artifacts: Artifacts,
     visited: Set<string>,
     opts?: TraverseOptions
