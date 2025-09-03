@@ -1522,6 +1522,37 @@ test('imports attribute', (t) => {
   ])
 })
 
+test('import default + named', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "import a, { b } from './bar.js'"
+    }
+
+    if (url.href === 'file:///bar.js') {
+      return 'module.exports = 42\nmodule.exports.b = 0451'
+    }
+
+    return null
+  }
+
+  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.js'),
+      source: "import a, { b } from './bar.js'",
+      imports: {
+        './bar.js': 'file:///bar.js'
+      }
+    },
+    {
+      url: new URL('file:///bar.js'),
+      source: 'module.exports = 42\nmodule.exports.b = 0451',
+      imports: {}
+    }
+  ])
+})
+
 function expand(iterable) {
   const iterator = iterable[Symbol.iterator]()
   const values = []
