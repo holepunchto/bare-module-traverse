@@ -123,7 +123,10 @@ exports.module = function* (
     source = yield { module: url }
 
     if (source === null) {
-      throw errors.MODULE_NOT_FOUND(`Cannot find module '${url.href}'`)
+      throw errors.MODULE_NOT_FOUND(
+        `Cannot find module '${url.href}'`,
+        url.href
+      )
     }
   }
 
@@ -307,6 +310,7 @@ exports.imports = function* (
     matchedConditions.push(condition)
 
     const resolver = resolve(entry, parentURL, { ...opts, matchedConditions })
+    const candidates = []
 
     let next = resolver.next()
     let resolutions = 0
@@ -318,6 +322,8 @@ exports.imports = function* (
         next = resolver.next(JSON.parse(yield { module: value.package }))
       } else {
         const url = value.resolution
+
+        candidates.push(url)
 
         let resolved = false
 
@@ -391,19 +397,35 @@ exports.imports = function* (
 
     matchedConditions.pop()
 
+    let message = `Cannot find ${condition === 'default' ? 'module' : condition} '${specifier}' imported from '${parentURL.href}'`
+
+    if (candidates.length > 0) {
+      message += '\nCandidates:'
+      message += '\n' + candidates.map((url) => '- ' + url.href).join('\n')
+    }
+
     if (resolutions === 0) {
       switch (condition) {
         case 'addon':
           throw errors.ADDON_NOT_FOUND(
-            `Cannot find addon '${specifier}' imported from '${parentURL.href}'`
+            message,
+            specifier,
+            parentURL,
+            candidates
           )
         case 'asset':
           throw errors.ASSET_NOT_FOUND(
-            `Cannot find asset '${specifier}' imported from '${parentURL.href}'`
+            message,
+            specifier,
+            parentURL,
+            candidates
           )
         default:
           throw errors.MODULE_NOT_FOUND(
-            `Cannot find module '${specifier}' imported from '${parentURL.href}'`
+            message,
+            specifier,
+            parentURL,
+            candidates
           )
       }
     }
