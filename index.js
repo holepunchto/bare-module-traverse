@@ -180,9 +180,13 @@ exports.module = function* (
     }
   }
 
-  yield* exports.imports(url, source, imports, artifacts, visited, opts)
+  const lexer = { imports: [] }
 
-  yield { dependency: { url, source, imports: compressImportsMap(imports) } }
+  yield* exports.imports(url, source, imports, artifacts, lexer, visited, opts)
+
+  yield {
+    dependency: { url, source, imports: compressImportsMap(imports), lexer }
+  }
 
   return true
 }
@@ -195,7 +199,7 @@ exports.package = function* (url, source, artifacts, visited, opts = {}) {
   const info = JSON.parse(source)
 
   if (info) {
-    yield { dependency: { url, source, imports: {} } }
+    yield { dependency: { url, source, imports: {}, lexer: { imports: [] } } }
 
     if (info.addon) {
       yield { children: exports.prebuilds(url, artifacts, visited, opts) }
@@ -249,7 +253,14 @@ exports.preresolved = function* (
     }
   }
 
-  yield { dependency: { url, source, imports: compressImportsMap(imports) } }
+  yield {
+    dependency: {
+      url,
+      source,
+      imports: compressImportsMap(imports),
+      lexer: { imports: [] }
+    }
+  }
 
   return true
 }
@@ -259,6 +270,7 @@ exports.imports = function* (
   source,
   imports,
   artifacts,
+  lexer,
   visited,
   opts = {}
 ) {
@@ -300,6 +312,8 @@ exports.imports = function* (
         condition: 'default'
       })
     }
+
+    lexer.imports.push(entry)
 
     queue.push({ entry, specifier, condition })
   }
@@ -397,14 +411,14 @@ exports.imports = function* (
 
     matchedConditions.pop()
 
-    let message = `Cannot find ${condition === 'default' ? 'module' : condition} '${specifier}' imported from '${parentURL.href}'`
-
-    if (candidates.length > 0) {
-      message += '\nCandidates:'
-      message += '\n' + candidates.map((url) => '- ' + url.href).join('\n')
-    }
-
     if (resolutions === 0) {
+      let message = `Cannot find ${condition === 'default' ? 'module' : condition} '${specifier}' imported from '${parentURL.href}'`
+
+      if (candidates.length > 0) {
+        message += '\nCandidates:'
+        message += '\n' + candidates.map((url) => '- ' + url.href).join('\n')
+      }
+
       switch (condition) {
         case 'addon':
           throw errors.ADDON_NOT_FOUND(
