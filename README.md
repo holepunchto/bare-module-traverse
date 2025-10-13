@@ -78,6 +78,11 @@ dependency = {
   source: 'string' | Buffer, // Source as returned by `readModule()`
   imports: {
     // See https://github.com/holepunchto/bare-module#imports
+  },
+  lexer: {
+    imports: [
+      // See https://github.com/holepunchto/bare-module-lexer#api
+    ]
   }
 }
 ```
@@ -158,7 +163,7 @@ next.value = {
 
 ```js
 next.value = {
-  children: URL
+  children: Generator
 }
 ```
 
@@ -166,7 +171,18 @@ next.value = {
 
 ```js
 next.value = {
-  dependency: URL
+  dependency: {
+    url: URL,
+    source: 'string' | Buffer,
+    imports: {
+      // See https://github.com/holepunchto/bare-module#imports
+    },
+    lexer: {
+      imports: [
+        // See https://github.com/holepunchto/bare-module-lexer#api
+      ]
+    }
+  }
 }
 ```
 

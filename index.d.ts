@@ -12,6 +12,9 @@ interface Dependency {
   url: URL
   source: string | Buffer
   imports: ImportsMap
+  lexer: {
+    imports: Import[]
+  }
 }
 
 interface TraverseOptions extends ResolveOptions {

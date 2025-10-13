@@ -1,5 +1,8 @@
 const test = require('brittle')
+const lex = require('bare-module-lexer')
 const traverse = require('.')
+
+const { REQUIRE, IMPORT, ADDON, ASSET, REEXPORT } = lex.constants
 
 const host = 'host'
 
@@ -28,6 +31,17 @@ test('require', (t) => {
       source: "const bar = require('./bar.js')",
       imports: {
         './bar.js': 'file:///bar.js'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './bar.js',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [12, 21, 29]
+          }
+        ]
       }
     },
     {
@@ -35,12 +49,24 @@ test('require', (t) => {
       source: "const baz = require('./baz.js')",
       imports: {
         './baz.js': 'file:///baz.js'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './baz.js',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [12, 21, 29]
+          }
+        ]
       }
     },
     {
       url: new URL('file:///baz.js'),
       source: 'module.exports = 42',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     }
   ])
 })
@@ -70,6 +96,17 @@ test('import', (t) => {
       source: "import './bar.js'",
       imports: {
         './bar.js': 'file:///bar.js'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './bar.js',
+            type: IMPORT,
+            names: [],
+            attributes: {},
+            position: [0, 8, 16]
+          }
+        ]
       }
     },
     {
@@ -77,12 +114,24 @@ test('import', (t) => {
       source: "import './baz.js'",
       imports: {
         './baz.js': 'file:///baz.js'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './baz.js',
+            type: IMPORT,
+            names: [],
+            attributes: {},
+            position: [0, 8, 16]
+          }
+        ]
       }
     },
     {
       url: new URL('file:///baz.js'),
       source: 'export default 42',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     }
   ])
 })
@@ -108,6 +157,17 @@ test('cyclic require', (t) => {
       source: "require('./bar.js')",
       imports: {
         './bar.js': 'file:///bar.js'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './bar.js',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [0, 9, 17]
+          }
+        ]
       }
     },
     {
@@ -115,6 +175,17 @@ test('cyclic require', (t) => {
       source: "require('./foo.js')",
       imports: {
         './foo.js': 'file:///foo.js'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './foo.js',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [0, 9, 17]
+          }
+        ]
       }
     }
   ])
@@ -141,6 +212,17 @@ test('cyclic import', (t) => {
       source: "import './bar.js'",
       imports: {
         './bar.js': 'file:///bar.js'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './bar.js',
+            type: IMPORT,
+            names: [],
+            attributes: {},
+            position: [0, 8, 16]
+          }
+        ]
       }
     },
     {
@@ -148,6 +230,17 @@ test('cyclic import', (t) => {
       source: "import './foo.js'",
       imports: {
         './foo.js': 'file:///foo.js'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './foo.js',
+            type: IMPORT,
+            names: [],
+            attributes: {},
+            position: [0, 8, 16]
+          }
+        ]
       }
     }
   ])
@@ -191,12 +284,31 @@ test('require, same module twice', (t) => {
       source: "require('./bar.js'), require('./bar.js')",
       imports: {
         './bar.js': 'file:///bar.js'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './bar.js',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [0, 9, 17]
+          },
+          {
+            specifier: './bar.js',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [21, 30, 38]
+          }
+        ]
       }
     },
     {
       url: new URL('file:///bar.js'),
       source: 'module.exports = 42',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     }
   ])
 })
@@ -233,6 +345,17 @@ test('require.addon', (t) => {
       imports: {
         '#package': 'file:///package.json',
         '.': 'file:///prebuilds/host/foo.bare'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: '.',
+            type: REQUIRE | ADDON,
+            names: [],
+            attributes: {},
+            position: [12, 27, 28]
+          }
+        ]
       }
     },
     {
@@ -240,12 +363,14 @@ test('require.addon', (t) => {
       source: '<native code>',
       imports: {
         '#package': 'file:///package.json'
-      }
+      },
+      lexer: { imports: [] }
     },
     {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo" }',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     }
   ])
 
@@ -284,6 +409,17 @@ test('require.addon, referrer', (t) => {
       imports: {
         '#package': 'file:///package.json',
         '.': 'file:///prebuilds/host/foo.bare'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: '.',
+            type: REQUIRE | ADDON,
+            names: [],
+            attributes: {},
+            position: [12, 27, 28]
+          }
+        ]
       }
     },
     {
@@ -291,12 +427,14 @@ test('require.addon, referrer', (t) => {
       source: '<native code>',
       imports: {
         '#package': 'file:///package.json'
-      }
+      },
+      lexer: { imports: [] }
     },
     {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo" }',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     }
   ])
 
@@ -362,6 +500,17 @@ test('require.addon, default specifier', (t) => {
       imports: {
         '#package': 'file:///package.json',
         '.': 'file:///prebuilds/host/foo.bare'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: '',
+            type: REQUIRE | ADDON,
+            names: [],
+            attributes: {},
+            position: [12, 26, 26]
+          }
+        ]
       }
     },
     {
@@ -369,12 +518,14 @@ test('require.addon, default specifier', (t) => {
       source: '<native code>',
       imports: {
         '#package': 'file:///package.json'
-      }
+      },
+      lexer: { imports: [] }
     },
     {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo" }',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     }
   ])
 
@@ -409,12 +560,24 @@ test('require.addon, builtin', (t) => {
       imports: {
         '#package': 'file:///package.json',
         '.': 'builtin:foo'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: '.',
+            type: REQUIRE | ADDON,
+            names: [],
+            attributes: {},
+            position: [12, 27, 28]
+          }
+        ]
       }
     },
     {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo" }',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     }
   ])
 
@@ -449,12 +612,24 @@ test('require.addon, linked', (t) => {
       imports: {
         '#package': 'file:///package.json',
         '.': 'linked:foo.framework/foo'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: '.',
+            type: REQUIRE | ADDON,
+            names: [],
+            attributes: {},
+            position: [12, 27, 28]
+          }
+        ]
       }
     },
     {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo" }',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     }
   ])
 
@@ -500,6 +675,17 @@ test('require.addon, hosts list', (t) => {
           a: 'file:///prebuilds/host-a/foo.bare',
           b: 'file:///prebuilds/host-b/foo.bare'
         }
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: '.',
+            type: REQUIRE | ADDON | REEXPORT,
+            names: [],
+            attributes: {},
+            position: [17, 32, 33]
+          }
+        ]
       }
     },
     {
@@ -507,19 +693,22 @@ test('require.addon, hosts list', (t) => {
       source: '<native code b>',
       imports: {
         '#package': 'file:///package.json'
-      }
+      },
+      lexer: { imports: [] }
     },
     {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo" }',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     },
     {
       url: new URL('file:///prebuilds/host-a/foo.bare'),
       source: '<native code a>',
       imports: {
         '#package': 'file:///package.json'
-      }
+      },
+      lexer: { imports: [] }
     }
   ])
 
@@ -575,6 +764,17 @@ test('require.addon, hosts list, host variants', (t) => {
           },
           default: 'file:///prebuilds/host/foo.bare'
         }
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: '.',
+            type: REQUIRE | ADDON | REEXPORT,
+            names: [],
+            attributes: {},
+            position: [17, 32, 33]
+          }
+        ]
       }
     },
     {
@@ -582,26 +782,30 @@ test('require.addon, hosts list, host variants', (t) => {
       source: '<native code a b>',
       imports: {
         '#package': 'file:///package.json'
-      }
+      },
+      lexer: { imports: [] }
     },
     {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo" }',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     },
     {
       url: new URL('file:///prebuilds/host-a/foo.bare'),
       source: '<native code a>',
       imports: {
         '#package': 'file:///package.json'
-      }
+      },
+      lexer: { imports: [] }
     },
     {
       url: new URL('file:///prebuilds/host/foo.bare'),
       source: '<native code>',
       imports: {
         '#package': 'file:///package.json'
-      }
+      },
+      lexer: { imports: [] }
     }
   ])
 
@@ -646,12 +850,24 @@ test('require.addon, hosts list, linked', (t) => {
           darwin: 'linked:foo.framework/foo',
           linux: 'linked:libfoo.so'
         }
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: '.',
+            type: REQUIRE | ADDON | REEXPORT,
+            names: [],
+            attributes: {},
+            position: [17, 32, 33]
+          }
+        ]
       }
     },
     {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo" }',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     }
   ])
 
@@ -682,12 +898,24 @@ test('require.asset', (t) => {
       source: "const bar = require.asset('./bar.txt')",
       imports: {
         './bar.txt': 'file:///bar.txt'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './bar.txt',
+            type: REQUIRE | ASSET,
+            names: [],
+            attributes: {},
+            position: [12, 27, 36]
+          }
+        ]
       }
     },
     {
       url: new URL('file:///bar.txt'),
       source: 'hello world',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     }
   ])
 
@@ -715,12 +943,24 @@ test('require.asset, referrer', (t) => {
       source: "const bar = require.asset('./bar.txt', __filename)",
       imports: {
         './bar.txt': 'file:///bar.txt'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './bar.txt',
+            type: REQUIRE | ASSET,
+            names: [],
+            attributes: {},
+            position: [12, 27, 36]
+          }
+        ]
       }
     },
     {
       url: new URL('file:///bar.txt'),
       source: 'hello world',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     }
   ])
 
@@ -748,12 +988,31 @@ test('require + require.asset', (t) => {
       source: "require('./bar.js'), require.asset('./bar.js')",
       imports: {
         './bar.js': 'file:///bar.js'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './bar.js',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [0, 9, 17]
+          },
+          {
+            specifier: './bar.js',
+            type: REQUIRE | ASSET,
+            names: [],
+            attributes: {},
+            position: [21, 36, 44]
+          }
+        ]
       }
     },
     {
       url: new URL('file:///bar.js'),
       source: 'module.exports = 42',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     }
   ])
 
@@ -795,17 +1054,30 @@ test('require.asset, directory', (t) => {
       source: "const bar = require.asset('./bar')",
       imports: {
         './bar': 'file:///bar'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './bar',
+            type: REQUIRE | ASSET,
+            names: [],
+            attributes: {},
+            position: [12, 27, 32]
+          }
+        ]
       }
     },
     {
       url: new URL('file:///bar/b.txt'),
       source: 'hello b',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     },
     {
       url: new URL('file:///bar/a.txt'),
       source: 'hello a',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     }
   ])
 
@@ -864,19 +1136,22 @@ test('package.json#addon', (t) => {
         source: '',
         imports: {
           '#package': 'file:///package.json'
-        }
+        },
+        lexer: { imports: [] }
       },
       {
         url: new URL('file:///package.json'),
         source: '{ "name": "foo", "addon": true }',
-        imports: {}
+        imports: {},
+        lexer: { imports: [] }
       },
       {
         url: new URL('file:///prebuilds/darwin-arm64/foo.bare'),
         source: '<native code>',
         imports: {
           '#package': 'file:///package.json'
-        }
+        },
+        lexer: { imports: [] }
       }
     ])
   }
@@ -896,19 +1171,22 @@ test('package.json#addon', (t) => {
         source: '',
         imports: {
           '#package': 'file:///package.json'
-        }
+        },
+        lexer: { imports: [] }
       },
       {
         url: new URL('file:///package.json'),
         source: '{ "name": "foo", "addon": true }',
-        imports: {}
+        imports: {},
+        lexer: { imports: [] }
       },
       {
         url: new URL('file:///prebuilds/linux-arm64/foo.bare'),
         source: '<native code>',
         imports: {
           '#package': 'file:///package.json'
-        }
+        },
+        lexer: { imports: [] }
       }
     ])
   }
@@ -949,19 +1227,22 @@ test('package.json#assets', (t) => {
       source: '',
       imports: {
         '#package': 'file:///package.json'
-      }
+      },
+      lexer: { imports: [] }
     },
     {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo", "assets": ["bar/"] }',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     },
     {
       url: new URL('file:///bar/baz.txt'),
       source: 'hello world',
       imports: {
         '#package': 'file:///package.json'
-      }
+      },
+      lexer: { imports: [] }
     }
   ])
 })
@@ -1005,19 +1286,22 @@ test('package.json#assets, pattern match', (t) => {
       source: '',
       imports: {
         '#package': 'file:///package.json'
-      }
+      },
+      lexer: { imports: [] }
     },
     {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo", "assets": ["bar/*.txt"] }',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     },
     {
       url: new URL('file:///bar/baz.txt'),
       source: 'hello world',
       imports: {
         '#package': 'file:///package.json'
-      }
+      },
+      lexer: { imports: [] }
     }
   ])
 })
@@ -1064,19 +1348,22 @@ test('package.json#assets, negate', (t) => {
       source: '',
       imports: {
         '#package': 'file:///package.json'
-      }
+      },
+      lexer: { imports: [] }
     },
     {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo", "assets": ["bar/", "!bar/qux.txt"] }',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     },
     {
       url: new URL('file:///bar/baz.txt'),
       source: 'hello world',
       imports: {
         '#package': 'file:///package.json'
-      }
+      },
+      lexer: { imports: [] }
     }
   ])
 })
@@ -1130,20 +1417,23 @@ test('package.json#assets, conditional pattern', (t) => {
         source: '',
         imports: {
           '#package': 'file:///package.json'
-        }
+        },
+        lexer: { imports: [] }
       },
       {
         url: new URL('file:///package.json'),
         source:
           '{ "name": "foo", "assets": [{ "darwin": "darwin/", "linux": "linux/" }] }',
-        imports: {}
+        imports: {},
+        lexer: { imports: [] }
       },
       {
         url: new URL('file:///darwin/baz.txt'),
         source: 'hello darwin',
         imports: {
           '#package': 'file:///package.json'
-        }
+        },
+        lexer: { imports: [] }
       }
     ])
   }
@@ -1163,20 +1453,23 @@ test('package.json#assets, conditional pattern', (t) => {
         source: '',
         imports: {
           '#package': 'file:///package.json'
-        }
+        },
+        lexer: { imports: [] }
       },
       {
         url: new URL('file:///package.json'),
         source:
           '{ "name": "foo", "assets": [{ "darwin": "darwin/", "linux": "linux/" }] }',
-        imports: {}
+        imports: {},
+        lexer: { imports: [] }
       },
       {
         url: new URL('file:///linux/baz.txt'),
         source: 'hello linux',
         imports: {
           '#package': 'file:///package.json'
-        }
+        },
+        lexer: { imports: [] }
       }
     ])
   }
@@ -1219,19 +1512,22 @@ test('resolutions map', (t) => {
       source: "const bar = require('./bar.js')",
       imports: {
         './bar.js': 'file:///bar.js'
-      }
+      },
+      lexer: { imports: [] }
     },
     {
       url: new URL('file:///bar.js'),
       source: "const baz = require('./baz.js')",
       imports: {
         './baz.js': 'file:///baz.js'
-      }
+      },
+      lexer: { imports: [] }
     },
     {
       url: new URL('file:///baz.js'),
       source: 'module.exports = 42',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     }
   ])
 })
@@ -1270,19 +1566,32 @@ test('resolutions map, partial', (t) => {
       source: "const bar = require('./bar.js')",
       imports: {
         './bar.js': 'file:///bar.js'
-      }
+      },
+      lexer: { imports: [] }
     },
     {
       url: new URL('file:///bar.js'),
       source: "const baz = require('./baz.js')",
       imports: {
         './baz.js': 'file:///baz.js'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './baz.js',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [12, 21, 29]
+          }
+        ]
       }
     },
     {
       url: new URL('file:///baz.js'),
       source: 'module.exports = 42',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     }
   ])
 })
@@ -1342,6 +1651,17 @@ test('imports map', (t) => {
       source: "const bar = require('bar')",
       imports: {
         bar: 'file:///bar.js'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: 'bar',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [12, 21, 24]
+          }
+        ]
       }
     },
     {
@@ -1349,12 +1669,24 @@ test('imports map', (t) => {
       source: "const baz = require('baz')",
       imports: {
         baz: 'file:///baz.js'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: 'baz',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [12, 21, 24]
+          }
+        ]
       }
     },
     {
       url: new URL('file:///baz.js'),
       source: 'module.exports = 42',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     }
   ])
 })
@@ -1389,6 +1721,17 @@ test('imports map, deferred', (t) => {
       source: "const bar = require('bar')",
       imports: {
         bar: 'file:///bar.js'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: 'bar',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [12, 21, 24]
+          }
+        ]
       }
     },
     {
@@ -1396,6 +1739,17 @@ test('imports map, deferred', (t) => {
       source: "const baz = require('baz')",
       imports: {
         baz: 'deferred:qux'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: 'baz',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [12, 21, 24]
+          }
+        ]
       }
     }
   ])
@@ -1444,6 +1798,17 @@ test('conditional imports, conditions matrix', (t) => {
           a: 'file:///a.js',
           b: 'file:///b.js'
         }
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: '#bar',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [12, 21, 25]
+          }
+        ]
       }
     },
     {
@@ -1451,20 +1816,23 @@ test('conditional imports, conditions matrix', (t) => {
       source: "module.exports = 'b'",
       imports: {
         '#package': 'file:///package.json'
-      }
+      },
+      lexer: { imports: [] }
     },
     {
       url: new URL('file:///package.json'),
       source:
         '{ "name": "foo", "imports": { "#bar": { "a": "./a.js", "b": "./b.js", "c": "./c.js" } } }',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     },
     {
       url: new URL('file:///a.js'),
       source: "module.exports = 'a'",
       imports: {
         '#package': 'file:///package.json'
-      }
+      },
+      lexer: { imports: [] }
     }
   ])
 })
@@ -1500,6 +1868,17 @@ test('imports attribute', (t) => {
       imports: {
         './bar.js': 'file:///bar.js',
         './imports.json': 'file:///imports.json'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './bar.js',
+            type: REQUIRE,
+            names: [],
+            attributes: { imports: 'file:///imports.json' },
+            position: [12, 21, 29]
+          }
+        ]
       }
     },
     {
@@ -1507,17 +1886,30 @@ test('imports attribute', (t) => {
       source: "const baz = require('baz')",
       imports: {
         baz: 'file:///baz.js'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: 'baz',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [12, 21, 24]
+          }
+        ]
       }
     },
     {
       url: new URL('file:///baz.js'),
       source: 'module.exports = 42',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     },
     {
       url: new URL('file:///imports.json'),
       source: '{ "baz": "/baz.js" }',
-      imports: {}
+      imports: {},
+      lexer: { imports: [] }
     }
   ])
 })
