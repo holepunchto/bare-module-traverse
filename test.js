@@ -1,5 +1,8 @@
 const test = require('brittle')
+const lex = require('bare-module-lexer')
 const traverse = require('.')
+
+const { REQUIRE, IMPORT, ADDON, ASSET, REEXPORT } = lex.constants
 
 const host = 'host'
 
@@ -33,7 +36,7 @@ test('require', (t) => {
         imports: [
           {
             specifier: './bar.js',
-            type: 1,
+            type: REQUIRE,
             names: [],
             attributes: {},
             position: [12, 21, 29]
@@ -51,7 +54,7 @@ test('require', (t) => {
         imports: [
           {
             specifier: './baz.js',
-            type: 1,
+            type: REQUIRE,
             names: [],
             attributes: {},
             position: [12, 21, 29]
@@ -98,7 +101,7 @@ test('import', (t) => {
         imports: [
           {
             specifier: './bar.js',
-            type: 2,
+            type: IMPORT,
             names: [],
             attributes: {},
             position: [0, 8, 16]
@@ -116,7 +119,7 @@ test('import', (t) => {
         imports: [
           {
             specifier: './baz.js',
-            type: 2,
+            type: IMPORT,
             names: [],
             attributes: {},
             position: [0, 8, 16]
@@ -159,7 +162,7 @@ test('cyclic require', (t) => {
         imports: [
           {
             specifier: './bar.js',
-            type: 1,
+            type: REQUIRE,
             names: [],
             attributes: {},
             position: [0, 9, 17]
@@ -177,7 +180,7 @@ test('cyclic require', (t) => {
         imports: [
           {
             specifier: './foo.js',
-            type: 1,
+            type: REQUIRE,
             names: [],
             attributes: {},
             position: [0, 9, 17]
@@ -214,7 +217,7 @@ test('cyclic import', (t) => {
         imports: [
           {
             specifier: './bar.js',
-            type: 2,
+            type: IMPORT,
             names: [],
             attributes: {},
             position: [0, 8, 16]
@@ -232,7 +235,7 @@ test('cyclic import', (t) => {
         imports: [
           {
             specifier: './foo.js',
-            type: 2,
+            type: IMPORT,
             names: [],
             attributes: {},
             position: [0, 8, 16]
@@ -286,14 +289,14 @@ test('require, same module twice', (t) => {
         imports: [
           {
             specifier: './bar.js',
-            type: 1,
+            type: REQUIRE,
             names: [],
             attributes: {},
             position: [0, 9, 17]
           },
           {
             specifier: './bar.js',
-            type: 1,
+            type: REQUIRE,
             names: [],
             attributes: {},
             position: [21, 30, 38]
@@ -347,7 +350,7 @@ test('require.addon', (t) => {
         imports: [
           {
             specifier: '.',
-            type: 9,
+            type: REQUIRE | ADDON,
             names: [],
             attributes: {},
             position: [12, 27, 28]
@@ -411,7 +414,7 @@ test('require.addon, referrer', (t) => {
         imports: [
           {
             specifier: '.',
-            type: 9,
+            type: REQUIRE | ADDON,
             names: [],
             attributes: {},
             position: [12, 27, 28]
@@ -502,7 +505,7 @@ test('require.addon, default specifier', (t) => {
         imports: [
           {
             specifier: '',
-            type: 9,
+            type: REQUIRE | ADDON,
             names: [],
             attributes: {},
             position: [12, 26, 26]
@@ -562,7 +565,7 @@ test('require.addon, builtin', (t) => {
         imports: [
           {
             specifier: '.',
-            type: 9,
+            type: REQUIRE | ADDON,
             names: [],
             attributes: {},
             position: [12, 27, 28]
@@ -614,7 +617,7 @@ test('require.addon, linked', (t) => {
         imports: [
           {
             specifier: '.',
-            type: 9,
+            type: REQUIRE | ADDON,
             names: [],
             attributes: {},
             position: [12, 27, 28]
@@ -677,7 +680,7 @@ test('require.addon, hosts list', (t) => {
         imports: [
           {
             specifier: '.',
-            type: 73,
+            type: REQUIRE | ADDON | REEXPORT,
             names: [],
             attributes: {},
             position: [17, 32, 33]
@@ -766,7 +769,7 @@ test('require.addon, hosts list, host variants', (t) => {
         imports: [
           {
             specifier: '.',
-            type: 73,
+            type: REQUIRE | ADDON | REEXPORT,
             names: [],
             attributes: {},
             position: [17, 32, 33]
@@ -852,7 +855,7 @@ test('require.addon, hosts list, linked', (t) => {
         imports: [
           {
             specifier: '.',
-            type: 73,
+            type: REQUIRE | ADDON | REEXPORT,
             names: [],
             attributes: {},
             position: [17, 32, 33]
@@ -900,7 +903,7 @@ test('require.asset', (t) => {
         imports: [
           {
             specifier: './bar.txt',
-            type: 17,
+            type: REQUIRE | ASSET,
             names: [],
             attributes: {},
             position: [12, 27, 36]
@@ -945,7 +948,7 @@ test('require.asset, referrer', (t) => {
         imports: [
           {
             specifier: './bar.txt',
-            type: 17,
+            type: REQUIRE | ASSET,
             names: [],
             attributes: {},
             position: [12, 27, 36]
@@ -990,14 +993,14 @@ test('require + require.asset', (t) => {
         imports: [
           {
             specifier: './bar.js',
-            type: 1,
+            type: REQUIRE,
             names: [],
             attributes: {},
             position: [0, 9, 17]
           },
           {
             specifier: './bar.js',
-            type: 17,
+            type: REQUIRE | ASSET,
             names: [],
             attributes: {},
             position: [21, 36, 44]
@@ -1056,7 +1059,7 @@ test('require.asset, directory', (t) => {
         imports: [
           {
             specifier: './bar',
-            type: 17,
+            type: REQUIRE | ASSET,
             names: [],
             attributes: {},
             position: [12, 27, 32]
@@ -1576,7 +1579,7 @@ test('resolutions map, partial', (t) => {
         imports: [
           {
             specifier: './baz.js',
-            type: 1,
+            type: REQUIRE,
             names: [],
             attributes: {},
             position: [12, 21, 29]
@@ -1653,7 +1656,7 @@ test('imports map', (t) => {
         imports: [
           {
             specifier: 'bar',
-            type: 1,
+            type: REQUIRE,
             names: [],
             attributes: {},
             position: [12, 21, 24]
@@ -1671,7 +1674,7 @@ test('imports map', (t) => {
         imports: [
           {
             specifier: 'baz',
-            type: 1,
+            type: REQUIRE,
             names: [],
             attributes: {},
             position: [12, 21, 24]
@@ -1723,7 +1726,7 @@ test('imports map, deferred', (t) => {
         imports: [
           {
             specifier: 'bar',
-            type: 1,
+            type: REQUIRE,
             names: [],
             attributes: {},
             position: [12, 21, 24]
@@ -1741,7 +1744,7 @@ test('imports map, deferred', (t) => {
         imports: [
           {
             specifier: 'baz',
-            type: 1,
+            type: REQUIRE,
             names: [],
             attributes: {},
             position: [12, 21, 24]
@@ -1800,7 +1803,7 @@ test('conditional imports, conditions matrix', (t) => {
         imports: [
           {
             specifier: '#bar',
-            type: 1,
+            type: REQUIRE,
             names: [],
             attributes: {},
             position: [12, 21, 25]
@@ -1870,7 +1873,7 @@ test('imports attribute', (t) => {
         imports: [
           {
             specifier: './bar.js',
-            type: 1,
+            type: REQUIRE,
             names: [],
             attributes: { imports: 'file:///imports.json' },
             position: [12, 21, 29]
@@ -1888,7 +1891,7 @@ test('imports attribute', (t) => {
         imports: [
           {
             specifier: 'baz',
-            type: 1,
+            type: REQUIRE,
             names: [],
             attributes: {},
             position: [12, 21, 24]
