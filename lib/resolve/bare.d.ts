@@ -8,11 +8,7 @@ interface BareResolveOptions extends ResolveOptions {
   target?: string[]
 }
 
-declare function resolve(
-  entry: Import,
-  parentURL: URL,
-  opts?: BareResolveOptions
-): Resolver
+declare function resolve(entry: Import, parentURL: URL, opts?: BareResolveOptions): Resolver
 
 declare namespace resolve {
   export { type BareResolveOptions }

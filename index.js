@@ -4,12 +4,7 @@ const lex = require('bare-module-lexer')
 const resolve = require('./lib/resolve')
 const errors = require('./lib/errors')
 
-module.exports = exports = function traverse(
-  entry,
-  opts,
-  readModule,
-  listPrefix
-) {
+module.exports = exports = function traverse(entry, opts, readModule, listPrefix) {
   if (typeof opts === 'function') {
     listPrefix = readModule
     readModule = opts
@@ -20,9 +15,7 @@ module.exports = exports = function traverse(
     *[Symbol.iterator]() {
       const artifacts = { addons: [], assets: [] }
 
-      const queue = [
-        exports.module(entry, null, {}, artifacts, new Set(), opts)
-      ]
+      const queue = [exports.module(entry, null, {}, artifacts, new Set(), opts)]
 
       while (queue.length > 0) {
         const generator = queue.pop()
@@ -63,9 +56,7 @@ module.exports = exports = function traverse(
     async *[Symbol.asyncIterator]() {
       const artifacts = { addons: [], assets: [] }
 
-      const queue = [
-        exports.module(entry, null, {}, artifacts, new Set(), opts)
-      ]
+      const queue = [exports.module(entry, null, {}, artifacts, new Set(), opts)]
 
       while (queue.length > 0) {
         const generator = queue.pop()
@@ -107,14 +98,7 @@ module.exports = exports = function traverse(
 
 exports.resolve = resolve
 
-exports.module = function* (
-  url,
-  source,
-  attributes,
-  artifacts,
-  visited,
-  opts = {}
-) {
+exports.module = function* (url, source, attributes, artifacts, visited, opts = {}) {
   const { resolutions = null } = opts
 
   if (visited.has(url.href)) return false
@@ -123,26 +107,14 @@ exports.module = function* (
     source = yield { module: url }
 
     if (source === null) {
-      throw errors.MODULE_NOT_FOUND(
-        `Cannot find module '${url.href}'`,
-        url.href
-      )
+      throw errors.MODULE_NOT_FOUND(`Cannot find module '${url.href}'`, url.href)
     }
   }
 
   visited.add(url.href)
 
   if (resolutions) {
-    if (
-      yield* exports.preresolved(
-        url,
-        source,
-        resolutions,
-        artifacts,
-        visited,
-        opts
-      )
-    ) {
+    if (yield* exports.preresolved(url, source, resolutions, artifacts, visited, opts)) {
       return true
     }
   }
@@ -217,14 +189,7 @@ exports.package = function* (url, source, artifacts, visited, opts = {}) {
   return false
 }
 
-exports.preresolved = function* (
-  url,
-  source,
-  resolutions,
-  artifacts,
-  visited,
-  opts = {}
-) {
+exports.preresolved = function* (url, source, resolutions, artifacts, visited, opts = {}) {
   const imports = resolutions[url.href]
 
   if (typeof imports !== 'object' || imports === null) return false
@@ -265,15 +230,7 @@ exports.preresolved = function* (
   return true
 }
 
-exports.imports = function* (
-  parentURL,
-  source,
-  imports,
-  artifacts,
-  lexer,
-  visited,
-  opts = {}
-) {
+exports.imports = function* (parentURL, source, imports, artifacts, lexer, visited, opts = {}) {
   const {
     resolve = exports.resolve.default,
     builtinProtocol = 'builtin:',
@@ -357,14 +314,7 @@ exports.imports = function* (
 
             for (const url of prefix) {
               yield {
-                children: exports.module(
-                  url,
-                  null,
-                  {},
-                  artifacts,
-                  visited,
-                  opts
-                )
+                children: exports.module(url, null, {}, artifacts, visited, opts)
               }
 
               addURL(artifacts.assets, url)
@@ -385,14 +335,7 @@ exports.imports = function* (
             }
 
             yield {
-              children: exports.module(
-                url,
-                source,
-                attributes,
-                artifacts,
-                visited,
-                opts
-              )
+              children: exports.module(url, source, attributes, artifacts, visited, opts)
             }
 
             resolved = yielded = true
@@ -421,26 +364,11 @@ exports.imports = function* (
 
       switch (condition) {
         case 'addon':
-          throw errors.ADDON_NOT_FOUND(
-            message,
-            specifier,
-            parentURL,
-            candidates
-          )
+          throw errors.ADDON_NOT_FOUND(message, specifier, parentURL, candidates)
         case 'asset':
-          throw errors.ASSET_NOT_FOUND(
-            message,
-            specifier,
-            parentURL,
-            candidates
-          )
+          throw errors.ASSET_NOT_FOUND(message, specifier, parentURL, candidates)
         default:
-          throw errors.MODULE_NOT_FOUND(
-            message,
-            specifier,
-            parentURL,
-            candidates
-          )
+          throw errors.MODULE_NOT_FOUND(message, specifier, parentURL, candidates)
       }
     }
   }
@@ -488,13 +416,7 @@ exports.prebuilds = function* (packageURL, artifacts, visited, opts = {}) {
   return yielded
 }
 
-exports.assets = function* (
-  patterns,
-  parentURL,
-  artifacts,
-  visited,
-  opts = {}
-) {
+exports.assets = function* (patterns, parentURL, artifacts, visited, opts = {}) {
   const matches = yield* exports.patternMatches(patterns, parentURL, [], opts)
 
   let yielded = false
@@ -516,12 +438,7 @@ exports.assets = function* (
   return yielded
 }
 
-exports.patternMatches = function* patternMatches(
-  pattern,
-  parentURL,
-  matches,
-  opts = {}
-) {
+exports.patternMatches = function* patternMatches(pattern, parentURL, matches, opts = {}) {
   const { conditions = [], matchedConditions = [] } = opts
 
   if (typeof pattern === 'string') {
@@ -563,11 +480,7 @@ exports.patternMatches = function* patternMatches(
   } else if (typeof pattern === 'object' && pattern !== null) {
     let yielded = false
 
-    for (const [condition, patternValue, subset] of conditionMatches(
-      pattern,
-      conditions,
-      opts
-    )) {
+    for (const [condition, patternValue, subset] of conditionMatches(pattern, conditions, opts)) {
       matchedConditions.push(condition)
 
       if (
@@ -699,9 +612,7 @@ function mixinImports(target, imports, url) {
   }
 
   if (typeof imports !== 'object' || imports === null) {
-    throw errors.INVALID_IMPORTS_MAP(
-      `Imports map at '${url.href}' is not valid`
-    )
+    throw errors.INVALID_IMPORTS_MAP(`Imports map at '${url.href}' is not valid`)
   }
 
   return { ...target, ...imports }

@@ -331,11 +331,7 @@ test('require.addon', (t) => {
   }
 
   const result = expand(
-    traverse(
-      new URL('file:///foo.js'),
-      { host, extensions: ['.bare'] },
-      readModule
-    )
+    traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule)
   )
 
   t.alike(result.values, [
@@ -395,11 +391,7 @@ test('require.addon, referrer', (t) => {
   }
 
   const result = expand(
-    traverse(
-      new URL('file:///foo.js'),
-      { host, extensions: ['.bare'] },
-      readModule
-    )
+    traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule)
   )
 
   t.alike(result.values, [
@@ -455,13 +447,7 @@ test('require.addon, addon missing', (t) => {
   }
 
   try {
-    expand(
-      traverse(
-        new URL('file:///foo.js'),
-        { host, extensions: ['.bare'] },
-        readModule
-      )
-    )
+    expand(traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule))
     t.fail()
   } catch (err) {
     t.comment(err.message)
@@ -486,11 +472,7 @@ test('require.addon, default specifier', (t) => {
   }
 
   const result = expand(
-    traverse(
-      new URL('file:///foo.js'),
-      { host, extensions: ['.bare'] },
-      readModule
-    )
+    traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule)
   )
 
   t.alike(result.values, [
@@ -598,11 +580,7 @@ test('require.addon, linked', (t) => {
   }
 
   const result = expand(
-    traverse(
-      new URL('file:///foo.js'),
-      { host: 'darwin-arm64', extensions: ['.bare'] },
-      readModule
-    )
+    traverse(new URL('file:///foo.js'), { host: 'darwin-arm64', extensions: ['.bare'] }, readModule)
   )
 
   t.alike(result.values, [
@@ -871,10 +849,7 @@ test('require.addon, hosts list, linked', (t) => {
     }
   ])
 
-  t.alike(result.return.addons, [
-    new URL('linked:foo.framework/foo'),
-    new URL('linked:libfoo.so')
-  ])
+  t.alike(result.return.addons, [new URL('linked:foo.framework/foo'), new URL('linked:libfoo.so')])
 })
 
 test('require.asset', (t) => {
@@ -1044,9 +1019,7 @@ test('require.asset, directory', (t) => {
     return []
   }
 
-  const result = expand(
-    traverse(new URL('file:///foo.js'), readModule, listPrefix)
-  )
+  const result = expand(traverse(new URL('file:///foo.js'), readModule, listPrefix))
 
   t.alike(result.values, [
     {
@@ -1081,10 +1054,7 @@ test('require.asset, directory', (t) => {
     }
   ])
 
-  t.alike(result.return.assets, [
-    new URL('file:///bar/a.txt'),
-    new URL('file:///bar/b.txt')
-  ])
+  t.alike(result.return.assets, [new URL('file:///bar/a.txt'), new URL('file:///bar/b.txt')])
 })
 
 test('package.json#addon', (t) => {
@@ -1122,12 +1092,7 @@ test('package.json#addon', (t) => {
 
   {
     const result = expand(
-      traverse(
-        new URL('file:///foo.js'),
-        { host: 'darwin-arm64' },
-        readModule,
-        listPrefix
-      )
+      traverse(new URL('file:///foo.js'), { host: 'darwin-arm64' }, readModule, listPrefix)
     )
 
     t.alike(result.values, [
@@ -1157,12 +1122,7 @@ test('package.json#addon', (t) => {
   }
   {
     const result = expand(
-      traverse(
-        new URL('file:///foo.js'),
-        { host: 'linux-arm64' },
-        readModule,
-        listPrefix
-      )
+      traverse(new URL('file:///foo.js'), { host: 'linux-arm64' }, readModule, listPrefix)
     )
 
     t.alike(result.values, [
@@ -1217,9 +1177,7 @@ test('package.json#assets', (t) => {
     return []
   }
 
-  const result = expand(
-    traverse(new URL('file:///foo.js'), readModule, listPrefix)
-  )
+  const result = expand(traverse(new URL('file:///foo.js'), readModule, listPrefix))
 
   t.alike(result.values, [
     {
@@ -1276,9 +1234,7 @@ test('package.json#assets, pattern match', (t) => {
     return []
   }
 
-  const result = expand(
-    traverse(new URL('file:///foo.js'), readModule, listPrefix)
-  )
+  const result = expand(traverse(new URL('file:///foo.js'), readModule, listPrefix))
 
   t.alike(result.values, [
     {
@@ -1316,10 +1272,7 @@ test('package.json#assets, negate', (t) => {
       return '{ "name": "foo", "assets": ["bar/", "!bar/qux.txt"] }'
     }
 
-    if (
-      url.href === 'file:///bar/baz.txt' ||
-      url.href === 'file:///bar/qux.txt'
-    ) {
+    if (url.href === 'file:///bar/baz.txt' || url.href === 'file:///bar/qux.txt') {
       return 'hello world'
     }
 
@@ -1338,9 +1291,7 @@ test('package.json#assets, negate', (t) => {
     return []
   }
 
-  const result = expand(
-    traverse(new URL('file:///foo.js'), readModule, listPrefix)
-  )
+  const result = expand(traverse(new URL('file:///foo.js'), readModule, listPrefix))
 
   t.alike(result.values, [
     {
@@ -1403,12 +1354,7 @@ test('package.json#assets, conditional pattern', (t) => {
 
   {
     const result = expand(
-      traverse(
-        new URL('file:///foo.js'),
-        { conditions: ['darwin'] },
-        readModule,
-        listPrefix
-      )
+      traverse(new URL('file:///foo.js'), { conditions: ['darwin'] }, readModule, listPrefix)
     )
 
     t.alike(result.values, [
@@ -1422,8 +1368,7 @@ test('package.json#assets, conditional pattern', (t) => {
       },
       {
         url: new URL('file:///package.json'),
-        source:
-          '{ "name": "foo", "assets": [{ "darwin": "darwin/", "linux": "linux/" }] }',
+        source: '{ "name": "foo", "assets": [{ "darwin": "darwin/", "linux": "linux/" }] }',
         imports: {},
         lexer: { imports: [] }
       },
@@ -1439,12 +1384,7 @@ test('package.json#assets, conditional pattern', (t) => {
   }
   {
     const result = expand(
-      traverse(
-        new URL('file:///foo.js'),
-        { conditions: ['linux'] },
-        readModule,
-        listPrefix
-      )
+      traverse(new URL('file:///foo.js'), { conditions: ['linux'] }, readModule, listPrefix)
     )
 
     t.alike(result.values, [
@@ -1458,8 +1398,7 @@ test('package.json#assets, conditional pattern', (t) => {
       },
       {
         url: new URL('file:///package.json'),
-        source:
-          '{ "name": "foo", "assets": [{ "darwin": "darwin/", "linux": "linux/" }] }',
+        source: '{ "name": "foo", "assets": [{ "darwin": "darwin/", "linux": "linux/" }] }',
         imports: {},
         lexer: { imports: [] }
       },
@@ -1502,9 +1441,7 @@ test('resolutions map', (t) => {
     'file:///baz.js': {}
   }
 
-  const result = expand(
-    traverse(new URL('file:///foo.js'), { resolutions }, readModule)
-  )
+  const result = expand(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
 
   t.alike(result.values, [
     {
@@ -1556,9 +1493,7 @@ test('resolutions map, partial', (t) => {
     'file:///baz.js': {}
   }
 
-  const result = expand(
-    traverse(new URL('file:///foo.js'), { resolutions }, readModule)
-  )
+  const result = expand(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
 
   t.alike(result.values, [
     {
@@ -1641,9 +1576,7 @@ test('imports map', (t) => {
     baz: 'file:///baz.js'
   }
 
-  const result = expand(
-    traverse(new URL('file:///foo.js'), { imports }, readModule)
-  )
+  const result = expand(traverse(new URL('file:///foo.js'), { imports }, readModule))
 
   t.alike(result.values, [
     {
@@ -1711,9 +1644,7 @@ test('imports map, deferred', (t) => {
 
   const defer = ['qux']
 
-  const result = expand(
-    traverse(new URL('file:///foo.js'), { imports, defer }, readModule)
-  )
+  const result = expand(traverse(new URL('file:///foo.js'), { imports, defer }, readModule))
 
   t.alike(result.values, [
     {
@@ -1781,11 +1712,7 @@ test('conditional imports, conditions matrix', (t) => {
   }
 
   const result = expand(
-    traverse(
-      new URL('file:///foo.js'),
-      { conditions: [['a'], ['b']] },
-      readModule
-    )
+    traverse(new URL('file:///foo.js'), { conditions: [['a'], ['b']] }, readModule)
   )
 
   t.alike(result.values, [
@@ -1863,8 +1790,7 @@ test('imports attribute', (t) => {
   t.alike(result.values, [
     {
       url: new URL('file:///foo.js'),
-      source:
-        "const bar = require('./bar.js', { with: { imports: './imports.json' } })",
+      source: "const bar = require('./bar.js', { with: { imports: './imports.json' } })",
       imports: {
         './bar.js': 'file:///bar.js',
         './imports.json': 'file:///imports.json'

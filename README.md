@@ -21,11 +21,7 @@ function* listPrefix(url) {
   // Yield URLs that have `url` as a prefix. The list may be empty.
 }
 
-for (const dependency of traverse(
-  new URL('file:///directory/file.js'),
-  readModule,
-  listPrefix
-)) {
+for (const dependency of traverse(new URL('file:///directory/file.js'), readModule, listPrefix)) {
   console.log(dependency)
 }
 ```
