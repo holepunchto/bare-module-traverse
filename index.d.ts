@@ -18,6 +18,7 @@ interface Dependency {
 }
 
 interface TraverseOptions extends ResolveOptions {
+  defaultType?: number
   resolve?: (entry: Import, parentURL: URL, opts?: ResolveOptions) => Resolver
 }
 
@@ -59,6 +60,17 @@ declare namespace traverse {
   export interface Artifacts {
     addons: URL[]
     assets: URL[]
+  }
+
+  export const constants: {
+    SCRIPT: number
+    MODULE: number
+    JSON: number
+    BUNDLE: number
+    ADDON: number
+    BINARY: number
+    TEXT: number
+    ASSET: number
   }
 
   export function module(

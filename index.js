@@ -4,6 +4,17 @@ const lex = require('bare-module-lexer')
 const resolve = require('./lib/resolve')
 const errors = require('./lib/errors')
 
+const constants = {
+  SCRIPT: 1,
+  MODULE: 2,
+  JSON: 3,
+  BUNDLE: 4,
+  ADDON: 5,
+  BINARY: 6,
+  TEXT: 7,
+  ASSET: 8
+}
+
 module.exports = exports = function traverse(entry, opts, readModule, listPrefix) {
   if (typeof opts === 'function') {
     listPrefix = readModule
@@ -96,10 +107,11 @@ module.exports = exports = function traverse(entry, opts, readModule, listPrefix
   }
 }
 
+exports.constants = constants
 exports.resolve = resolve
 
 exports.module = function* (url, source, attributes, artifacts, visited, opts = {}) {
-  const { resolutions = null } = opts
+  const { resolutions = null, defaultType = constants.SCRIPT } = opts
 
   if (visited.has(url.href)) return false
 
@@ -119,12 +131,18 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
     }
   }
 
+  attributes = attributes || {}
+
   const imports = {}
+
+  let info = null
 
   for (const packageURL of lookupPackageScope(url, opts)) {
     const source = yield { module: packageURL }
 
     if (source !== null) {
+      info = JSON.parse(source)
+
       imports['#package'] = packageURL.href
 
       yield {
@@ -135,11 +153,7 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
     }
   }
 
-  if (
-    typeof attributes === 'object' &&
-    attributes !== null &&
-    typeof attributes.imports === 'string'
-  ) {
+  if (typeof attributes.imports === 'string') {
     const url = new URL(attributes.imports)
 
     const source = yield { module: url }
@@ -152,9 +166,76 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
     }
   }
 
+  let type = 0
+
+  if (typeof attributes.type === 'string') {
+    switch (attributes.type) {
+      case 'script':
+        type = constants.SCRIPT
+        break
+      case 'module':
+        type = constants.MODULE
+        break
+      case 'json':
+        type = constants.JSON
+        break
+      case 'bundle':
+        type = constants.BUNDLE
+        break
+      case 'addon':
+        type = constants.ADDON
+        break
+      case 'binary':
+        type = constants.BINARY
+        break
+      case 'text':
+        type = constants.TEXT
+        break
+    }
+  } else {
+    const match = url.pathname.match(/\.[a-z]+$/)
+
+    if (match !== null) {
+      const [extension] = match
+
+      switch (extension) {
+        case '.js':
+          const isESM =
+            defaultType === constants.MODULE || (info !== null && info.type === 'module')
+
+          type = isESM ? constants.MODULE : constants.SCRIPT
+          break
+        case '.cjs':
+          type = constants.SCRIPT
+          break
+        case '.mjs':
+          type = constants.MODULE
+          break
+        case '.json':
+          type = constants.JSON
+          break
+        case '.bundle':
+          type = constants.BUNDLE
+          break
+        case '.bare':
+        case '.node':
+          type = constants.ADDON
+          break
+        case '.bin':
+          type = constants.BINARY
+          break
+        case '.txt':
+          type = constants.TEXT
+          break
+      }
+    }
+  }
+
   const lexer = { imports: [] }
 
-  yield* exports.imports(url, source, imports, artifacts, lexer, visited, opts)
+  if (type === constants.SCRIPT || constants.MODULE) {
+    yield* exports.imports(url, source, imports, artifacts, lexer, visited, opts)
+  }
 
   yield {
     dependency: { url, source, imports: compressImportsMap(imports), lexer }

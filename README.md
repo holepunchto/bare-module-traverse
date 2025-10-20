@@ -58,6 +58,7 @@ Options include:
 
 ```js
 options = {
+  defaultType: constants.SCRIPT,
   resolve: resolve.default
 }
 ```
