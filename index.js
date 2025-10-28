@@ -271,6 +271,12 @@ exports.package = function* (url, source, artifacts, visited, opts = {}) {
 }
 
 exports.preresolved = function* (url, source, resolutions, artifacts, visited, opts = {}) {
+  const {
+    builtinProtocol = 'builtin:',
+    linkedProtocol = 'linked:',
+    deferredProtocol = 'deferred:'
+  } = opts
+
   const imports = resolutions[url.href]
 
   if (typeof imports !== 'object' || imports === null) return false
@@ -288,7 +294,11 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
           yield {
             children: exports.package(url, null, artifacts, visited, opts)
           }
-        } else {
+        } else if (
+          url.protocol !== builtinProtocol &&
+          url.protocol !== linkedProtocol &&
+          url.protocol !== deferredProtocol
+        ) {
           yield {
             children: exports.module(url, null, {}, artifacts, visited, opts)
           }

@@ -1554,6 +1554,35 @@ test('resolutions map, module missing', (t) => {
   }
 })
 
+test('resolutions map, builtin', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require('./bar.js')"
+    }
+
+    return null
+  }
+
+  const resolutions = {
+    'file:///foo.js': {
+      './bar.js': 'builtin:bar.js'
+    }
+  }
+
+  const result = expand(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.js'),
+      source: "const bar = require('./bar.js')",
+      imports: {
+        './bar.js': 'builtin:bar.js'
+      },
+      lexer: { imports: [] }
+    }
+  ])
+})
+
 test('imports map', (t) => {
   function readModule(url) {
     if (url.href === 'file:///foo.js') {
