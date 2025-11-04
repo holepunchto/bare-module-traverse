@@ -233,7 +233,7 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
 
   const lexer = { imports: [] }
 
-  if (type === constants.SCRIPT || constants.MODULE) {
+  if (type === constants.SCRIPT || type === constants.MODULE) {
     yield* exports.imports(url, source, imports, artifacts, lexer, visited, opts)
   }
 
