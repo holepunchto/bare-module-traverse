@@ -254,10 +254,6 @@ exports.package = function* (url, source, artifacts, visited, opts = {}) {
   if (info) {
     yield { dependency: { url, source, imports: {}, lexer: { imports: [] } } }
 
-    if (info.addon) {
-      yield { children: exports.prebuilds(url, artifacts, visited, opts) }
-    }
-
     if (info.assets) {
       yield {
         children: exports.assets(info.assets, url, artifacts, visited, opts)
