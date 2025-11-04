@@ -400,21 +400,19 @@ exports.imports = function* (parentURL, source, imports, artifacts, lexer, visit
 
           resolved = yielded = true
         } else if (condition === 'asset') {
-          const prefix = yield { prefix: url }
+          const prefix = url
 
-          if (prefix.length !== 0) {
-            addResolution(imports, specifier, matchedConditions, url)
-
-            for (const url of prefix) {
-              yield {
-                children: exports.module(url, null, {}, artifacts, visited, opts)
-              }
-
-              addURL(artifacts.assets, url)
+          for (const url of yield { prefix }) {
+            yield {
+              children: exports.module(url, null, {}, artifacts, visited, opts)
             }
+
+            addURL(artifacts.assets, url)
 
             resolved = yielded = true
           }
+
+          if (resolved) addResolution(imports, specifier, matchedConditions, url)
         } else {
           const source = yield { module: url }
 
