@@ -1,5 +1,4 @@
 const { lookupPackageScope, conditionMatches } = require('bare-module-resolve')
-const { lookupPrebuildsScope } = require('bare-addon-resolve')
 const lex = require('bare-module-lexer')
 const resolve = require('./lib/resolve')
 const errors = require('./lib/errors')
@@ -465,53 +464,6 @@ exports.imports = function* (parentURL, source, imports, artifacts, lexer, visit
           throw errors.MODULE_NOT_FOUND(message, specifier, parentURL, candidates)
       }
     }
-  }
-
-  return yielded
-}
-
-exports.prebuilds = function* (packageURL, artifacts, visited, opts = {}) {
-  // Handle backwards compatibility with the `target` option
-  if (opts.target) {
-    const { target, ...rest } = opts
-    rest.hosts = target
-    opts = rest
-  }
-
-  const {
-    host = null, // Shorthand for single host resolution
-    hosts = host !== null ? [host] : [],
-    matchedConditions = []
-  } = opts
-
-  const [prebuildsURL = null] = lookupPrebuildsScope(packageURL, opts)
-
-  if (prebuildsURL === null) return false
-
-  let yielded = false
-
-  for (const host of hosts) {
-    const prefix = new URL(host + '/', prebuildsURL)
-
-    const conditions = host.split('-')
-
-    matchedConditions.push(...conditions)
-
-    for (const url of yield { prefix }) {
-      const source = yield { module: url }
-
-      if (source !== null) {
-        addURL(artifacts.addons, url)
-
-        yield {
-          children: exports.module(url, source, {}, artifacts, visited, opts)
-        }
-
-        yielded = true
-      }
-    }
-
-    for (const _ of conditions) matchedConditions.pop()
   }
 
   return yielded

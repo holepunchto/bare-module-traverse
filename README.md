@@ -232,8 +232,6 @@ Options are the same as `traverse()` for all functions.
 
 #### `const generator = traverse.imports(parentURL, source, imports, artifacts, visited[, options])`
 
-#### `const generator = traverse.prebuilds(packageURL, artifacts, visited[, options])`
-
 #### `const generator = traverse.assets(patterns, parentURL, artifacts, visited[, options])`
 
 ## License
