@@ -234,6 +234,8 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
 
   if (type === constants.SCRIPT || type === constants.MODULE) {
     yield* exports.imports(url, source, imports, artifacts, lexer, visited, opts)
+  } else if (type === constants.ADDON) {
+    yield* exports.addons(url, artifacts, visited, opts)
   }
 
   yield {
@@ -461,6 +463,30 @@ exports.imports = function* (parentURL, source, imports, artifacts, lexer, visit
         default:
           throw errors.MODULE_NOT_FOUND(message, specifier, parentURL, candidates)
       }
+    }
+  }
+
+  return yielded
+}
+
+const ADDON_EXTENSION = /\.(bare|node)$/
+
+exports.addons = function* (parentURL, artifacts, visited, opts = {}) {
+  let yielded = false
+
+  if (ADDON_EXTENSION.test(parentURL.pathname)) {
+    const prefix = new URL(parentURL)
+
+    prefix.pathname = prefix.pathname.replace(ADDON_EXTENSION, '') + '/'
+
+    for (const url of yield { prefix }) {
+      yield {
+        children: exports.module(url, null, {}, artifacts, visited, opts)
+      }
+
+      addURL(artifacts.addons, url)
+
+      yielded = true
     }
   }
 
