@@ -322,6 +322,13 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
 }
 
 exports.imports = function* (parentURL, source, imports, artifacts, lexer, visited, opts = {}) {
+  // Handle backwards compatibility with the `target` option
+  if (opts.target) {
+    const { target, ...rest } = opts
+    rest.hosts = target
+    opts = rest
+  }
+
   const {
     resolve = exports.resolve.default,
     builtinProtocol = 'builtin:',
