@@ -5,7 +5,8 @@ interface NodeResolveOptions extends ResolveOptions {
   platform?: string
   arch?: string
   simulator?: boolean
-  target?: string[]
+  host?: string
+  hosts?: string[]
 }
 
 declare function resolve(entry: Import, parentURL: URL, opts?: NodeResolveOptions): Resolver

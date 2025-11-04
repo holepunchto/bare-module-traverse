@@ -468,6 +468,13 @@ exports.imports = function* (parentURL, source, imports, artifacts, lexer, visit
 }
 
 exports.prebuilds = function* (packageURL, artifacts, visited, opts = {}) {
+  // Handle backwards compatibility with the `target` option
+  if (opts.target) {
+    const { target, ...rest } = opts
+    rest.hosts = target
+    opts = rest
+  }
+
   const {
     host = null, // Shorthand for single host resolution
     hosts = host !== null ? [host] : [],

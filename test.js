@@ -852,6 +852,88 @@ test('require.addon, hosts list, linked', (t) => {
   t.alike(result.return.addons, [new URL('linked:foo.framework/foo'), new URL('linked:libfoo.so')])
 })
 
+test('require.addon, target list', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "module.exports = require.addon('.')"
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    if (url.href === 'file:///prebuilds/host-a/foo.bare') {
+      return '<native code a>'
+    }
+
+    if (url.href === 'file:///prebuilds/host-b/foo.bare') {
+      return '<native code b>'
+    }
+
+    return null
+  }
+
+  const result = expand(
+    traverse(
+      new URL('file:///foo.js'),
+      { target: ['host-a', 'host-b'], extensions: ['.bare'] },
+      readModule
+    )
+  )
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.js'),
+      source: "module.exports = require.addon('.')",
+      imports: {
+        '#package': 'file:///package.json',
+        '.': {
+          a: 'file:///prebuilds/host-a/foo.bare',
+          b: 'file:///prebuilds/host-b/foo.bare'
+        }
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: '.',
+            type: REQUIRE | ADDON | REEXPORT,
+            names: [],
+            attributes: {},
+            position: [17, 32, 33]
+          }
+        ]
+      }
+    },
+    {
+      url: new URL('file:///prebuilds/host-b/foo.bare'),
+      source: '<native code b>',
+      imports: {
+        '#package': 'file:///package.json'
+      },
+      lexer: { imports: [] }
+    },
+    {
+      url: new URL('file:///package.json'),
+      source: '{ "name": "foo" }',
+      imports: {},
+      lexer: { imports: [] }
+    },
+    {
+      url: new URL('file:///prebuilds/host-a/foo.bare'),
+      source: '<native code a>',
+      imports: {
+        '#package': 'file:///package.json'
+      },
+      lexer: { imports: [] }
+    }
+  ])
+
+  t.alike(result.return.addons, [
+    new URL('file:///prebuilds/host-a/foo.bare'),
+    new URL('file:///prebuilds/host-b/foo.bare')
+  ])
+})
+
 test('require.asset', (t) => {
   function readModule(url) {
     if (url.href === 'file:///foo.js') {

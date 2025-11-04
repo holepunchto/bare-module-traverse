@@ -114,11 +114,11 @@ options = {
   arch: Bare.arch,
   simulator: false,
   host: `${platform}-${arch}${simulator ? '-simulator' : ''}`,
-  target: [host]
+  hosts: [host]
 }
 ```
 
-For single target traversal it is sufficient to pass `platform`, `arch`, `simulator`, and/or `host`. For multi target target traversal pass a list of `target` identifiers instead.
+For single target traversal it is sufficient to pass `platform`, `arch`, `simulator`, and/or `host`. For multi target traversal pass a list of `hosts` identifiers instead.
 
 #### `resolve.node`
 
@@ -130,11 +130,11 @@ options = {
   arch: process.arch,
   simulator: false,
   host: `${platform}-${arch}${simulator ? '-simulator' : ''}`,
-  target: [host]
+  hosts: [host]
 }
 ```
 
-For single target traversal it is sufficient to pass `platform`, `arch`, `simulator`, and/or `host`. For multi target target traversal pass a list of `target` identifiers instead.
+For single target traversal it is sufficient to pass `platform`, `arch`, `simulator`, and/or `host`. For multi target traversal pass a list of `hosts` identifiers instead.
 
 ### Algorithm
 
