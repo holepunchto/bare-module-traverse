@@ -417,10 +417,10 @@ exports.imports = function* (parentURL, source, imports, artifacts, lexer, visit
           if (source !== null) {
             addResolution(imports, specifier, matchedConditions, url)
 
-            const attributes = entry.attributes
+            let attributes = entry.attributes
 
             if (attributes.imports) {
-              attributes.imports = imports[attributes.imports].default
+              attributes = { ...attributes, imports: imports[attributes.imports].default }
             }
 
             yield {

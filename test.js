@@ -1817,7 +1817,7 @@ test('imports attribute', (t) => {
             specifier: './bar.js',
             type: REQUIRE,
             names: [],
-            attributes: { imports: 'file:///imports.json' },
+            attributes: { imports: './imports.json' },
             position: [12, 21, 29]
           }
         ]
