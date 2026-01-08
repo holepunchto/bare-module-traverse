@@ -248,6 +248,12 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
 exports.package = function* (url, source, artifacts, visited, opts = {}) {
   if (visited.has(url.href)) return false
 
+  if (source === null) {
+    source = yield { module: url }
+
+    if (source === null) return false
+  }
+
   visited.add(url.href)
 
   const info = JSON.parse(source)

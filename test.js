@@ -1570,6 +1570,46 @@ test('resolutions map, builtin', (t) => {
   ])
 })
 
+test('resolutions map, #package entry', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return 'module.exports = 42'
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    return null
+  }
+
+  const resolutions = {
+    'file:///foo.js': {
+      '#package': 'file:///package.json'
+    },
+    'file:///package.json': {}
+  }
+
+  const result = expand(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.js'),
+      source: 'module.exports = 42',
+      imports: {
+        '#package': 'file:///package.json'
+      },
+      lexer: { imports: [] }
+    },
+    {
+      url: new URL('file:///package.json'),
+      source: '{ "name": "foo" }',
+      imports: {},
+      lexer: { imports: [] }
+    }
+  ])
+})
+
 test('imports map', (t) => {
   function readModule(url) {
     if (url.href === 'file:///foo.js') {
