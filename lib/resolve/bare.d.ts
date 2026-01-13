@@ -3,9 +3,6 @@ import { type ResolveOptions, type Resolver } from 'bare-addon-resolve'
 
 interface BareResolveOptions extends ResolveOptions {
   linked?: boolean
-  platform?: string
-  arch?: string
-  simulator?: boolean
   host?: string
   hosts?: string[]
 }

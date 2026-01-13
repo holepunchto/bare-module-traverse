@@ -110,15 +110,12 @@ The Bare resolver, which matches the options used by the Bare module system. The
 
 ```js
 options = {
-  platform: Bare.platform,
-  arch: Bare.arch,
-  simulator: false,
-  host: `${platform}-${arch}${simulator ? '-simulator' : ''}`,
+  host,
   hosts: [host]
 }
 ```
 
-For single target traversal it is sufficient to pass `platform`, `arch`, `simulator`, and/or `host`. For multi target traversal pass a list of `hosts` identifiers instead.
+For single target traversal it is sufficient to pass `host`. For multi target traversal pass a list of `hosts` identifiers instead.
 
 #### `resolve.node`
 
@@ -126,15 +123,12 @@ The Node.js resolver, which matches the options used by the Node.js module syste
 
 ```js
 options = {
-  platform: process.platform,
-  arch: process.arch,
-  simulator: false,
-  host: `${platform}-${arch}${simulator ? '-simulator' : ''}`,
+  host,
   hosts: [host]
 }
 ```
 
-For single target traversal it is sufficient to pass `platform`, `arch`, `simulator`, and/or `host`. For multi target traversal pass a list of `hosts` identifiers instead.
+For single target traversal it is sufficient to pass `host`. For multi target traversal pass a list of `hosts` identifiers instead.
 
 ### Algorithm
 
