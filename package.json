@@ -25,17 +25,17 @@
     },
     "./package": "./package.json"
   },
-  "files": [
-    "index.js",
-    "index.d.ts",
-    "lib"
-  ],
   "imports": {
     "#runtime": {
       "bare": "./lib/runtime/bare.js",
       "node": "./lib/runtime/node.js"
     }
   },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "lib"
+  ],
   "scripts": {
     "test": "npm run lint && npm run test:bare && npm run test:node",
     "test:bare": "bare test.js",
