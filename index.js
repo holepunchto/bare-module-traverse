@@ -198,12 +198,13 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
       const [extension] = match
 
       switch (extension) {
-        case '.js':
+        case '.js': {
           const isESM =
             defaultType === constants.MODULE || (info !== null && info.type === 'module')
 
           type = isESM ? constants.MODULE : constants.SCRIPT
           break
+        }
         case '.cjs':
           type = constants.SCRIPT
           break
