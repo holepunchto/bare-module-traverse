@@ -110,7 +110,7 @@ exports.constants = constants
 exports.resolve = resolve
 
 exports.module = function* (url, source, attributes, artifacts, visited, opts = {}) {
-  const { resolutions = null, defaultType = constants.SCRIPT } = opts
+  const { resolutions = null, defaultType = constants.SCRIPT, aliases = null } = opts
 
   if (visited.has(url.href)) return false
 
@@ -195,7 +195,9 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
     const match = url.pathname.match(/\.[a-z]+$/)
 
     if (match !== null) {
-      const [extension] = match
+      let [extension] = match
+
+      if (aliases !== null && extension in aliases) extension = aliases[extension]
 
       switch (extension) {
         case '.js': {
