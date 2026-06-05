@@ -59,6 +59,11 @@ Options include:
 ```js
 options = {
   defaultType: constants.SCRIPT,
+  aliases: {
+    // Map an extension to a supported extension, e.g. `'.ts': '.js'`. The
+    // aliased extension is used for module type detection, so `readModule()`
+    // must return source compatible with that type.
+  },
   resolve: resolve.default
 }
 ```

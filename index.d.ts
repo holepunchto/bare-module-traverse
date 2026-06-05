@@ -17,8 +17,20 @@ interface Dependency {
   }
 }
 
+type AliasableExtension =
+  | '.js'
+  | '.cjs'
+  | '.mjs'
+  | '.json'
+  | '.bundle'
+  | '.bare'
+  | '.node'
+  | '.bin'
+  | '.txt'
+
 interface TraverseOptions extends ResolveOptions {
   defaultType?: number
+  aliases?: Record<string, AliasableExtension>
   resolve?: (entry: Import, parentURL: URL, opts?: ResolveOptions) => Resolver
 }
 

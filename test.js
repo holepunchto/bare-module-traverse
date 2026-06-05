@@ -1814,6 +1814,148 @@ test('imports attribute', (t) => {
   ])
 })
 
+test('aliases, .ts to .js', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.ts') {
+      return "const bar = require('./bar.ts')"
+    }
+
+    if (url.href === 'file:///bar.ts') {
+      return 'module.exports = 42'
+    }
+
+    return null
+  }
+
+  const result = expand(
+    traverse(new URL('file:///foo.ts'), { aliases: { '.ts': '.js' } }, readModule)
+  )
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.ts'),
+      source: "const bar = require('./bar.ts')",
+      imports: {
+        './bar.ts': 'file:///bar.ts'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './bar.ts',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [12, 21, 29]
+          }
+        ]
+      }
+    },
+    {
+      url: new URL('file:///bar.ts'),
+      source: 'module.exports = 42',
+      imports: {},
+      lexer: { imports: [] }
+    }
+  ])
+})
+
+test('aliases, .mts to .mjs', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.mts') {
+      return "import './bar.mts'"
+    }
+
+    if (url.href === 'file:///bar.mts') {
+      return 'export default 42'
+    }
+
+    return null
+  }
+
+  const result = expand(
+    traverse(new URL('file:///foo.mts'), { aliases: { '.mts': '.mjs' } }, readModule)
+  )
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.mts'),
+      source: "import './bar.mts'",
+      imports: {
+        './bar.mts': 'file:///bar.mts'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './bar.mts',
+            type: IMPORT,
+            names: [],
+            attributes: {},
+            position: [0, 8, 17]
+          }
+        ]
+      }
+    },
+    {
+      url: new URL('file:///bar.mts'),
+      source: 'export default 42',
+      imports: {},
+      lexer: { imports: [] }
+    }
+  ])
+})
+
+test('aliases, .ts to .js with defaultType MODULE', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.ts') {
+      return "import './bar.ts'"
+    }
+
+    if (url.href === 'file:///bar.ts') {
+      return 'export default 42'
+    }
+
+    return null
+  }
+
+  const result = expand(
+    traverse(
+      new URL('file:///foo.ts'),
+      {
+        defaultType: traverse.constants.MODULE,
+        aliases: { '.ts': '.js' }
+      },
+      readModule
+    )
+  )
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.ts'),
+      source: "import './bar.ts'",
+      imports: {
+        './bar.ts': 'file:///bar.ts'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './bar.ts',
+            type: IMPORT,
+            names: [],
+            attributes: {},
+            position: [0, 8, 16]
+          }
+        ]
+      }
+    },
+    {
+      url: new URL('file:///bar.ts'),
+      source: 'export default 42',
+      imports: {},
+      lexer: { imports: [] }
+    }
+  ])
+})
+
 function expand(iterable) {
   const iterator = iterable[Symbol.iterator]()
   const values = []
