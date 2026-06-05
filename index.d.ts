@@ -70,8 +70,8 @@ declare namespace traverse {
   >
 
   export interface Artifacts {
-    addons: URL[]
-    assets: URL[]
+    addons: URL[] | Set<string>
+    assets: URL[] | Set<string>
   }
 
   export const constants: {

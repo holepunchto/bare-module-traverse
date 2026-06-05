@@ -580,24 +580,28 @@ exports.patternMatches = function* patternMatches(pattern, parentURL, matches, o
   return matches
 }
 
-function addURL(array, url) {
-  let lo = 0
-  let hi = array.length - 1
+function addURL(collection, url) {
+  if (Array.isArray(collection)) {
+    let lo = 0
+    let hi = collection.length - 1
 
-  while (lo <= hi) {
-    const mid = lo + ((hi - lo) >> 1)
-    const found = array[mid]
+    while (lo <= hi) {
+      const mid = lo + ((hi - lo) >> 1)
+      const found = collection[mid]
 
-    if (found.href === url.href) return
+      if (found.href === url.href) return
 
-    if (found.href < url.href) {
-      lo = mid + 1
-    } else {
-      hi = mid - 1
+      if (found.href < url.href) {
+        lo = mid + 1
+      } else {
+        hi = mid - 1
+      }
     }
-  }
 
-  array.splice(lo, 0, url)
+    collection.splice(lo, 0, url)
+  } else {
+    collection.add(url.href)
+  }
 }
 
 function removeURL(array, url) {
