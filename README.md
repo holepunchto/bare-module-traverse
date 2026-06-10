@@ -62,7 +62,10 @@ options = {
   aliases: {
     // Map an extension to a supported extension, e.g. `'.ts': '.js'`. The
     // aliased extension is used for module type detection, so `readModule()`
-    // must return source compatible with that type.
+    // must return source compatible with that type. Aliased modules are also
+    // emitted with the aliased extension, and resolutions to them are
+    // rewritten to match, so `'.ts': '.js'` yields a `file:///foo.js`
+    // dependency rather than `file:///foo.ts`.
   },
   resolve: resolve.default
 }
