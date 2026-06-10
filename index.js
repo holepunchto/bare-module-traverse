@@ -109,6 +109,26 @@ module.exports = exports = function traverse(entry, opts, readModule, listPrefix
 exports.constants = constants
 exports.resolve = resolve
 
+exports.alias = function alias(url, opts = {}) {
+  const { aliases = null } = opts
+
+  if (aliases === null) return url
+
+  const match = url.pathname.match(/\.[a-z]+$/)
+
+  if (match === null) return url
+
+  const [extension] = match
+
+  if (extension in aliases === false) return url
+
+  url = new URL(url)
+
+  url.pathname = url.pathname.slice(0, -extension.length) + aliases[extension]
+
+  return url
+}
+
 exports.module = function* (url, source, attributes, artifacts, visited, opts = {}) {
   const { resolutions = null, defaultType = constants.SCRIPT, aliases = null } = opts
 
@@ -242,7 +262,12 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
   }
 
   yield {
-    dependency: { url, source, imports: compressImportsMap(imports), lexer }
+    dependency: {
+      url: exports.alias(url, opts),
+      source,
+      imports: compressImportsMap(imports),
+      lexer
+    }
   }
 
   return true
@@ -317,7 +342,7 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
 
   yield {
     dependency: {
-      url,
+      url: exports.alias(url, opts),
       source,
       imports: compressImportsMap(imports),
       lexer: { imports: [] }
@@ -421,7 +446,7 @@ exports.imports = function* (parentURL, source, imports, artifacts, lexer, visit
           const source = yield { module: url }
 
           if (source !== null) {
-            addResolution(imports, specifier, matchedConditions, url)
+            addResolution(imports, specifier, matchedConditions, exports.alias(url, opts))
 
             let attributes = entry.attributes
 

@@ -1833,10 +1833,10 @@ test('aliases, .ts to .js', (t) => {
 
   t.alike(result.values, [
     {
-      url: new URL('file:///foo.ts'),
+      url: new URL('file:///foo.js'),
       source: "const bar = require('./bar.ts')",
       imports: {
-        './bar.ts': 'file:///bar.ts'
+        './bar.ts': 'file:///bar.js'
       },
       lexer: {
         imports: [
@@ -1851,7 +1851,7 @@ test('aliases, .ts to .js', (t) => {
       }
     },
     {
-      url: new URL('file:///bar.ts'),
+      url: new URL('file:///bar.js'),
       source: 'module.exports = 42',
       imports: {},
       lexer: { imports: [] }
@@ -1878,10 +1878,10 @@ test('aliases, .mts to .mjs', (t) => {
 
   t.alike(result.values, [
     {
-      url: new URL('file:///foo.mts'),
+      url: new URL('file:///foo.mjs'),
       source: "import './bar.mts'",
       imports: {
-        './bar.mts': 'file:///bar.mts'
+        './bar.mts': 'file:///bar.mjs'
       },
       lexer: {
         imports: [
@@ -1896,7 +1896,7 @@ test('aliases, .mts to .mjs', (t) => {
       }
     },
     {
-      url: new URL('file:///bar.mts'),
+      url: new URL('file:///bar.mjs'),
       source: 'export default 42',
       imports: {},
       lexer: { imports: [] }
@@ -1930,10 +1930,10 @@ test('aliases, .ts to .js with defaultType MODULE', (t) => {
 
   t.alike(result.values, [
     {
-      url: new URL('file:///foo.ts'),
+      url: new URL('file:///foo.js'),
       source: "import './bar.ts'",
       imports: {
-        './bar.ts': 'file:///bar.ts'
+        './bar.ts': 'file:///bar.js'
       },
       lexer: {
         imports: [
@@ -1948,7 +1948,7 @@ test('aliases, .ts to .js with defaultType MODULE', (t) => {
       }
     },
     {
-      url: new URL('file:///bar.ts'),
+      url: new URL('file:///bar.js'),
       source: 'export default 42',
       imports: {},
       lexer: { imports: [] }
