@@ -1,1 +1,3 @@
 index.d.ts
+lib/resolve/bare.d.ts
+lib/resolve/node.d.ts

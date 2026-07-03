@@ -1956,6 +1956,338 @@ test('aliases, .ts to .js with defaultType MODULE', (t) => {
   ])
 })
 
+test('aliases, extensionless .ts to .js, bare resolver', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.ts') {
+      return "const bar = require('./bar')"
+    }
+
+    if (url.href === 'file:///bar.ts') {
+      return 'module.exports = 42'
+    }
+
+    return null
+  }
+
+  const result = expand(
+    traverse(
+      new URL('file:///foo.ts'),
+      { resolve: traverse.resolve.bare, aliases: { '.ts': '.js' } },
+      readModule
+    )
+  )
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.js'),
+      source: "const bar = require('./bar')",
+      imports: {
+        './bar': 'file:///bar.js'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './bar',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [12, 21, 26]
+          }
+        ]
+      }
+    },
+    {
+      url: new URL('file:///bar.js'),
+      source: 'module.exports = 42',
+      imports: {},
+      lexer: { imports: [] }
+    }
+  ])
+})
+
+test('aliases, extensionless .cts to .cjs, bare resolver', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.cts') {
+      return "const bar = require('./bar')"
+    }
+
+    if (url.href === 'file:///bar.cts') {
+      return 'module.exports = 42'
+    }
+
+    return null
+  }
+
+  const result = expand(
+    traverse(
+      new URL('file:///foo.cts'),
+      { resolve: traverse.resolve.bare, aliases: { '.cts': '.cjs' } },
+      readModule
+    )
+  )
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.cjs'),
+      source: "const bar = require('./bar')",
+      imports: {
+        './bar': 'file:///bar.cjs'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './bar',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [12, 21, 26]
+          }
+        ]
+      }
+    },
+    {
+      url: new URL('file:///bar.cjs'),
+      source: 'module.exports = 42',
+      imports: {},
+      lexer: { imports: [] }
+    }
+  ])
+})
+
+test('aliases, extensionless .mts to .mjs, bare resolver', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.mts') {
+      return "import './bar'"
+    }
+
+    if (url.href === 'file:///bar.mts') {
+      return 'export default 42'
+    }
+
+    return null
+  }
+
+  const result = expand(
+    traverse(
+      new URL('file:///foo.mts'),
+      { resolve: traverse.resolve.bare, aliases: { '.mts': '.mjs' } },
+      readModule
+    )
+  )
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.mjs'),
+      source: "import './bar'",
+      imports: {
+        './bar': 'file:///bar.mjs'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './bar',
+            type: IMPORT,
+            names: [],
+            attributes: {},
+            position: [0, 8, 13]
+          }
+        ]
+      }
+    },
+    {
+      url: new URL('file:///bar.mjs'),
+      source: 'export default 42',
+      imports: {},
+      lexer: { imports: [] }
+    }
+  ])
+})
+
+test('require, TypeScript source', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.ts') {
+      return "const bar: number = require('./bar.ts')"
+    }
+
+    if (url.href === 'file:///bar.ts') {
+      return 'module.exports = 42'
+    }
+
+    return null
+  }
+
+  const result = expand(traverse(new URL('file:///foo.ts'), readModule))
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.ts'),
+      source: "const bar: number = require('./bar.ts')",
+      imports: {
+        './bar.ts': 'file:///bar.ts'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './bar.ts',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [20, 29, 37]
+          }
+        ]
+      }
+    },
+    {
+      url: new URL('file:///bar.ts'),
+      source: 'module.exports = 42',
+      imports: {},
+      lexer: { imports: [] }
+    }
+  ])
+})
+
+test('require, TypeScript source, .cts', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.cts') {
+      return "const bar = require('./bar.cts')"
+    }
+
+    if (url.href === 'file:///bar.cts') {
+      return 'module.exports = 42'
+    }
+
+    return null
+  }
+
+  const result = expand(traverse(new URL('file:///foo.cts'), readModule))
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.cts'),
+      source: "const bar = require('./bar.cts')",
+      imports: {
+        './bar.cts': 'file:///bar.cts'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './bar.cts',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [12, 21, 30]
+          }
+        ]
+      }
+    },
+    {
+      url: new URL('file:///bar.cts'),
+      source: 'module.exports = 42',
+      imports: {},
+      lexer: { imports: [] }
+    }
+  ])
+})
+
+test('import, TypeScript source, .mts', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.mts') {
+      return "import { type Bar, baz } from './bar.mts'"
+    }
+
+    if (url.href === 'file:///bar.mts') {
+      return 'export type Bar = number\nexport const baz = 42'
+    }
+
+    return null
+  }
+
+  const result = expand(traverse(new URL('file:///foo.mts'), readModule))
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.mts'),
+      source: "import { type Bar, baz } from './bar.mts'",
+      imports: {
+        './bar.mts': 'file:///bar.mts'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './bar.mts',
+            type: IMPORT,
+            names: ['baz'],
+            attributes: {},
+            position: [0, 31, 40]
+          }
+        ]
+      }
+    },
+    {
+      url: new URL('file:///bar.mts'),
+      source: 'export type Bar = number\nexport const baz = 42',
+      imports: {},
+      lexer: { imports: [] }
+    }
+  ])
+})
+
+test('import, TypeScript source, package type module', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.ts') {
+      return "import './bar.ts'"
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "type": "module" }'
+    }
+
+    if (url.href === 'file:///bar.ts') {
+      return 'export default 42'
+    }
+
+    return null
+  }
+
+  const result = expand(traverse(new URL('file:///foo.ts'), readModule))
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.ts'),
+      source: "import './bar.ts'",
+      imports: {
+        '#package': 'file:///package.json',
+        './bar.ts': 'file:///bar.ts'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './bar.ts',
+            type: IMPORT,
+            names: [],
+            attributes: {},
+            position: [0, 8, 16]
+          }
+        ]
+      }
+    },
+    {
+      url: new URL('file:///bar.ts'),
+      source: 'export default 42',
+      imports: {
+        '#package': 'file:///package.json'
+      },
+      lexer: { imports: [] }
+    },
+    {
+      url: new URL('file:///package.json'),
+      source: '{ "type": "module" }',
+      imports: {},
+      lexer: { imports: [] }
+    }
+  ])
+})
+
 function expand(iterable) {
   const iterator = iterable[Symbol.iterator]()
   const values = []
