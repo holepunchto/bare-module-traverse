@@ -18,7 +18,18 @@ interface Dependency {
 }
 
 type AliasableExtension =
-  '.js' | '.cjs' | '.mjs' | '.json' | '.bundle' | '.bare' | '.node' | '.bin' | '.txt'
+  | '.js'
+  | '.cjs'
+  | '.mjs'
+  | '.ts'
+  | '.cts'
+  | '.mts'
+  | '.json'
+  | '.bundle'
+  | '.bare'
+  | '.node'
+  | '.bin'
+  | '.txt'
 
 interface TraverseOptions extends ResolveOptions {
   defaultType?: number
