@@ -220,7 +220,8 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
       if (aliases !== null && extension in aliases) extension = aliases[extension]
 
       switch (extension) {
-        case '.js': {
+        case '.js':
+        case '.ts': {
           const isESM =
             defaultType === constants.MODULE || (info !== null && info.type === 'module')
 
@@ -228,9 +229,11 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
           break
         }
         case '.cjs':
+        case '.cts':
           type = constants.SCRIPT
           break
         case '.mjs':
+        case '.mts':
           type = constants.MODULE
           break
         case '.json':
