@@ -85,7 +85,6 @@ declare namespace traverse {
     ADDON: number
     BINARY: number
     TEXT: number
-    ASSET: number
   }
 
   export function module(

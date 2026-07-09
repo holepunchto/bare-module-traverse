@@ -67,9 +67,12 @@ options = {
     // rewritten to match, so `'.ts': '.js'` yields a `file:///foo.js`
     // dependency rather than `file:///foo.ts`.
   },
-  resolve: resolve.default
+  resolve: resolve.default,
+  visited: new Set()
 }
 ```
+
+`visited` is a `Set` of already visited module hrefs. If provided, modules whose href is already in the set are skipped and the set is updated in place as traversal proceeds. This allows a single set to be shared across several traversals so that a later traversal, such as one rooted at a dynamically imported module, does not revisit modules already seen by an earlier one.
 
 Options supported by <https://github.com/holepunchto/bare-module-resolve> and <https://github.com/holepunchto/bare-addon-resolve> may also be specified.
 
@@ -81,11 +84,15 @@ Synchronously iterate the module graph. Each yielded dependency has the followin
 dependency = {
   url: URL,
   source: 'string' | Buffer, // Source as returned by `readModule()`
+  type: constants.SCRIPT, // The detected module type, or `0` if unknown
   imports: {
     // See https://github.com/holepunchto/bare-module#imports
   },
   lexer: {
     imports: [
+      // See https://github.com/holepunchto/bare-module-lexer#api
+    ],
+    exports: [
       // See https://github.com/holepunchto/bare-module-lexer#api
     ]
   }
@@ -95,6 +102,20 @@ dependency = {
 #### `for await (const dependency of dependencies)`
 
 Asynchronously iterate the module graph. If `readModule` returns a promise or `listPrefix` returns a promise generator, these will be awaited. The same comments as `for (const dependency of dependencies)` apply.
+
+#### `constants`
+
+The module type constants used by the `type` field of each dependency and accepted as the `defaultType` option.
+
+| Constant | Description        |
+| :------- | :----------------- |
+| `SCRIPT` | A CommonJS module. |
+| `MODULE` | An ES module.      |
+| `JSON`   | A JSON module.     |
+| `BUNDLE` | A bundle module.   |
+| `ADDON`  | A native addon.    |
+| `BINARY` | A binary module.   |
+| `TEXT`   | A text module.     |
 
 ### Resolution
 
@@ -162,7 +183,8 @@ next.value = {
 
 ```js
 next.value = {
-  children: Generator
+  children: Generator,
+  deferred: boolean
 }
 ```
 
@@ -173,11 +195,15 @@ next.value = {
   dependency: {
     url: URL,
     source: 'string' | Buffer,
+    type: constants.SCRIPT,
     imports: {
       // See https://github.com/holepunchto/bare-module#imports
     },
     lexer: {
       imports: [
+        // See https://github.com/holepunchto/bare-module-lexer#api
+      ],
+      exports: [
         // See https://github.com/holepunchto/bare-module-lexer#api
       ]
     }
