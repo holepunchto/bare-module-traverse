@@ -360,6 +360,10 @@ exports.imports = function* (parentURL, source, imports, artifacts, lexer, visit
       condition = 'addon'
     } else if (entry.type & lex.constants.ASSET) {
       condition = 'asset'
+    } else if (entry.type & lex.constants.REQUIRE) {
+      condition = 'require'
+    } else if (entry.type & lex.constants.IMPORT) {
+      condition = 'import'
     }
 
     if (entry.attributes.imports) {
@@ -466,7 +470,7 @@ exports.imports = function* (parentURL, source, imports, artifacts, lexer, visit
     matchedConditions.pop()
 
     if (resolutions === 0) {
-      let message = `Cannot find ${condition === 'default' ? 'module' : condition} '${specifier}' imported from '${parentURL.href}'`
+      let message = `Cannot find ${condition === 'addon' || condition === 'asset' ? condition : 'module'} '${specifier}' imported from '${parentURL.href}'`
 
       if (candidates.length > 0) {
         message += '\nCandidates:'
@@ -764,6 +768,12 @@ function compressImportsMapEntry(resolved) {
 
     if (entry[0] === 'default') primary = entry[1]
   }
+
+  if (entries.length === 0) return resolved
+
+  const [, first] = entries[0]
+
+  if (entries.every(([, resolved]) => resolved === first)) return first
 
   entries = entries.filter(
     ([condition, resolved]) => condition === 'default' || resolved !== primary
