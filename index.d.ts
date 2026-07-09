@@ -6,14 +6,16 @@ import {
   type ResolutionsMap
 } from 'bare-module-resolve'
 import { type ResolveOptions, type Resolver } from 'bare-addon-resolve'
-import { type Import } from 'bare-module-lexer'
+import { type Import, type Export } from 'bare-module-lexer'
 
 interface Dependency {
   url: URL
   source: string | Buffer
+  type: number
   imports: ImportsMap
   lexer: {
     imports: Import[]
+    exports: Export[]
   }
 }
 
@@ -67,7 +69,7 @@ declare namespace traverse {
   export { type TraverseOptions }
 
   export type Traversal = Generator<
-    { module: URL } | { prefix: URL } | { children: URL } | { dependency: URL },
+    { module: URL } | { prefix: URL } | { children: URL; deferred: boolean } | { dependency: URL },
     boolean,
     void | URL[] | Buffer | string | null
   >
@@ -85,7 +87,6 @@ declare namespace traverse {
     ADDON: number
     BINARY: number
     TEXT: number
-    ASSET: number
   }
 
   export function module(
