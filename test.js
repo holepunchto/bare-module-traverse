@@ -2855,6 +2855,74 @@ test('import, TypeScript source, package type module', (t) => {
   ])
 })
 
+test('conditional exports resolve per condition', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.mjs') {
+      return "import 'pkg'\nrequire('pkg')"
+    }
+
+    if (url.href === 'file:///node_modules/pkg/package.json') {
+      return '{ "exports": { "import": "./esm.mjs", "require": "./cjs.cjs" } }'
+    }
+
+    if (url.href === 'file:///node_modules/pkg/esm.mjs') {
+      return 'export default 1'
+    }
+
+    if (url.href === 'file:///node_modules/pkg/cjs.cjs') {
+      return 'module.exports = 2'
+    }
+
+    return null
+  }
+
+  const result = expand(
+    traverse(new URL('file:///foo.mjs'), { resolve: traverse.resolve.bare }, readModule)
+  )
+
+  const foo = result.values.find((value) => value.url.href === 'file:///foo.mjs')
+
+  t.alike(foo.imports, {
+    pkg: {
+      import: 'file:///node_modules/pkg/esm.mjs',
+      require: 'file:///node_modules/pkg/cjs.cjs'
+    }
+  })
+
+  t.alike(result.values.map((value) => value.url.href).sort(), [
+    'file:///foo.mjs',
+    'file:///node_modules/pkg/cjs.cjs',
+    'file:///node_modules/pkg/esm.mjs',
+    'file:///node_modules/pkg/package.json'
+  ])
+})
+
+test('conditional exports collapse when equal', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.mjs') {
+      return "import 'pkg'\nrequire('pkg')"
+    }
+
+    if (url.href === 'file:///node_modules/pkg/package.json') {
+      return '{ "exports": "./index.js" }'
+    }
+
+    if (url.href === 'file:///node_modules/pkg/index.js') {
+      return 'module.exports = 1'
+    }
+
+    return null
+  }
+
+  const result = expand(
+    traverse(new URL('file:///foo.mjs'), { resolve: traverse.resolve.bare }, readModule)
+  )
+
+  const foo = result.values.find((value) => value.url.href === 'file:///foo.mjs')
+
+  t.alike(foo.imports, { pkg: 'file:///node_modules/pkg/index.js' })
+})
+
 function expand(iterable) {
   const iterator = iterable[Symbol.iterator]()
   const values = []
