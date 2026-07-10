@@ -2923,6 +2923,280 @@ test('conditional exports collapse when equal', (t) => {
   t.alike(foo.imports, { pkg: 'file:///node_modules/pkg/index.js' })
 })
 
+test('resolution transform canonicalizes and dedupes', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const a = require('./a.js')\nconst b = require('./b.js')"
+    }
+
+    if (url.href === 'file:///a.js' || url.href === 'file:///b.js') {
+      return 'module.exports = 42'
+    }
+
+    return null
+  }
+
+  function resolveModule(url) {
+    if (url.href === 'file:///a.js' || url.href === 'file:///b.js') {
+      return new URL('file:///real.js')
+    }
+
+    return url
+  }
+
+  const result = expand(traverse(new URL('file:///foo.js'), readModule, null, null, resolveModule))
+
+  const foo = result.values.find((value) => value.url.href === 'file:///foo.js')
+
+  t.alike(foo.imports, {
+    './a.js': 'file:///real.js',
+    './b.js': 'file:///real.js'
+  })
+
+  const urls = result.values.map((value) => value.url.href)
+
+  t.absent(urls.includes('file:///a.js'))
+  t.absent(urls.includes('file:///b.js'))
+  t.is(urls.filter((href) => href === 'file:///real.js').length, 1)
+})
+
+test('resolution transform applied to addon', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require.addon('.')"
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    if (url.href === 'file:///prebuilds/host/foo.bare') {
+      return '<native code>'
+    }
+
+    return null
+  }
+
+  function resolveModule(url) {
+    if (url.href === 'file:///prebuilds/host/foo.bare') {
+      return new URL('file:///real/foo.bare')
+    }
+
+    return url
+  }
+
+  const result = expand(
+    traverse(
+      new URL('file:///foo.js'),
+      { host, extensions: ['.bare'] },
+      readModule,
+      null,
+      null,
+      resolveModule
+    )
+  )
+
+  const foo = result.values.find((value) => value.url.href === 'file:///foo.js')
+
+  t.is(foo.imports['.'], 'file:///real/foo.bare')
+
+  t.alike(result.return.addons, [new URL('file:///real/foo.bare')])
+
+  const urls = result.values.map((value) => value.url.href)
+
+  t.ok(urls.includes('file:///real/foo.bare'))
+  t.absent(urls.includes('file:///prebuilds/host/foo.bare'))
+})
+
+test('resolution transform is called for every existing module', (t) => {
+  const resolved = []
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require('./bar.js')"
+    }
+
+    if (url.href === 'file:///bar.js') {
+      return 'module.exports = 42'
+    }
+
+    return null
+  }
+
+  function resolveModule(url) {
+    resolved.push(url.href)
+
+    return url
+  }
+
+  expand(traverse(new URL('file:///foo.js'), readModule, null, null, resolveModule))
+
+  t.alike(resolved, ['file:///bar.js'])
+})
+
+test('probe, custom probe reports addon exists', (t) => {
+  const probed = []
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require.addon('.')"
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    if (url.href === 'file:///prebuilds/host/foo.bare') {
+      return '<native code>'
+    }
+
+    return null
+  }
+
+  function probeModule(url) {
+    probed.push(url.href)
+
+    if (url.href === 'file:///prebuilds/host/foo.bare') return true
+
+    return null
+  }
+
+  const result = expand(
+    traverse(
+      new URL('file:///foo.js'),
+      { host, extensions: ['.bare'] },
+      readModule,
+      null,
+      probeModule
+    )
+  )
+
+  t.alike(probed, ['file:///prebuilds/host/foo.bare'])
+
+  t.alike(result.return.addons, [new URL('file:///prebuilds/host/foo.bare')])
+
+  const addon = result.values.find((value) => value.url.href === 'file:///prebuilds/host/foo.bare')
+
+  t.is(addon.source, '<native code>')
+  t.is(addon.type, constants.ADDON)
+})
+
+test('probe, custom probe reports addon missing', (t) => {
+  const read = []
+
+  function readModule(url) {
+    read.push(url.href)
+
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require.addon('.')"
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    if (url.href === 'file:///prebuilds/host/foo.bare') {
+      t.fail()
+    }
+
+    return null
+  }
+
+  function probeModule(url) {
+    if (url.href === 'file:///prebuilds/host/foo.bare') return false
+
+    return null
+  }
+
+  try {
+    expand(
+      traverse(
+        new URL('file:///foo.js'),
+        { host, extensions: ['.bare'] },
+        readModule,
+        null,
+        probeModule
+      )
+    )
+    t.fail('should throw')
+  } catch (err) {
+    t.comment(err.message)
+  }
+
+  t.absent(read.includes('file:///prebuilds/host/foo.bare'))
+})
+
+test('probe, default probe reads addon exactly once', (t) => {
+  const read = []
+
+  function readModule(url) {
+    read.push(url.href)
+
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require.addon('.')"
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    if (url.href === 'file:///prebuilds/host/foo.bare') {
+      return '<native code>'
+    }
+
+    return null
+  }
+
+  const result = expand(
+    traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule)
+  )
+
+  t.is(read.filter((href) => href === 'file:///prebuilds/host/foo.bare').length, 1)
+
+  t.alike(result.return.addons, [new URL('file:///prebuilds/host/foo.bare')])
+})
+
+test('probe, async custom probe', async (t) => {
+  const probed = []
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require.addon('.')"
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    if (url.href === 'file:///prebuilds/host/foo.bare') {
+      return '<native code>'
+    }
+
+    return null
+  }
+
+  async function probeModule(url) {
+    probed.push(url.href)
+
+    return url.href === 'file:///prebuilds/host/foo.bare'
+  }
+
+  const addons = []
+
+  for await (const dependency of traverse(
+    new URL('file:///foo.js'),
+    { host, extensions: ['.bare'] },
+    readModule,
+    null,
+    probeModule
+  )) {
+    if (dependency.type === constants.ADDON) addons.push(dependency.url.href)
+  }
+
+  t.alike(probed, ['file:///prebuilds/host/foo.bare'])
+  t.alike(addons, ['file:///prebuilds/host/foo.bare'])
+})
+
 function expand(iterable) {
   const iterator = iterable[Symbol.iterator]()
   const values = []
