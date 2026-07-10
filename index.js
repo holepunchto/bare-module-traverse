@@ -382,6 +382,8 @@ exports.imports = function* (parentURL, source, imports, artifacts, lexer, visit
     matchedConditions = []
   } = opts
 
+  opts = opts.matchedConditions === matchedConditions ? opts : { ...opts, matchedConditions }
+
   let yielded = false
 
   const queue = []
@@ -431,7 +433,7 @@ exports.imports = function* (parentURL, source, imports, artifacts, lexer, visit
 
     matchedConditions.push(condition)
 
-    const resolver = resolve(entry, parentURL, { ...opts, matchedConditions })
+    const resolver = resolve(entry, parentURL, opts)
     const candidates = []
 
     let next = resolver.next()
