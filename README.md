@@ -52,7 +52,7 @@ for await (const dependency of traverse(
 
 #### `const dependencies = traverse(url[, options], readModule[, listPrefix[, probeModule[, resolveModule]]])`
 
-Traverse the module graph rooted at `url`, which must be a WHATWG `URL` instance. `readModule` is called with a `URL` instance for every module to be read and must either return the module source, if it exists, or `null`. `listPrefix` is called with a `URL` instance of every prefix to be listed and must yield `URL` instances that have the specified `URL` as a prefix. If not provided, prefixes won't be traversed. `probeModule` is called with a `URL` instance to test whether a module exists and must return `true` if it does, `false` if it doesn't, or `null` if probing isn't supported; this lets existence be checked without reading the full module source, such as when locating an addon or asset. When it returns `null`, existence is instead determined by reading the module, so no source is read twice. If not provided, `probeModule` returns `null` and no probing is performed. `resolveModule` is called with a `URL` instance for every resolved, existing module and must return the `URL` to use in its place, applying any post-resolution transform; a file system implementation would canonicalize symlinks here with `realpath` so a module reached through different symlinks dedupes against its real location. If not provided, resolutions are used unchanged. If `readModule`, `probeModule`, or `resolveModule` returns a promise, or `listPrefix` returns a promise generator, synchronous iteration is not supported.
+Traverse the module graph rooted at `url`, which must be a WHATWG `URL` instance. `readModule` is called with a `URL` instance for every module to be read and must either return the module source, if it exists, or `null`. `listPrefix` is called with a `URL` instance of every prefix to be listed and must yield `URL` instances that have the specified `URL` as a prefix. If not provided, prefixes won't be traversed. `probeModule` is called with a `URL` instance to test whether a module exists and must return `true` if it does, `false` if it doesn't, or `undefined` if probing isn't supported; this lets existence be checked without reading the full module source, such as when locating an addon or asset. When it returns `undefined`, existence is instead determined by reading the module, so no source is read twice. If not provided, `probeModule` returns `undefined` and no probing is performed. `resolveModule` is called with a `URL` instance for every resolved, existing module and must return the `URL` to use in its place, applying any post-resolution transform; a file system implementation would canonicalize symlinks here with `realpath` so a module reached through different symlinks dedupes against its real location. If not provided, resolutions are used unchanged. If `readModule`, `probeModule`, or `resolveModule` returns a promise, or `listPrefix` returns a promise generator, synchronous iteration is not supported.
 
 Options include:
 
@@ -246,8 +246,8 @@ while (queue.length > 0) {
 
       next = generator.next(source)
     } else if (value.probe) {
-      // Test whether `value.probe` exists, returning `true`, `false`, or `null`
-      // if probing isn't supported
+      // Test whether `value.probe` exists, returning `true`, `false`, or
+      // `undefined` if probing isn't supported
       let exists
 
       next = generator.next(exists)

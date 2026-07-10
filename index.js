@@ -18,7 +18,7 @@ function defaultResolveModule(url) {
 }
 
 function defaultProbeModule() {
-  return null
+  return undefined
 }
 
 module.exports = exports = function traverse(
@@ -167,20 +167,20 @@ exports.alias = function alias(url, opts = {}) {
 }
 
 exports.module = function* (url, source, attributes, artifacts, visited, opts = {}) {
-  const { resolutions = null, asset = false, probed = null } = opts
+  const { resolutions = null, asset = false, probed } = opts
 
   if (visited.has(url.href)) return false
 
   visited.add(url.href)
 
-  if (probed !== null) opts = { ...opts, probed: null }
+  if (probed !== undefined) opts = { ...opts, probed: undefined }
 
   attributes = attributes || {}
 
   const artifact = asset === true || moduleType(url, attributes, null, opts) === constants.ADDON
 
   if (source === null) {
-    const exists = probed !== null ? probed : artifact ? yield { probe: url } : null
+    const exists = probed !== undefined ? probed : artifact ? yield { probe: url } : undefined
 
     if (exists === false) {
       throw errors.MODULE_NOT_FOUND(`Cannot find module '${url.href}'`, url.href)
@@ -482,7 +482,7 @@ exports.imports = function* (parentURL, source, imports, artifacts, lexer, visit
           let exists = yield { probe: url }
           let source = null
 
-          if (exists === null) {
+          if (exists === undefined) {
             source = yield { module: url }
             exists = source !== null
           }

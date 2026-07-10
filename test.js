@@ -3058,7 +3058,7 @@ test('probe, custom probe reports addon exists', (t) => {
 
     if (url.href === 'file:///prebuilds/host/foo.bare') return true
 
-    return null
+    return undefined
   }
 
   const result = expand(
@@ -3105,7 +3105,7 @@ test('probe, custom probe reports addon missing', (t) => {
   function probeModule(url) {
     if (url.href === 'file:///prebuilds/host/foo.bare') return false
 
-    return null
+    return undefined
   }
 
   try {

@@ -43,7 +43,7 @@ declare function traverse(
   entry: URL,
   readModule: (url: URL) => Buffer | string | null,
   listPrefix?: (url: URL) => Iterable<URL>,
-  probeModule?: (url: URL) => boolean | null,
+  probeModule?: (url: URL) => boolean | undefined,
   resolveModule?: (url: URL) => URL
 ): Iterable<Dependency>
 
@@ -51,7 +51,7 @@ declare function traverse(
   entry: URL,
   readModule: (url: URL) => Promise<Buffer | string | null>,
   listPrefix?: (url: URL) => AsyncIterable<URL>,
-  probeModule?: (url: URL) => Promise<boolean | null>,
+  probeModule?: (url: URL) => Promise<boolean | undefined>,
   resolveModule?: (url: URL) => Promise<URL>
 ): AsyncIterable<Dependency>
 
@@ -60,7 +60,7 @@ declare function traverse(
   opts: TraverseOptions,
   readModule: (url: URL) => Buffer | string | null,
   listPrefix?: (url: URL) => Iterable<URL>,
-  probeModule?: (url: URL) => boolean | null,
+  probeModule?: (url: URL) => boolean | undefined,
   resolveModule?: (url: URL) => URL
 ): Iterable<Dependency>
 
@@ -69,7 +69,7 @@ declare function traverse(
   opts: TraverseOptions,
   readModule: (url: URL) => Promise<Buffer | string | null>,
   listPrefix?: (url: URL) => AsyncIterable<URL>,
-  probeModule?: (url: URL) => Promise<boolean | null>,
+  probeModule?: (url: URL) => Promise<boolean | undefined>,
   resolveModule?: (url: URL) => Promise<URL>
 ): AsyncIterable<Dependency>
 
