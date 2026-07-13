@@ -81,8 +81,9 @@ declare namespace traverse {
     | { probe: URL }
     | { resolution: URL }
     | { prefix: URL }
-    | { children: URL; deferred: boolean }
-    | { dependency: URL },
+    | { links: Traversal[] }
+    | { children: Traversal; deferred: boolean }
+    | { dependency: Dependency },
     boolean,
     void | URL | URL[] | Buffer | string | boolean | null
   >
@@ -131,6 +132,17 @@ declare namespace traverse {
   export function imports(
     parentURL: URL,
     source: string | Buffer,
+    imports: ImportsMap,
+    artifacts: Artifacts,
+    visited: Set<string>,
+    opts?: TraverseOptions
+  ): Traversal
+
+  export function link(
+    entry: Import,
+    specifier: string,
+    condition: string,
+    parentURL: URL,
     imports: ImportsMap,
     artifacts: Artifacts,
     visited: Set<string>,

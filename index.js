@@ -49,9 +49,7 @@ module.exports = exports = function traverse(
       const queue = [exports.module(entry, null, {}, artifacts, visited, opts)]
       const deferred = []
 
-      while (queue.length > 0 || deferred.length > 0) {
-        const generator = queue.length > 0 ? queue.pop() : deferred.shift()
-
+      function* drive(generator) {
         let next = generator.next()
 
         while (next.done !== true) {
@@ -77,15 +75,25 @@ module.exports = exports = function traverse(
             }
 
             next = generator.next(result)
+          } else if (value.links) {
+            for (const link of value.links) yield* drive(link)
+
+            next = generator.next()
+          } else if (value.children) {
+            if (value.deferred) deferred.push(value.children)
+            else queue.push(value.children)
+
+            next = generator.next()
           } else {
-            if (value.children) {
-              if (value.deferred) deferred.push(value.children)
-              else queue.push(value.children)
-            } else yield value.dependency
+            yield value.dependency
 
             next = generator.next()
           }
         }
+      }
+
+      while (queue.length > 0 || deferred.length > 0) {
+        yield* drive(queue.length > 0 ? queue.pop() : deferred.shift())
       }
 
       return artifacts
@@ -99,9 +107,7 @@ module.exports = exports = function traverse(
       const queue = [exports.module(entry, null, {}, artifacts, visited, opts)]
       const deferred = []
 
-      while (queue.length > 0 || deferred.length > 0) {
-        const generator = queue.length > 0 ? queue.pop() : deferred.shift()
-
+      async function* drive(generator) {
         let next = generator.next()
 
         while (next.done !== true) {
@@ -127,15 +133,25 @@ module.exports = exports = function traverse(
             }
 
             next = generator.next(result)
+          } else if (value.links) {
+            for (const link of value.links) yield* drive(link)
+
+            next = generator.next()
+          } else if (value.children) {
+            if (value.deferred) deferred.push(value.children)
+            else queue.push(value.children)
+
+            next = generator.next()
           } else {
-            if (value.children) {
-              if (value.deferred) deferred.push(value.children)
-              else queue.push(value.children)
-            } else yield value.dependency
+            yield value.dependency
 
             next = generator.next()
           }
         }
+      }
+
+      while (queue.length > 0 || deferred.length > 0) {
+        yield* drive(queue.length > 0 ? queue.pop() : deferred.shift())
       }
 
       return artifacts
@@ -374,23 +390,11 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
 }
 
 exports.imports = function* (parentURL, source, imports, artifacts, lexer, visited, opts = {}) {
-  const {
-    resolve = exports.resolve.default,
-    builtinProtocol = 'builtin:',
-    linkedProtocol = 'linked:',
-    deferredProtocol = 'deferred:',
-    matchedConditions = []
-  } = opts
-
-  opts = opts.matchedConditions === matchedConditions ? opts : { ...opts, matchedConditions }
-
-  let yielded = false
-
-  const queue = []
-
   const lexed = lex(source)
 
   lexer.exports = lexed.exports
+
+  const links = []
 
   for (const entry of lexed.imports) {
     let specifier = entry.specifier
@@ -407,158 +411,181 @@ exports.imports = function* (parentURL, source, imports, artifacts, lexer, visit
       condition = 'import'
     }
 
-    if (entry.attributes.imports) {
-      const specifier = entry.attributes.imports
-
-      queue.push({
-        entry: {
-          type: 0,
-          specifier,
-          names: [],
-          attributes: {},
-          position: [0, 0, 0]
-        },
-        specifier,
-        condition: 'default'
-      })
-    }
-
     lexer.imports.push(entry)
 
-    queue.push({ entry, specifier, condition })
+    links.push(
+      exports.link(entry, specifier, condition, parentURL, imports, artifacts, visited, opts)
+    )
   }
 
-  while (queue.length > 0) {
-    const { entry, specifier, condition } = queue.shift()
+  yield { links }
+}
 
-    matchedConditions.push(condition)
+exports.link = function* (
+  entry,
+  specifier,
+  condition,
+  parentURL,
+  imports,
+  artifacts,
+  visited,
+  opts = {}
+) {
+  if (entry.attributes.imports) {
+    const specifier = entry.attributes.imports
 
-    const resolver = resolve(entry, parentURL, opts)
-    const candidates = []
+    yield* resolveImport(
+      { type: 0, specifier, names: [], attributes: {}, position: [0, 0, 0] },
+      specifier,
+      'default',
+      parentURL,
+      imports,
+      artifacts,
+      visited,
+      opts
+    )
+  }
 
-    let next = resolver.next()
-    let resolutions = 0
+  yield* resolveImport(entry, specifier, condition, parentURL, imports, artifacts, visited, opts)
+}
 
-    while (next.done !== true) {
-      const value = next.value
+function* resolveImport(entry, specifier, condition, parentURL, imports, artifacts, visited, opts) {
+  const {
+    resolve = exports.resolve.default,
+    builtinProtocol = 'builtin:',
+    linkedProtocol = 'linked:',
+    deferredProtocol = 'deferred:'
+  } = opts
 
-      if (value.package) {
-        next = resolver.next(JSON.parse(yield { module: value.package }))
+  const matchedConditions = []
+
+  opts = { ...opts, matchedConditions }
+
+  matchedConditions.push(condition)
+
+  const resolver = resolve(entry, parentURL, opts)
+  const candidates = []
+
+  let next = resolver.next()
+  let resolutions = 0
+
+  while (next.done !== true) {
+    const value = next.value
+
+    if (value.package) {
+      next = resolver.next(JSON.parse(yield { module: value.package }))
+    } else {
+      const url = value.resolution
+
+      candidates.push(url)
+
+      let resolved = false
+      let resolution = url
+
+      if (
+        url.protocol === builtinProtocol ||
+        url.protocol === linkedProtocol ||
+        url.protocol === deferredProtocol
+      ) {
+        addResolution(imports, specifier, matchedConditions, url)
+
+        resolved = true
+      } else if (condition === 'asset') {
+        const prefix = url
+
+        for (const url of yield { prefix }) {
+          const resolution = yield* postresolve(url)
+
+          yield {
+            children: exports.module(resolution, null, {}, artifacts, visited, {
+              ...opts,
+              asset: true
+            }),
+            deferred: true
+          }
+
+          addURL(artifacts.assets, resolution)
+
+          resolved = true
+        }
+
+        if (resolved) addResolution(imports, specifier, matchedConditions, url)
+      } else if (condition === 'addon') {
+        let exists = yield { probe: url }
+        let source = null
+
+        if (exists === undefined) {
+          source = yield { module: url }
+          exists = source !== null
+        }
+
+        if (exists) {
+          resolution = yield* postresolve(url)
+
+          addResolution(imports, specifier, matchedConditions, resolution)
+
+          yield {
+            children: exports.module(resolution, source, {}, artifacts, visited, {
+              ...opts,
+              probed: true
+            }),
+            deferred: false
+          }
+
+          resolved = true
+        }
       } else {
-        const url = value.resolution
+        const source = yield { module: url }
 
-        candidates.push(url)
+        if (source !== null) {
+          resolution = yield* postresolve(url)
 
-        let resolved = false
-        let resolution = url
+          addResolution(imports, specifier, matchedConditions, exports.alias(resolution, opts))
 
-        if (
-          url.protocol === builtinProtocol ||
-          url.protocol === linkedProtocol ||
-          url.protocol === deferredProtocol
-        ) {
-          addResolution(imports, specifier, matchedConditions, url)
+          let attributes = entry.attributes
 
-          resolved = yielded = true
-        } else if (condition === 'asset') {
-          const prefix = url
-
-          for (const url of yield { prefix }) {
-            const resolution = yield* postresolve(url)
-
-            yield {
-              children: exports.module(resolution, null, {}, artifacts, visited, {
-                ...opts,
-                asset: true
-              }),
-              deferred: true
-            }
-
-            addURL(artifacts.assets, resolution)
-
-            resolved = yielded = true
+          if (attributes.imports) {
+            attributes = { ...attributes, imports: imports[attributes.imports].default }
           }
 
-          if (resolved) addResolution(imports, specifier, matchedConditions, url)
-        } else if (condition === 'addon') {
-          let exists = yield { probe: url }
-          let source = null
-
-          if (exists === undefined) {
-            source = yield { module: url }
-            exists = source !== null
+          yield {
+            children: exports.module(resolution, source, attributes, artifacts, visited, opts),
+            deferred: false
           }
 
-          if (exists) {
-            resolution = yield* postresolve(url)
-
-            addResolution(imports, specifier, matchedConditions, resolution)
-
-            yield {
-              children: exports.module(resolution, source, {}, artifacts, visited, {
-                ...opts,
-                probed: true
-              }),
-              deferred: false
-            }
-
-            resolved = yielded = true
-          }
-        } else {
-          const source = yield { module: url }
-
-          if (source !== null) {
-            resolution = yield* postresolve(url)
-
-            addResolution(imports, specifier, matchedConditions, exports.alias(resolution, opts))
-
-            let attributes = entry.attributes
-
-            if (attributes.imports) {
-              attributes = { ...attributes, imports: imports[attributes.imports].default }
-            }
-
-            yield {
-              children: exports.module(resolution, source, attributes, artifacts, visited, opts),
-              deferred: false
-            }
-
-            resolved = yielded = true
-          }
+          resolved = true
         }
-
-        if (resolved) {
-          if (condition === 'addon') addURL(artifacts.addons, resolution)
-
-          resolutions++
-        }
-
-        next = resolver.next(resolved)
-      }
-    }
-
-    matchedConditions.pop()
-
-    if (resolutions === 0) {
-      let message = `Cannot find ${condition === 'addon' || condition === 'asset' ? condition : 'module'} '${specifier}' imported from '${parentURL.href}'`
-
-      if (candidates.length > 0) {
-        message += '\nCandidates:'
-        message += '\n' + candidates.map((url) => '- ' + url.href).join('\n')
       }
 
-      switch (condition) {
-        case 'addon':
-          throw errors.ADDON_NOT_FOUND(message, specifier, parentURL, candidates)
-        case 'asset':
-          throw errors.ASSET_NOT_FOUND(message, specifier, parentURL, candidates)
-        default:
-          throw errors.MODULE_NOT_FOUND(message, specifier, parentURL, candidates)
+      if (resolved) {
+        if (condition === 'addon') addURL(artifacts.addons, resolution)
+
+        resolutions++
       }
+
+      next = resolver.next(resolved)
     }
   }
 
-  return yielded
+  matchedConditions.pop()
+
+  if (resolutions === 0) {
+    let message = `Cannot find ${condition === 'addon' || condition === 'asset' ? condition : 'module'} '${specifier}' imported from '${parentURL.href}'`
+
+    if (candidates.length > 0) {
+      message += '\nCandidates:'
+      message += '\n' + candidates.map((url) => '- ' + url.href).join('\n')
+    }
+
+    switch (condition) {
+      case 'addon':
+        throw errors.ADDON_NOT_FOUND(message, specifier, parentURL, candidates)
+      case 'asset':
+        throw errors.ASSET_NOT_FOUND(message, specifier, parentURL, candidates)
+      default:
+        throw errors.MODULE_NOT_FOUND(message, specifier, parentURL, candidates)
+    }
+  }
 }
 
 const ADDON_EXTENSION = /\.(bare|node)$/
