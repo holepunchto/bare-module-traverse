@@ -42,36 +42,49 @@ interface TraverseOptions extends ResolveOptions {
 declare function traverse(
   entry: URL,
   readModule: (url: URL) => Buffer | string | null,
-  listPrefix?: (url: URL) => Iterable<URL>
+  listPrefix?: (url: URL) => Iterable<URL>,
+  probeModule?: (url: URL) => boolean | undefined,
+  resolveModule?: (url: URL) => URL
 ): Iterable<Dependency>
 
 declare function traverse(
   entry: URL,
   readModule: (url: URL) => Promise<Buffer | string | null>,
-  listPrefix?: (url: URL) => AsyncIterable<URL>
+  listPrefix?: (url: URL) => AsyncIterable<URL>,
+  probeModule?: (url: URL) => Promise<boolean | undefined>,
+  resolveModule?: (url: URL) => Promise<URL>
 ): AsyncIterable<Dependency>
 
 declare function traverse(
   entry: URL,
   opts: TraverseOptions,
   readModule: (url: URL) => Buffer | string | null,
-  listPrefix?: (url: URL) => Iterable<URL>
+  listPrefix?: (url: URL) => Iterable<URL>,
+  probeModule?: (url: URL) => boolean | undefined,
+  resolveModule?: (url: URL) => URL
 ): Iterable<Dependency>
 
 declare function traverse(
   entry: URL,
   opts: TraverseOptions,
   readModule: (url: URL) => Promise<Buffer | string | null>,
-  listPrefix?: (url: URL) => AsyncIterable<URL>
+  listPrefix?: (url: URL) => AsyncIterable<URL>,
+  probeModule?: (url: URL) => Promise<boolean | undefined>,
+  resolveModule?: (url: URL) => Promise<URL>
 ): AsyncIterable<Dependency>
 
 declare namespace traverse {
   export { type TraverseOptions }
 
   export type Traversal = Generator<
-    { module: URL } | { prefix: URL } | { children: URL; deferred: boolean } | { dependency: URL },
+    | { module: URL }
+    | { probe: URL }
+    | { resolution: URL }
+    | { prefix: URL }
+    | { children: URL; deferred: boolean }
+    | { dependency: URL },
     boolean,
-    void | URL[] | Buffer | string | null
+    void | URL | URL[] | Buffer | string | boolean | null
   >
 
   export interface Artifacts {

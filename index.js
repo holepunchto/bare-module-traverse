@@ -13,12 +13,32 @@ const constants = {
   TEXT: 7
 }
 
-module.exports = exports = function traverse(entry, opts, readModule, listPrefix) {
+function defaultResolveModule(url) {
+  return url
+}
+
+function defaultProbeModule() {
+  return undefined
+}
+
+module.exports = exports = function traverse(
+  entry,
+  opts,
+  readModule,
+  listPrefix,
+  probeModule,
+  resolveModule
+) {
   if (typeof opts === 'function') {
+    resolveModule = probeModule
+    probeModule = listPrefix
     listPrefix = readModule
     readModule = opts
     opts = {}
   }
+
+  if (typeof resolveModule !== 'function') resolveModule = defaultResolveModule
+  if (typeof probeModule !== 'function') probeModule = defaultProbeModule
 
   return {
     *[Symbol.iterator]() {
@@ -27,10 +47,6 @@ module.exports = exports = function traverse(entry, opts, readModule, listPrefix
       const visited = opts.visited || new Set()
 
       const queue = [exports.module(entry, null, {}, artifacts, visited, opts)]
-
-      // Asset traversal is deferred until the module graph has been fully
-      // drained so that a module imported both as an asset and as a regular
-      // module is typed by the regular import
       const deferred = []
 
       while (queue.length > 0 || deferred.length > 0) {
@@ -43,6 +59,10 @@ module.exports = exports = function traverse(entry, opts, readModule, listPrefix
 
           if (value.module) {
             next = generator.next(readModule(value.module))
+          } else if (value.probe) {
+            next = generator.next(probeModule(value.probe))
+          } else if (value.resolution) {
+            next = generator.next(resolveModule(value.resolution))
           } else if (value.prefix) {
             const result = []
 
@@ -77,10 +97,6 @@ module.exports = exports = function traverse(entry, opts, readModule, listPrefix
       const visited = opts.visited || new Set()
 
       const queue = [exports.module(entry, null, {}, artifacts, visited, opts)]
-
-      // Asset traversal is deferred until the module graph has been fully
-      // drained so that a module imported both as an asset and as a regular
-      // module is typed by the regular import.
       const deferred = []
 
       while (queue.length > 0 || deferred.length > 0) {
@@ -93,6 +109,10 @@ module.exports = exports = function traverse(entry, opts, readModule, listPrefix
 
           if (value.module) {
             next = generator.next(await readModule(value.module))
+          } else if (value.probe) {
+            next = generator.next(await probeModule(value.probe))
+          } else if (value.resolution) {
+            next = generator.next(await resolveModule(value.resolution))
           } else if (value.prefix) {
             const result = []
 
@@ -147,16 +167,28 @@ exports.alias = function alias(url, opts = {}) {
 }
 
 exports.module = function* (url, source, attributes, artifacts, visited, opts = {}) {
-  const { resolutions = null, asset = false } = opts
+  const { resolutions = null, asset = false, probed } = opts
 
   if (visited.has(url.href)) return false
 
   visited.add(url.href)
 
+  if (probed !== undefined) opts = { ...opts, probed: undefined }
+
+  attributes = attributes || {}
+
+  const artifact = asset === true || moduleType(url, attributes, null, opts) === constants.ADDON
+
   if (source === null) {
+    const exists = probed !== undefined ? probed : artifact ? yield { probe: url } : undefined
+
+    if (exists === false) {
+      throw errors.MODULE_NOT_FOUND(`Cannot find module '${url.href}'`, url.href)
+    }
+
     source = yield { module: url }
 
-    if (source === null) {
+    if (exists !== true && source === null) {
       throw errors.MODULE_NOT_FOUND(`Cannot find module '${url.href}'`, url.href)
     }
   }
@@ -166,8 +198,6 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
       return true
     }
   }
-
-  attributes = attributes || {}
 
   const imports = {}
 
@@ -207,10 +237,6 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
 
   const lexer = { imports: [], exports: [] }
 
-  // Assets are opaque; their contents are never interpreted, so we only recurse
-  // into modules that are actually imported as modules. An asset that happens
-  // to be a script, module, or addon is not lexed and its imports and addons
-  // are not followed.
   if (asset === false) {
     if (type === constants.SCRIPT || type === constants.MODULE) {
       yield* exports.imports(url, source, imports, artifacts, lexer, visited, opts)
@@ -281,10 +307,10 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
   if (typeof imports !== 'object' || imports === null) return false
 
   for (const [specifier, entry] of Object.entries(imports)) {
-    const stack = [entry]
+    const stack = [{ entry, asset: false }]
 
     while (stack.length > 0) {
-      const entry = stack.pop()
+      const { entry, asset } = stack.pop()
 
       if (typeof entry === 'string') {
         const url = new URL(entry)
@@ -293,6 +319,20 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
           yield {
             children: exports.package(url, null, artifacts, visited, opts),
             deferred: false
+          }
+        } else if (asset) {
+          addURL(artifacts.assets, url)
+
+          const source = yield { module: url }
+
+          if (source !== null) {
+            yield {
+              children: exports.module(url, source, {}, artifacts, visited, {
+                ...opts,
+                asset: true
+              }),
+              deferred: true
+            }
           }
         } else if (
           url.protocol !== builtinProtocol &&
@@ -305,14 +345,13 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
           }
         }
       } else {
-        stack.unshift(...Object.values(entry))
+        for (const [condition, child] of Object.entries(entry)) {
+          stack.push({ entry: child, asset: asset || condition === 'asset' })
+        }
       }
     }
   }
 
-  // The type is derived from the extension and default type alone; unlike
-  // `module`, the preresolved path does not read the package scope, so any
-  // `package.json` type declaration is not consulted here.
   const type = moduleType(url, {}, null, opts)
 
   const lexer = { imports: [], exports: [] }
@@ -342,6 +381,8 @@ exports.imports = function* (parentURL, source, imports, artifacts, lexer, visit
     deferredProtocol = 'deferred:',
     matchedConditions = []
   } = opts
+
+  opts = opts.matchedConditions === matchedConditions ? opts : { ...opts, matchedConditions }
 
   let yielded = false
 
@@ -392,7 +433,7 @@ exports.imports = function* (parentURL, source, imports, artifacts, lexer, visit
 
     matchedConditions.push(condition)
 
-    const resolver = resolve(entry, parentURL, { ...opts, matchedConditions })
+    const resolver = resolve(entry, parentURL, opts)
     const candidates = []
 
     let next = resolver.next()
@@ -409,6 +450,7 @@ exports.imports = function* (parentURL, source, imports, artifacts, lexer, visit
         candidates.push(url)
 
         let resolved = false
+        let resolution = url
 
         if (
           url.protocol === builtinProtocol ||
@@ -422,25 +464,53 @@ exports.imports = function* (parentURL, source, imports, artifacts, lexer, visit
           const prefix = url
 
           for (const url of yield { prefix }) {
+            const resolution = yield* postresolve(url)
+
             yield {
-              children: exports.module(url, null, {}, artifacts, visited, {
+              children: exports.module(resolution, null, {}, artifacts, visited, {
                 ...opts,
                 asset: true
               }),
               deferred: true
             }
 
-            addURL(artifacts.assets, url)
+            addURL(artifacts.assets, resolution)
 
             resolved = yielded = true
           }
 
           if (resolved) addResolution(imports, specifier, matchedConditions, url)
+        } else if (condition === 'addon') {
+          let exists = yield { probe: url }
+          let source = null
+
+          if (exists === undefined) {
+            source = yield { module: url }
+            exists = source !== null
+          }
+
+          if (exists) {
+            resolution = yield* postresolve(url)
+
+            addResolution(imports, specifier, matchedConditions, resolution)
+
+            yield {
+              children: exports.module(resolution, source, {}, artifacts, visited, {
+                ...opts,
+                probed: true
+              }),
+              deferred: false
+            }
+
+            resolved = yielded = true
+          }
         } else {
           const source = yield { module: url }
 
           if (source !== null) {
-            addResolution(imports, specifier, matchedConditions, exports.alias(url, opts))
+            resolution = yield* postresolve(url)
+
+            addResolution(imports, specifier, matchedConditions, exports.alias(resolution, opts))
 
             let attributes = entry.attributes
 
@@ -449,7 +519,7 @@ exports.imports = function* (parentURL, source, imports, artifacts, lexer, visit
             }
 
             yield {
-              children: exports.module(url, source, attributes, artifacts, visited, opts),
+              children: exports.module(resolution, source, attributes, artifacts, visited, opts),
               deferred: false
             }
 
@@ -458,7 +528,7 @@ exports.imports = function* (parentURL, source, imports, artifacts, lexer, visit
         }
 
         if (resolved) {
-          if (condition === 'addon') addURL(artifacts.addons, url)
+          if (condition === 'addon') addURL(artifacts.addons, resolution)
 
           resolutions++
         }
@@ -502,12 +572,14 @@ exports.addons = function* (parentURL, artifacts, visited, opts = {}) {
     prefix.pathname = prefix.pathname.replace(ADDON_EXTENSION, '') + '/'
 
     for (const url of yield { prefix }) {
+      const resolution = yield* postresolve(url)
+
       yield {
-        children: exports.module(url, null, {}, artifacts, visited, opts),
+        children: exports.module(resolution, null, {}, artifacts, visited, opts),
         deferred: false
       }
 
-      addURL(artifacts.addons, url)
+      addURL(artifacts.addons, resolution)
 
       yielded = true
     }
@@ -525,10 +597,12 @@ exports.assets = function* (patterns, parentURL, artifacts, visited, opts = {}) 
     const source = yield { module: url }
 
     if (source !== null) {
-      addURL(artifacts.assets, url)
+      const resolution = yield* postresolve(url)
+
+      addURL(artifacts.assets, resolution)
 
       yield {
-        children: exports.module(url, source, {}, artifacts, visited, {
+        children: exports.module(resolution, source, {}, artifacts, visited, {
           ...opts,
           asset: true
         }),
@@ -605,10 +679,10 @@ exports.patternMatches = function* patternMatches(pattern, parentURL, matches, o
   return matches
 }
 
-// Determine the module type from an explicit type attribute, if given, and
-// otherwise from the module's extension. For the ambiguous `.js` and `.ts`
-// extensions the nearest `package.json`, passed as `info`, and the default type
-// break the tie. Returns `0` when the type cannot be determined.
+function* postresolve(url) {
+  return (yield { resolution: url }) || url
+}
+
 function moduleType(url, attributes, info, opts = {}) {
   const { defaultType = constants.SCRIPT, aliases = null } = opts
 
@@ -635,7 +709,7 @@ function moduleType(url, attributes, info, opts = {}) {
 
   const match = url.pathname.match(/\.[a-z]+$/)
 
-  if (match === null) return 0
+  if (match === null) return defaultType
 
   let [extension] = match
 
@@ -666,7 +740,7 @@ function moduleType(url, attributes, info, opts = {}) {
       return constants.TEXT
   }
 
-  return 0
+  return defaultType
 }
 
 function addURL(collection, url) {

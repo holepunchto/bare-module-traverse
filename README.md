@@ -1,6 +1,6 @@
 # bare-module-traverse
 
-Low-level module graph traversal for Bare. The algorithm is implemented as a generator function that yields either modules to be read, prefixes to be listed, child dependencies to be traversed, or resolved dependencies of the module graph. As a convenience, the main export is a synchronous and asynchronous iterable that relies on modules being read and prefixes being listed by callbacks. For asynchronous iteration, the callbacks may return promises which will be awaited before being passed to the generator.
+Low-level module graph traversal for Bare. The algorithm is implemented as a generator function that yields either modules to be read, modules to be probed for existence, resolutions to be transformed, prefixes to be listed, child dependencies to be traversed, or resolved dependencies of the module graph. As a convenience, the main export is a synchronous and asynchronous iterable that relies on modules being read, modules being probed, resolutions being transformed, and prefixes being listed by callbacks. For asynchronous iteration, the callbacks may return promises which will be awaited before being passed to the generator.
 
 ```
 npm i bare-module-traverse
@@ -50,9 +50,9 @@ for await (const dependency of traverse(
 
 ## API
 
-#### `const dependencies = traverse(url[, options], readModule[, listPrefix])`
+#### `const dependencies = traverse(url[, options], readModule[, listPrefix[, probeModule[, resolveModule]]])`
 
-Traverse the module graph rooted at `url`, which must be a WHATWG `URL` instance. `readModule` is called with a `URL` instance for every module to be read and must either return the module source, if it exists, or `null`. `listPrefix` is called with a `URL` instance of every prefix to be listed and must yield `URL` instances that have the specified `URL` as a prefix. If not provided, prefixes won't be traversed. If `readModule` returns a promise or `listPrefix` returns a promise generator, synchronous iteration is not supported.
+Traverse the module graph rooted at `url`, which must be a WHATWG `URL` instance. `readModule` is called with a `URL` instance for every module to be read and must either return the module source, if it exists, or `null`. `listPrefix` is called with a `URL` instance of every prefix to be listed and must yield `URL` instances that have the specified `URL` as a prefix. If not provided, prefixes won't be traversed. `probeModule` is called with a `URL` instance to test whether a module exists and must return `true` if it does, `false` if it doesn't, or `undefined` if probing isn't supported; this lets existence be checked without reading the full module source, such as when locating an addon or asset. When it returns `undefined`, existence is instead determined by reading the module, so no source is read twice. If not provided, `probeModule` returns `undefined` and no probing is performed. `resolveModule` is called with a `URL` instance for every resolved, existing module and must return the `URL` to use in its place, applying any post-resolution transform; a file system implementation would canonicalize symlinks here with `realpath` so a module reached through different symlinks dedupes against its real location. If not provided, resolutions are used unchanged. If `readModule`, `probeModule`, or `resolveModule` returns a promise, or `listPrefix` returns a promise generator, synchronous iteration is not supported.
 
 Options include:
 
@@ -171,6 +171,22 @@ next.value = {
 }
 ```
 
+**Probed module**
+
+```js
+next.value = {
+  probe: URL
+}
+```
+
+**Resolved module**
+
+```js
+next.value = {
+  resolution: URL
+}
+```
+
 **File prefix**
 
 ```js
@@ -229,6 +245,18 @@ while (queue.length > 0) {
       let source
 
       next = generator.next(source)
+    } else if (value.probe) {
+      // Test whether `value.probe` exists, returning `true`, `false`, or
+      // `undefined` if probing isn't supported
+      let exists
+
+      next = generator.next(exists)
+    } else if (value.resolution) {
+      // Transform `value.resolution`, e.g. canonicalize it with `realpath`, or
+      // pass it through unchanged
+      let resolution = value.resolution
+
+      next = generator.next(resolution)
     } else if (value.prefix) {
       // List the modules that have `value.prefix` as a prefix
       let modules
