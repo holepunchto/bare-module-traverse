@@ -72,6 +72,8 @@ options = {
 }
 ```
 
+When a module URL uses the `data:` protocol, its source is decoded directly from the specifier rather than read via `readModule()`, so no source module effect is emitted for it. base64 encoded data is decoded to a `Buffer`, other data is percent-decoded to a string, and the module type is derived from the media type (`text/javascript` and `application/javascript` map to a script or module, `application/json` to JSON, and anything else to `defaultType`). A JavaScript `data:` URL inherits the type of the module that imports it, so it is a script when imported from a script and a module when imported from a module, falling back to `defaultType` when it has no referrer, such as a `data:` entry. Only the UTF-8 charset is supported; a `data:` URL specifying any other charset throws.
+
 `visited` is a `Set` of already visited module hrefs. If provided, modules whose href is already in the set are skipped and the set is updated in place as traversal proceeds. This allows a single set to be shared across several traversals so that a later traversal, such as one rooted at a dynamically imported module, does not revisit modules already seen by an earlier one.
 
 Options supported by <https://github.com/holepunchto/bare-module-resolve> and <https://github.com/holepunchto/bare-addon-resolve> may also be specified.

@@ -1,5 +1,6 @@
 const { lookupPackageScope, conditionMatches } = require('bare-module-resolve')
 const lex = require('bare-module-lexer')
+const MIME = require('bare-mime')
 const resolve = require('./lib/resolve')
 const errors = require('./lib/errors')
 
@@ -196,16 +197,20 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
   const artifact = asset === true || moduleType(url, attributes, null, opts) === constants.ADDON
 
   if (source === null) {
-    const exists = probed !== undefined ? probed : artifact ? yield { probe: url } : undefined
+    if (url.protocol === 'data:') {
+      source = decodeDataURL(url)
+    } else {
+      const exists = probed !== undefined ? probed : artifact ? yield { probe: url } : undefined
 
-    if (exists === false) {
-      throw errors.MODULE_NOT_FOUND(`Cannot find module '${url.href}'`, url.href)
-    }
+      if (exists === false) {
+        throw errors.MODULE_NOT_FOUND(`Cannot find module '${url.href}'`, url.href)
+      }
 
-    source = yield { module: url, artifact }
+      source = yield { module: url, artifact }
 
-    if (exists !== true && source === null) {
-      throw errors.MODULE_NOT_FOUND(`Cannot find module '${url.href}'`, url.href)
+      if (exists !== true && source === null) {
+        throw errors.MODULE_NOT_FOUND(`Cannot find module '${url.href}'`, url.href)
+      }
     }
   }
 
@@ -219,20 +224,22 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
 
   let info = null
 
-  for (const packageURL of lookupPackageScope(url, opts)) {
-    const source = yield { module: packageURL, artifact: false }
+  if (url.protocol !== 'data:') {
+    for (const packageURL of lookupPackageScope(url, opts)) {
+      const source = yield { module: packageURL, artifact: false }
 
-    if (source !== null) {
-      info = JSON.parse(source)
+      if (source !== null) {
+        info = JSON.parse(source)
 
-      imports['#package'] = packageURL.href
+        imports['#package'] = packageURL.href
 
-      yield {
-        children: exports.package(packageURL, source, artifacts, visited, opts),
-        deferred: false
+        yield {
+          children: exports.package(packageURL, source, artifacts, visited, opts),
+          deferred: false
+        }
+
+        break
       }
-
-      break
     }
   }
 
@@ -255,7 +262,10 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
 
   if (asset === false) {
     if (type === constants.SCRIPT || type === constants.MODULE) {
-      yield* exports.imports(url, source, imports, artifacts, lexer, visited, opts)
+      yield* exports.imports(url, source, imports, artifacts, lexer, visited, {
+        ...opts,
+        referrerType: type
+      })
     } else if (type === constants.ADDON) {
       yield* exports.addons(url, artifacts, visited, opts)
     }
@@ -534,7 +544,13 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
           resolved = true
         }
       } else {
-        const source = yield { module: url, artifact: false }
+        let source
+
+        if (url.protocol === 'data:') {
+          source = decodeDataURL(url)
+        } else {
+          source = yield { module: url, artifact: false }
+        }
 
         if (source !== null) {
           resolution = yield* postresolve(url)
@@ -706,7 +722,7 @@ function* postresolve(url) {
 }
 
 function moduleType(url, attributes, info, opts = {}) {
-  const { defaultType = constants.SCRIPT, aliases = null } = opts
+  const { defaultType = constants.SCRIPT, referrerType, aliases = null } = opts
 
   if (typeof attributes.type === 'string') {
     switch (attributes.type) {
@@ -727,6 +743,20 @@ function moduleType(url, attributes, info, opts = {}) {
     }
 
     return 0
+  }
+
+  if (url.protocol === 'data:') {
+    const { mime } = parseDataURL(url)
+
+    if (mime === null || mime.subtype === 'javascript') {
+      if (referrerType) return referrerType
+
+      return defaultType === constants.MODULE ? constants.MODULE : constants.SCRIPT
+    }
+
+    if (mime.subtype === 'json') return constants.JSON
+
+    return defaultType
   }
 
   const match = url.pathname.match(/\.[a-z]+$/)
@@ -763,6 +793,36 @@ function moduleType(url, attributes, info, opts = {}) {
   }
 
   return defaultType
+}
+
+function parseDataURL(url) {
+  const { pathname } = url
+
+  const comma = pathname.indexOf(',')
+
+  const meta = comma === -1 ? pathname : pathname.slice(0, comma)
+  const data = comma === -1 ? '' : pathname.slice(comma + 1)
+
+  const base64 = /;base64$/i.test(meta)
+
+  return { mime: MIME.parse(meta), base64, data }
+}
+
+function decodeDataURL(url) {
+  const { mime, base64, data } = parseDataURL(url)
+
+  const charset = mime === null ? undefined : mime.parameters.get('charset')
+
+  if (charset !== undefined && !/^utf-?8$/i.test(charset)) {
+    throw errors.UNKNOWN_DATA_URL_CHARSET(
+      `Unsupported charset '${charset}' in data URL '${url.href}'`,
+      charset
+    )
+  }
+
+  if (base64) return Buffer.from(data, 'base64')
+
+  return decodeURIComponent(data)
 }
 
 function addURL(collection, url) {

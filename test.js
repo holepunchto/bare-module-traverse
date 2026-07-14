@@ -3197,6 +3197,257 @@ test('probe, async custom probe', async (t) => {
   t.alike(addons, ['file:///prebuilds/host/foo.bare'])
 })
 
+test('data URL entry', (t) => {
+  const read = []
+
+  function readModule(url) {
+    read.push(url.href)
+
+    if (url.href === 'file:///bar.js') {
+      return 'module.exports = 42'
+    }
+
+    return null
+  }
+
+  const entry = dataURL('require("file:///bar.js")')
+
+  const result = expand(traverse(entry, readModule))
+
+  t.absent(read.includes(entry.href))
+
+  t.alike(result.values, [
+    {
+      url: entry,
+      source: 'require("file:///bar.js")',
+      type: constants.SCRIPT,
+      imports: {
+        'file:///bar.js': 'file:///bar.js'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: 'file:///bar.js',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [0, 9, 23]
+          }
+        ],
+        exports: []
+      }
+    },
+    {
+      url: new URL('file:///bar.js'),
+      source: 'module.exports = 42',
+      type: constants.SCRIPT,
+      imports: {},
+      lexer: {
+        imports: [],
+        exports: []
+      }
+    }
+  ])
+})
+
+test('data URL import', (t) => {
+  const entry = dataURL('{"foo":42}', 'application/json')
+
+  const read = []
+
+  function readModule(url) {
+    read.push(url.href)
+
+    if (url.href === 'file:///foo.js') {
+      return `const x = require('${entry.href}')`
+    }
+
+    return null
+  }
+
+  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+
+  t.absent(read.includes(entry.href))
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.js'),
+      source: `const x = require('${entry.href}')`,
+      type: constants.SCRIPT,
+      imports: {
+        [entry.href]: entry.href
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: entry.href,
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [10, 19, 61]
+          }
+        ],
+        exports: []
+      }
+    },
+    {
+      url: entry,
+      source: '{"foo":42}',
+      type: constants.JSON,
+      imports: {},
+      lexer: {
+        imports: [],
+        exports: []
+      }
+    }
+  ])
+})
+
+test('data URL base64', (t) => {
+  const read = []
+
+  function readModule(url) {
+    read.push(url.href)
+
+    return null
+  }
+
+  const entry = base64DataURL('{"bar":1}', 'application/json')
+
+  const result = expand(traverse(entry, readModule))
+
+  t.alike(read, [])
+
+  t.alike(result.values, [
+    {
+      url: entry,
+      source: Buffer.from('{"bar":1}'),
+      type: constants.JSON,
+      imports: {},
+      lexer: {
+        imports: [],
+        exports: []
+      }
+    }
+  ])
+})
+
+test('data URL without media type', (t) => {
+  const entry = dataURL('module.exports = 42', '')
+
+  const result = expand(traverse(entry, () => null))
+
+  t.alike(result.values, [
+    {
+      url: entry,
+      source: 'module.exports = 42',
+      type: constants.SCRIPT,
+      imports: {},
+      lexer: {
+        imports: [],
+        exports: []
+      }
+    }
+  ])
+})
+
+test('data URL with UTF-8 charset', (t) => {
+  const entry = dataURL('module.exports = 42', 'text/javascript;charset=utf-8')
+
+  const result = expand(traverse(entry, () => null))
+
+  t.alike(result.values, [
+    {
+      url: entry,
+      source: 'module.exports = 42',
+      type: constants.SCRIPT,
+      imports: {},
+      lexer: {
+        imports: [],
+        exports: []
+      }
+    }
+  ])
+})
+
+test('data URL with unknown charset', (t) => {
+  const entry = dataURL('module.exports = 42', 'text/javascript;charset=utf-16')
+
+  t.exception(() => expand(traverse(entry, () => null)), /UNKNOWN_DATA_URL_CHARSET/)
+})
+
+test('data URL without media type inherits module type from ES module referrer', (t) => {
+  const entry = dataURL('export default 42', '')
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.mjs') {
+      return `import ${JSON.stringify(entry.href)}`
+    }
+
+    return null
+  }
+
+  const result = expand(traverse(new URL('file:///foo.mjs'), readModule))
+
+  const dependency = result.values.find((d) => d.url.href === entry.href)
+
+  t.is(dependency.type, constants.MODULE)
+})
+
+test('data URL without media type inherits script type from CommonJS referrer', (t) => {
+  const entry = dataURL('module.exports = 42', '')
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.cjs') {
+      return `require(${JSON.stringify(entry.href)})`
+    }
+
+    return null
+  }
+
+  const result = expand(traverse(new URL('file:///foo.cjs'), readModule))
+
+  const dependency = result.values.find((d) => d.url.href === entry.href)
+
+  t.is(dependency.type, constants.SCRIPT)
+})
+
+test('data URL import inherits module type from ES module referrer', (t) => {
+  const entry = dataURL('export default 42')
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.mjs') {
+      return `import ${JSON.stringify(entry.href)}`
+    }
+
+    return null
+  }
+
+  const result = expand(traverse(new URL('file:///foo.mjs'), readModule))
+
+  const dependency = result.values.find((d) => d.url.href === entry.href)
+
+  t.is(dependency.type, constants.MODULE)
+})
+
+test('data URL import inherits script type from CommonJS referrer', (t) => {
+  const entry = dataURL('module.exports = 42')
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.cjs') {
+      return `require(${JSON.stringify(entry.href)})`
+    }
+
+    return null
+  }
+
+  const result = expand(traverse(new URL('file:///foo.cjs'), readModule))
+
+  const dependency = result.values.find((d) => d.url.href === entry.href)
+
+  t.is(dependency.type, constants.SCRIPT)
+})
+
 function expand(iterable) {
   const iterator = iterable[Symbol.iterator]()
   const values = []
@@ -3210,4 +3461,12 @@ function expand(iterable) {
   }
 
   return { values, return: next.value }
+}
+
+function dataURL(data, mediaType = 'text/javascript') {
+  return new URL(`data:${mediaType},${encodeURIComponent(data)}`)
+}
+
+function base64DataURL(data, mediaType = 'text/javascript') {
+  return new URL(`data:${mediaType};base64,${Buffer.from(data).toString('base64')}`)
 }
