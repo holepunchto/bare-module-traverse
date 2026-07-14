@@ -814,7 +814,7 @@ function decodeDataURL(url) {
   const charset = mime === null ? undefined : mime.parameters.get('charset')
 
   if (charset !== undefined && !/^utf-?8$/i.test(charset)) {
-    throw errors.UNSUPPORTED_DATA_URL_CHARSET(
+    throw errors.UNKNOWN_DATA_URL_CHARSET(
       `Unsupported charset '${charset}' in data URL '${url.href}'`,
       charset
     )
