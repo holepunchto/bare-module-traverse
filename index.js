@@ -202,7 +202,7 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
       throw errors.MODULE_NOT_FOUND(`Cannot find module '${url.href}'`, url.href)
     }
 
-    source = yield { module: url }
+    source = yield { module: url, artifact }
 
     if (exists !== true && source === null) {
       throw errors.MODULE_NOT_FOUND(`Cannot find module '${url.href}'`, url.href)
@@ -220,7 +220,7 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
   let info = null
 
   for (const packageURL of lookupPackageScope(url, opts)) {
-    const source = yield { module: packageURL }
+    const source = yield { module: packageURL, artifact: false }
 
     if (source !== null) {
       info = JSON.parse(source)
@@ -239,7 +239,7 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
   if (typeof attributes.imports === 'string') {
     const url = new URL(attributes.imports)
 
-    const source = yield { module: url }
+    const source = yield { module: url, artifact: false }
 
     if (source !== null) {
       opts = {
@@ -280,7 +280,7 @@ exports.package = function* (url, source, artifacts, visited, opts = {}) {
   visited.add(url.href)
 
   if (source === null) {
-    source = yield { module: url }
+    source = yield { module: url, artifact: false }
 
     if (source === null) return false
   }
@@ -339,16 +339,12 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
         } else if (asset) {
           addURL(artifacts.assets, url)
 
-          const source = yield { module: url }
-
-          if (source !== null) {
-            yield {
-              children: exports.module(url, source, {}, artifacts, visited, {
-                ...opts,
-                asset: true
-              }),
-              deferred: true
-            }
+          yield {
+            children: exports.module(url, null, {}, artifacts, visited, {
+              ...opts,
+              asset: true
+            }),
+            deferred: true
           }
         } else if (
           url.protocol !== builtinProtocol &&
@@ -473,7 +469,7 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
     const value = next.value
 
     if (value.package) {
-      next = resolver.next(JSON.parse(yield { module: value.package }))
+      next = resolver.next(JSON.parse(yield { module: value.package, artifact: false }))
     } else {
       const url = value.resolution
 
@@ -510,19 +506,22 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
         }
 
         if (resolved) addResolution(imports, specifier, matchedConditions, url)
-      } else if (condition === 'addon') {
+      } else if (
+        condition === 'addon' ||
+        moduleType(url, entry.attributes, null, opts) === constants.ADDON
+      ) {
         let exists = yield { probe: url }
         let source = null
 
         if (exists === undefined) {
-          source = yield { module: url }
+          source = yield { module: url, artifact: false }
           exists = source !== null
         }
 
         if (exists) {
           resolution = yield* postresolve(url)
 
-          addResolution(imports, specifier, matchedConditions, resolution)
+          addResolution(imports, specifier, matchedConditions, exports.alias(resolution, opts))
 
           yield {
             children: exports.module(resolution, source, {}, artifacts, visited, {
@@ -535,7 +534,7 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
           resolved = true
         }
       } else {
-        const source = yield { module: url }
+        const source = yield { module: url, artifact: false }
 
         if (source !== null) {
           resolution = yield* postresolve(url)
@@ -621,23 +620,19 @@ exports.assets = function* (patterns, parentURL, artifacts, visited, opts = {}) 
   let yielded = false
 
   for (const url of matches) {
-    const source = yield { module: url }
+    const resolution = yield* postresolve(url)
 
-    if (source !== null) {
-      const resolution = yield* postresolve(url)
+    addURL(artifacts.assets, resolution)
 
-      addURL(artifacts.assets, resolution)
-
-      yield {
-        children: exports.module(resolution, source, {}, artifacts, visited, {
-          ...opts,
-          asset: true
-        }),
-        deferred: true
-      }
-
-      yielded = true
+    yield {
+      children: exports.module(resolution, null, {}, artifacts, visited, {
+        ...opts,
+        asset: true
+      }),
+      deferred: true
     }
+
+    yielded = true
   }
 
   return yielded

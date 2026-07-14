@@ -165,11 +165,12 @@ The following generator functions implement the traversal algorithm. The yielded
 
 **Source module**
 
-A module to be read. The driver returns its source if it exists, otherwise `null`.
+A module to be read. The driver returns its source if it exists, otherwise `null`. When `artifact` is `true`, the module is an addon or asset whose contents are loaded lazily and referenced by path. A driver that only needs to locate such artifacts, such as a module loader, may return `null` without reading, having already established existence by probing; a driver that embeds their contents, such as a bundler, reads them as normal.
 
 ```js
 next.value = {
-  module: URL
+  module: URL,
+  artifact: boolean
 }
 ```
 
@@ -265,7 +266,9 @@ function drive(generator) {
     const value = next.value
 
     if (value.module) {
-      // Read `value.module` if it exists, otherwise `null`
+      // Read `value.module` if it exists, otherwise `null`. When
+      // `value.artifact` is `true`, the module is an addon or asset that may be
+      // left unread, returning `null`, unless its contents are needed
       let source
 
       next = generator.next(source)
@@ -322,7 +325,7 @@ Options are the same as `traverse()` for all functions.
 
 #### `const generator = traverse.preresolved(url, source, resolutions, artifacts, visited[, options])`
 
-#### `const generator = traverse.imports(parentURL, source, imports, artifacts, visited[, options])`
+#### `const generator = traverse.imports(parentURL, source, imports, artifacts, lexer, visited[, options])`
 
 #### `const generator = traverse.link(entry, specifier, condition, parentURL, imports, artifacts, visited[, options])`
 
