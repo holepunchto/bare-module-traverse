@@ -262,7 +262,10 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
 
   if (asset === false) {
     if (type === constants.SCRIPT || type === constants.MODULE) {
-      yield* exports.imports(url, source, imports, artifacts, lexer, visited, opts)
+      yield* exports.imports(url, source, imports, artifacts, lexer, visited, {
+        ...opts,
+        referrerType: type
+      })
     } else if (type === constants.ADDON) {
       yield* exports.addons(url, artifacts, visited, opts)
     }
@@ -719,7 +722,7 @@ function* postresolve(url) {
 }
 
 function moduleType(url, attributes, info, opts = {}) {
-  const { defaultType = constants.SCRIPT, aliases = null } = opts
+  const { defaultType = constants.SCRIPT, referrerType, aliases = null } = opts
 
   if (typeof attributes.type === 'string') {
     switch (attributes.type) {
@@ -745,15 +748,13 @@ function moduleType(url, attributes, info, opts = {}) {
   if (url.protocol === 'data:') {
     const { mime } = parseDataURL(url)
 
-    if (mime !== null) {
-      if (mime.subtype === 'javascript' && (mime.type === 'application' || mime.type === 'text')) {
-        return defaultType === constants.MODULE ? constants.MODULE : constants.SCRIPT
-      }
+    if (mime === null || mime.subtype === 'javascript') {
+      if (referrerType) return referrerType
 
-      if (mime.subtype === 'json' && mime.type === 'application') {
-        return constants.JSON
-      }
+      return defaultType === constants.MODULE ? constants.MODULE : constants.SCRIPT
     }
+
+    if (mime.subtype === 'json') return constants.JSON
 
     return defaultType
   }
