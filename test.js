@@ -3370,10 +3370,10 @@ test('data URL with UTF-8 charset', (t) => {
   ])
 })
 
-test('data URL with unsupported charset', (t) => {
+test('data URL with unknown charset', (t) => {
   const entry = dataURL('module.exports = 42', 'text/javascript;charset=utf-16')
 
-  t.exception(() => expand(traverse(entry, () => null)), /UNSUPPORTED_DATA_URL_CHARSET/)
+  t.exception(() => expand(traverse(entry, () => null)), /UNKNOWN_DATA_URL_CHARSET/)
 })
 
 test('data URL without media type inherits module type from ES module referrer', (t) => {
