@@ -3376,21 +3376,6 @@ test('data URL with unsupported charset', (t) => {
   t.exception(() => expand(traverse(entry, () => null)), /UNSUPPORTED_DATA_URL_CHARSET/)
 })
 
-function expand(iterable) {
-  const iterator = iterable[Symbol.iterator]()
-  const values = []
-
-  let next = iterator.next()
-
-  while (next.done !== true) {
-    values.push(next.value)
-
-    next = iterator.next()
-  }
-
-  return { values, return: next.value }
-}
-
 test('data URL without media type inherits module type from ES module referrer', (t) => {
   const entry = dataURL('export default 42', '')
 
@@ -3462,6 +3447,21 @@ test('data URL import inherits script type from CommonJS referrer', (t) => {
 
   t.is(dependency.type, constants.SCRIPT)
 })
+
+function expand(iterable) {
+  const iterator = iterable[Symbol.iterator]()
+  const values = []
+
+  let next = iterator.next()
+
+  while (next.done !== true) {
+    values.push(next.value)
+
+    next = iterator.next()
+  }
+
+  return { values, return: next.value }
+}
 
 function dataURL(data, mediaType = 'text/javascript') {
   return new URL(`data:${mediaType},${encodeURIComponent(data)}`)
