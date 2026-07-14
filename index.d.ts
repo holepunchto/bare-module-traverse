@@ -77,7 +77,7 @@ declare namespace traverse {
   export { type TraverseOptions }
 
   export type Traversal = Generator<
-    | { module: URL }
+    | { module: URL; artifact: boolean }
     | { probe: URL }
     | { resolution: URL }
     | { prefix: URL }
@@ -134,6 +134,10 @@ declare namespace traverse {
     source: string | Buffer,
     imports: ImportsMap,
     artifacts: Artifacts,
+    lexer: {
+      imports: Import[]
+      exports: Export[]
+    },
     visited: Set<string>,
     opts?: TraverseOptions
   ): Traversal
@@ -149,8 +153,8 @@ declare namespace traverse {
     opts?: TraverseOptions
   ): Traversal
 
-  export function prebuilds(
-    packageURL: URL,
+  export function addons(
+    parentURL: URL,
     artifacts: Artifacts,
     visited: Set<string>,
     opts?: TraverseOptions
@@ -158,7 +162,7 @@ declare namespace traverse {
 
   export function assets(
     patterns: ConditionalSpecifier,
-    packageURL: URL,
+    parentURL: URL,
     artifacts: Artifacts,
     visited: Set<string>,
     opts?: TraverseOptions
