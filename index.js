@@ -332,6 +332,8 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
 
   if (typeof imports !== 'object' || imports === null) return false
 
+  const type = moduleType(url, {}, null, opts)
+
   for (const [specifier, entry] of Object.entries(imports)) {
     const stack = [{ entry, asset: false }]
 
@@ -352,7 +354,8 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
           yield {
             children: exports.module(url, null, {}, artifacts, visited, {
               ...opts,
-              asset: true
+              asset: true,
+              referrerType: type
             }),
             deferred: true
           }
@@ -362,7 +365,10 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
           url.protocol !== deferredProtocol
         ) {
           yield {
-            children: exports.module(url, null, {}, artifacts, visited, opts),
+            children: exports.module(url, null, {}, artifacts, visited, {
+              ...opts,
+              referrerType: type
+            }),
             deferred: false
           }
         }
@@ -373,8 +379,6 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
       }
     }
   }
-
-  const type = moduleType(url, {}, null, opts)
 
   const lexer = { imports: [], exports: [] }
 
