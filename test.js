@@ -3448,6 +3448,54 @@ test('data URL import inherits script type from CommonJS referrer', (t) => {
   t.is(dependency.type, constants.SCRIPT)
 })
 
+test('data URL in resolutions map inherits module type from ES module referrer', (t) => {
+  const entry = dataURL('export default 42')
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.mjs') {
+      return `import ${JSON.stringify(entry.href)}`
+    }
+
+    return null
+  }
+
+  const resolutions = {
+    'file:///foo.mjs': {
+      [entry.href]: entry.href
+    }
+  }
+
+  const result = expand(traverse(new URL('file:///foo.mjs'), { resolutions }, readModule))
+
+  const dependency = result.values.find((d) => d.url.href === entry.href)
+
+  t.is(dependency.type, constants.MODULE)
+})
+
+test('data URL in resolutions map inherits script type from CommonJS referrer', (t) => {
+  const entry = dataURL('module.exports = 42')
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.cjs') {
+      return `require(${JSON.stringify(entry.href)})`
+    }
+
+    return null
+  }
+
+  const resolutions = {
+    'file:///foo.cjs': {
+      [entry.href]: entry.href
+    }
+  }
+
+  const result = expand(traverse(new URL('file:///foo.cjs'), { resolutions }, readModule))
+
+  const dependency = result.values.find((d) => d.url.href === entry.href)
+
+  t.is(dependency.type, constants.SCRIPT)
+})
+
 function expand(iterable) {
   const iterator = iterable[Symbol.iterator]()
   const values = []
