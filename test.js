@@ -3496,6 +3496,74 @@ test('data URL in resolutions map inherits script type from CommonJS referrer', 
   t.is(dependency.type, constants.SCRIPT)
 })
 
+test('data URL with JSON media type', (t) => {
+  const entry = dataURL('{ "foo": 42 }', 'application/json')
+
+  const result = expand(traverse(entry, () => null))
+
+  const dependency = result.values.find((d) => d.url.href === entry.href)
+
+  t.is(dependency.type, constants.JSON)
+})
+
+test('data URL with text media type', (t) => {
+  const entry = dataURL('hello', 'text/plain')
+
+  const result = expand(traverse(entry, () => null))
+
+  const dependency = result.values.find((d) => d.url.href === entry.href)
+
+  t.is(dependency.type, constants.TEXT)
+})
+
+test('data URL with binary media type', (t) => {
+  const entry = dataURL('hello', 'application/octet-stream')
+
+  const result = expand(traverse(entry, () => null))
+
+  const dependency = result.values.find((d) => d.url.href === entry.href)
+
+  t.is(dependency.type, constants.BINARY)
+})
+
+test('data URL with unsupported media type', (t) => {
+  const entry = dataURL('<a/>', 'application/xml')
+
+  t.exception(() => expand(traverse(entry, () => null)), /TYPE_INCOMPATIBLE/)
+})
+
+test('data URL with incompatible type attribute', (t) => {
+  const entry = dataURL('export default 42', 'text/javascript')
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.mjs') {
+      return `import d from ${JSON.stringify(entry.href)} with { type: 'json' }`
+    }
+
+    return null
+  }
+
+  t.exception(() => expand(traverse(new URL('file:///foo.mjs'), readModule)), /TYPE_INCOMPATIBLE/)
+})
+
+test('data URL with type attribute disambiguating JavaScript', (t) => {
+  const entry = dataURL('module.exports = 42', 'text/javascript')
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.mjs') {
+      return `import d from ${JSON.stringify(entry.href)} with { type: 'script' }`
+    }
+
+    return null
+  }
+
+  const result = expand(traverse(new URL('file:///foo.mjs'), readModule))
+
+  const dependency = result.values.find((d) => d.url.href === entry.href)
+
+  t.is(dependency.type, constants.SCRIPT)
+})
+
 function expand(iterable) {
   const iterator = iterable[Symbol.iterator]()
   const values = []

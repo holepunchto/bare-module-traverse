@@ -726,41 +726,14 @@ function* postresolve(url) {
 }
 
 function moduleType(url, attributes, info, opts = {}) {
-  const { defaultType = constants.SCRIPT, referrerType, aliases = null } = opts
-
-  if (typeof attributes.type === 'string') {
-    switch (attributes.type) {
-      case 'script':
-        return constants.SCRIPT
-      case 'module':
-        return constants.MODULE
-      case 'json':
-        return constants.JSON
-      case 'bundle':
-        return constants.BUNDLE
-      case 'addon':
-        return constants.ADDON
-      case 'binary':
-        return constants.BINARY
-      case 'text':
-        return constants.TEXT
-    }
-
-    return 0
-  }
+  const { defaultType = constants.SCRIPT, aliases = null } = opts
 
   if (url.protocol === 'data:') {
-    const { mime } = parseDataURL(url)
+    return dataURLModuleType(url, attributes, opts)
+  }
 
-    if (mime === null || mime.subtype === 'javascript') {
-      if (referrerType) return referrerType
-
-      return defaultType === constants.MODULE ? constants.MODULE : constants.SCRIPT
-    }
-
-    if (mime.subtype === 'json') return constants.JSON
-
-    return defaultType
+  if (typeof attributes.type === 'string') {
+    return typeForAttribute(attributes.type)
   }
 
   const match = url.pathname.match(/\.[a-z]+$/)
@@ -797,6 +770,67 @@ function moduleType(url, attributes, info, opts = {}) {
   }
 
   return defaultType
+}
+
+function typeForAttribute(type) {
+  switch (type) {
+    case 'script':
+      return constants.SCRIPT
+    case 'module':
+      return constants.MODULE
+    case 'json':
+      return constants.JSON
+    case 'bundle':
+      return constants.BUNDLE
+    case 'addon':
+      return constants.ADDON
+    case 'binary':
+      return constants.BINARY
+    case 'text':
+      return constants.TEXT
+  }
+
+  return 0
+}
+
+function dataURLModuleType(url, attributes, opts = {}) {
+  const { defaultType = constants.SCRIPT, referrerType } = opts
+
+  const { mime } = parseDataURL(url)
+
+  const asserted = typeof attributes.type === 'string' ? typeForAttribute(attributes.type) : null
+
+  if (mime === null || mime.subtype === 'javascript') {
+    if (asserted === constants.SCRIPT || asserted === constants.MODULE) return asserted
+
+    if (asserted !== null) {
+      throw errors.TYPE_INCOMPATIBLE(`Module '${url.href}' is not of type '${attributes.type}'`)
+    }
+
+    if (referrerType) return referrerType
+
+    return defaultType === constants.MODULE ? constants.MODULE : constants.SCRIPT
+  }
+
+  let type
+
+  if (mime.subtype === 'json') {
+    type = constants.JSON
+  } else if (mime.type === 'text') {
+    type = constants.TEXT
+  } else if (mime.subtype === 'octet-stream') {
+    type = constants.BINARY
+  } else {
+    throw errors.TYPE_INCOMPATIBLE(
+      `Media type '${mime.type}/${mime.subtype}' of '${url.href}' is not supported`
+    )
+  }
+
+  if (asserted !== null && asserted !== type) {
+    throw errors.TYPE_INCOMPATIBLE(`Module '${url.href}' is not of type '${attributes.type}'`)
+  }
+
+  return type
 }
 
 function parseDataURL(url) {
