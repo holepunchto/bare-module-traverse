@@ -688,9 +688,8 @@ exports.patternMatches = function* patternMatches(pattern, parentURL, matches, o
         if (patternNegate) removeURL(matches, url)
         else addURL(matches, url)
       } else if (patternTrailer === '' || url.href.endsWith(patternTrailer)) {
-        addURL(matches, url)
-      } else if (patternNegate) {
-        removeURL(matches, url)
+        if (patternNegate) removeURL(matches, url)
+        else addURL(matches, url)
       }
     }
   } else if (Array.isArray(pattern)) {
