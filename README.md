@@ -49,6 +49,7 @@ for await (const dependency of traverse(
 ```
 
 <!-- bare-refgen:api start -->
+
 ## API
 
 ### Functions
@@ -65,13 +66,13 @@ Traverse the module graph rooted at `entry`, which must be a WHATWG `URL` instan
 
 **Parameters**
 
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `entry` | `URL` | — | The WHATWG `URL` of the entry module to root the graph at. |
-| `readModule` | `(url: URL) => Buffer \| string \| null` | — | Called with the `URL` of each module to read; returns its source as a `Buffer` or `string`, or `null` if it does not exist. Returning a promise disables synchronous iteration. |
-| `listPrefix?` | `(url: URL) => Iterable<URL>` | — | Called with the `URL` of each prefix to list; must yield the `URL`s that have it as a prefix. If omitted, prefixes are not traversed. |
-| `probeModule?` | `(url: URL) => boolean \| undefined` | — | Called with the `URL` of each module to probe for existence; returns a boolean, or `undefined` to fall back to `readModule`. |
-| `resolveModule?` | `(url: URL) => URL` | — | Called with each resolution `URL` to transform; returns the `URL` to use in its place. Defaults to the identity function. |
+| Parameter        | Type                                     | Default | Description                                                                                                                                                                     |
+| ---------------- | ---------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `entry`          | `URL`                                    | —       | The WHATWG `URL` of the entry module to root the graph at.                                                                                                                      |
+| `readModule`     | `(url: URL) => Buffer \| string \| null` | —       | Called with the `URL` of each module to read; returns its source as a `Buffer` or `string`, or `null` if it does not exist. Returning a promise disables synchronous iteration. |
+| `listPrefix?`    | `(url: URL) => Iterable<URL>`            | —       | Called with the `URL` of each prefix to list; must yield the `URL`s that have it as a prefix. If omitted, prefixes are not traversed.                                           |
+| `probeModule?`   | `(url: URL) => boolean \| undefined`     | —       | Called with the `URL` of each module to probe for existence; returns a boolean, or `undefined` to fall back to `readModule`.                                                    |
+| `resolveModule?` | `(url: URL) => URL`                      | —       | Called with each resolution `URL` to transform; returns the `URL` to use in its place. Defaults to the identity function.                                                       |
 
 **Returns** `Iterable<Dependency>` — An iterable of resolved `Dependency` records for the module graph; asynchronous when any callback returns a promise.
 
@@ -93,9 +94,9 @@ interface TraverseOptions extends ResolveOptions {
 
 ```ts
 interface Artifacts {
-    addons: URL[] | Set<string>
-    assets: URL[] | Set<string>
-  }
+  addons: URL[] | Set<string>
+  assets: URL[] | Set<string>
+}
 ```
 
 [source](https://github.com/holepunchto/bare-module-traverse/blob/v2.4.2/index.d.ts#L91)
@@ -112,11 +113,11 @@ The default resolver, which simply forwards to <https://github.com/holepunchto/b
 
 **Parameters**
 
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `entry` | `Import` | — | The import to resolve, as produced by `bare-module-lexer`. |
-| `parentURL` | `URL` | — | The WHATWG `URL` to resolve `entry` relative to. |
-| `opts?` | `ResolveOptions` | — | Resolve options forwarded to the underlying resolution algorithm. |
+| Parameter   | Type             | Default | Description                                                       |
+| ----------- | ---------------- | ------- | ----------------------------------------------------------------- |
+| `entry`     | `Import`         | —       | The import to resolve, as produced by `bare-module-lexer`.        |
+| `parentURL` | `URL`            | —       | The WHATWG `URL` to resolve `entry` relative to.                  |
+| `opts?`     | `ResolveOptions` | —       | Resolve options forwarded to the underlying resolution algorithm. |
 
 **Returns** `Resolver` — A `Resolver` that yields the candidate resolutions for `entry`.
 
@@ -128,11 +129,11 @@ The Bare resolver, which matches the options used by the Bare module system.
 
 **Parameters**
 
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `entry` | `Import` | — | The import to resolve, as produced by `bare-module-lexer`. |
-| `parentURL` | `URL` | — | The WHATWG `URL` to resolve `entry` relative to. |
-| `opts?` | `BareResolveOptions` | — | Resolve options forwarded to the underlying resolution algorithm. |
+| Parameter   | Type                 | Default | Description                                                       |
+| ----------- | -------------------- | ------- | ----------------------------------------------------------------- |
+| `entry`     | `Import`             | —       | The import to resolve, as produced by `bare-module-lexer`.        |
+| `parentURL` | `URL`                | —       | The WHATWG `URL` to resolve `entry` relative to.                  |
+| `opts?`     | `BareResolveOptions` | —       | Resolve options forwarded to the underlying resolution algorithm. |
 
 **Returns** `Resolver` — A `Resolver` that yields the candidate resolutions for `entry`.
 
@@ -144,11 +145,11 @@ The Node.js resolver, which matches the options used by the Node.js module syste
 
 **Parameters**
 
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `entry` | `Import` | — | The import to resolve, as produced by `bare-module-lexer`. |
-| `parentURL` | `URL` | — | The WHATWG `URL` to resolve `entry` relative to. |
-| `opts?` | `NodeResolveOptions` | — | Resolve options forwarded to the underlying resolution algorithm. |
+| Parameter   | Type                 | Default | Description                                                       |
+| ----------- | -------------------- | ------- | ----------------------------------------------------------------- |
+| `entry`     | `Import`             | —       | The import to resolve, as produced by `bare-module-lexer`.        |
+| `parentURL` | `URL`                | —       | The WHATWG `URL` to resolve `entry` relative to.                  |
+| `opts?`     | `NodeResolveOptions` | —       | Resolve options forwarded to the underlying resolution algorithm. |
 
 **Returns** `Resolver` — A `Resolver` that yields the candidate resolutions for `entry`.
 
@@ -162,11 +163,11 @@ The Node.js resolver, which matches the options used by the Node.js module syste
 
 **Parameters**
 
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `entry` | `Import` | — | The import to resolve, as produced by `bare-module-lexer`. |
-| `parentURL` | `URL` | — | The WHATWG `URL` to resolve `entry` relative to. |
-| `opts?` | `ResolveOptions` | — | Resolve options forwarded to the underlying resolution algorithm. |
+| Parameter   | Type             | Default | Description                                                       |
+| ----------- | ---------------- | ------- | ----------------------------------------------------------------- |
+| `entry`     | `Import`         | —       | The import to resolve, as produced by `bare-module-lexer`.        |
+| `parentURL` | `URL`            | —       | The WHATWG `URL` to resolve `entry` relative to.                  |
+| `opts?`     | `ResolveOptions` | —       | Resolve options forwarded to the underlying resolution algorithm. |
 
 **Returns** `Resolver` — A `Resolver` that yields the candidate resolutions for `entry`.
 
@@ -180,11 +181,11 @@ The Node.js resolver, which matches the options used by the Node.js module syste
 
 **Parameters**
 
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `entry` | `Import` | — | The import to resolve, as produced by `bare-module-lexer`. |
-| `parentURL` | `URL` | — | The WHATWG `URL` to resolve `entry` relative to. |
-| `opts?` | `BareResolveOptions` | — | Resolve options forwarded to the underlying resolution algorithm. |
+| Parameter   | Type                 | Default | Description                                                       |
+| ----------- | -------------------- | ------- | ----------------------------------------------------------------- |
+| `entry`     | `Import`             | —       | The import to resolve, as produced by `bare-module-lexer`.        |
+| `parentURL` | `URL`                | —       | The WHATWG `URL` to resolve `entry` relative to.                  |
+| `opts?`     | `BareResolveOptions` | —       | Resolve options forwarded to the underlying resolution algorithm. |
 
 **Returns** `Resolver` — A `Resolver` that yields the candidate resolutions for `entry`.
 
@@ -212,11 +213,11 @@ interface BareResolveOptions extends ResolveOptions {
 
 **Parameters**
 
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `entry` | `Import` | — | The import to resolve, as produced by `bare-module-lexer`. |
-| `parentURL` | `URL` | — | The WHATWG `URL` to resolve `entry` relative to. |
-| `opts?` | `NodeResolveOptions` | — | Resolve options forwarded to the underlying resolution algorithm. |
+| Parameter   | Type                 | Default | Description                                                       |
+| ----------- | -------------------- | ------- | ----------------------------------------------------------------- |
+| `entry`     | `Import`             | —       | The import to resolve, as produced by `bare-module-lexer`.        |
+| `parentURL` | `URL`                | —       | The WHATWG `URL` to resolve `entry` relative to.                  |
+| `opts?`     | `NodeResolveOptions` | —       | Resolve options forwarded to the underlying resolution algorithm. |
 
 **Returns** `Resolver` — A `Resolver` that yields the candidate resolutions for `entry`.
 
@@ -232,6 +233,7 @@ interface NodeResolveOptions extends ResolveOptions {
 ```
 
 [source](https://github.com/holepunchto/bare-module-traverse/blob/v2.4.2/lib/resolve/node.d.ts#L4)
+
 <!-- bare-refgen:api end -->
 
 ## License
