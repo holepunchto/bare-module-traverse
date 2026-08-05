@@ -36,9 +36,24 @@ type AliasableExtension =
 interface TraverseOptions extends ResolveOptions {
   defaultType?: number
   aliases?: Record<string, AliasableExtension>
+  /**
+   * @param entry - The import to resolve, as produced by `bare-module-lexer`.
+   * @param parentURL - The WHATWG `URL` to resolve `entry` relative to.
+   * @param opts - Resolve options forwarded to the underlying resolution algorithm.
+   * @returns A `Resolver` that yields the candidate resolutions for `entry`.
+   */
   resolve?: (entry: Import, parentURL: URL, opts?: ResolveOptions) => Resolver
 }
 
+/**
+ * Traverse the module graph rooted at `entry`, which must be a WHATWG `URL` instance. `readModule` is called with a `URL` instance for every module to be read and must either return the module source, if it exists, or `null`. `listPrefix` is called with a `URL` instance of every prefix to be listed and must yield `URL` instances that have the specified `URL` as a prefix. If not provided, prefixes won't be traversed. If `readModule` returns a promise or `listPrefix` returns a promise generator, synchronous iteration is not supported.
+ * @param entry - The WHATWG `URL` of the entry module to root the graph at.
+ * @param readModule - Called with the `URL` of each module to read; returns its source as a `Buffer` or `string`, or `null` if it does not exist. Returning a promise disables synchronous iteration.
+ * @param listPrefix - Called with the `URL` of each prefix to list; must yield the `URL`s that have it as a prefix. If omitted, prefixes are not traversed.
+ * @param probeModule - Called with the `URL` of each module to probe for existence; returns a boolean, or `undefined` to fall back to `readModule`.
+ * @param resolveModule - Called with each resolution `URL` to transform; returns the `URL` to use in its place. Defaults to the identity function.
+ * @returns An iterable of resolved `Dependency` records for the module graph; asynchronous when any callback returns a promise.
+ */
 declare function traverse(
   entry: URL,
   readModule: (url: URL) => Buffer | string | null,
