@@ -50,9 +50,7 @@ for await (const dependency of traverse(
 
 ## API
 
-See the [`bare-module-traverse` reference][reference].
-
-[reference]: https://docs.pears.com/reference/bare/modules/bare-module-traverse
+See the [`bare-module-traverse` reference](https://docs.pears.com/reference/bare/modules/bare-module-traverse).
 
 ## License
 
