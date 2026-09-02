@@ -212,6 +212,20 @@ Options are the same as `traverse()` for all functions.
 > [!WARNING]
 > These functions are currently subject to change between minor releases. If using them directly, make sure to specify a tilde range (`~1.2.3`) when declaring the module dependency.
 
+### `const generator = traverse.module(url, source, attributes, artifacts, visited[, options])`
+
+### `const generator = traverse.package(url, source, artifacts, visited[, options])`
+
+### `const generator = traverse.preresolved(url, source, resolutions, artifacts, visited[, options])`
+
+### `const generator = traverse.imports(parentURL, source, imports, artifacts, lexer, visited[, options])`
+
+### `const generator = traverse.link(entry, specifier, condition, parentURL, imports, artifacts, visited[, options])`
+
+### `const generator = traverse.addons(parentURL, artifacts, visited[, options])`
+
+### `const generator = traverse.assets(patterns, parentURL, artifacts, visited[, options])`
+
 ## License
 
 Apache-2.0
