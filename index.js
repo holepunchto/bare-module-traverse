@@ -464,7 +464,8 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
     resolve = exports.resolve.default,
     builtinProtocol = 'builtin:',
     linkedProtocol = 'linked:',
-    deferredProtocol = 'deferred:'
+    deferredProtocol = 'deferred:',
+    deferUnresolved = false
   } = opts
 
   const matchedConditions = []
@@ -584,6 +585,12 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
 
       next = resolver.next(resolved)
     }
+  }
+
+  if (resolutions === 0 && deferUnresolved) {
+    addResolution(imports, specifier, matchedConditions, new URL(deferredProtocol + specifier))
+
+    resolutions++
   }
 
   matchedConditions.pop()
