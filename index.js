@@ -504,8 +504,12 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
       } else if (condition === 'asset') {
         const prefix = url
 
+        let prefixResolution = null
+
         for (const url of yield { prefix }) {
           const resolution = yield* postresolve(url)
+
+          if (url.href === prefix.href) prefixResolution = resolution
 
           yield {
             children: exports.module(resolution, null, {}, artifacts, visited, {
@@ -520,7 +524,11 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
           resolved = true
         }
 
-        if (resolved) addResolution(imports, specifier, matchedConditions, url)
+        if (resolved) {
+          resolution = prefixResolution || (yield* postresolve(prefix))
+
+          addResolution(imports, specifier, matchedConditions, resolution)
+        }
       } else if (
         condition === 'addon' ||
         moduleType(url, entry.attributes, null, opts) === constants.ADDON

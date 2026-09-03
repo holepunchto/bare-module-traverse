@@ -3551,6 +3551,80 @@ test('resolution transform canonicalizes and dedupes', (t) => {
   t.is(urls.filter((href) => href === 'file:///real.js').length, 1)
 })
 
+test('resolution transform applied to asset', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require.asset('./bar.txt')"
+    }
+
+    if (url.href === 'file:///real/bar.txt') {
+      return 'hello'
+    }
+
+    return null
+  }
+
+  function listPrefix(url) {
+    if (url.href === 'file:///bar.txt') return [new URL('file:///bar.txt')]
+
+    return []
+  }
+
+  function resolveModule(url) {
+    if (url.href === 'file:///bar.txt') return new URL('file:///real/bar.txt')
+
+    return url
+  }
+
+  const result = expand(
+    traverse(new URL('file:///foo.js'), readModule, listPrefix, null, resolveModule)
+  )
+
+  const foo = result.values.find((value) => value.url.href === 'file:///foo.js')
+
+  t.is(foo.imports['./bar.txt'], 'file:///real/bar.txt')
+
+  t.alike(result.return.assets, [new URL('file:///real/bar.txt')])
+})
+
+test('resolution transform applied to asset directory', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require.asset('./bar')"
+    }
+
+    if (url.href === 'file:///real/a.txt') {
+      return 'hello'
+    }
+
+    return null
+  }
+
+  function listPrefix(url) {
+    if (url.href === 'file:///bar') return [new URL('file:///bar/a.txt')]
+
+    return []
+  }
+
+  function resolveModule(url) {
+    if (url.href === 'file:///bar') return new URL('file:///real')
+
+    if (url.href === 'file:///bar/a.txt') return new URL('file:///real/a.txt')
+
+    return url
+  }
+
+  const result = expand(
+    traverse(new URL('file:///foo.js'), readModule, listPrefix, null, resolveModule)
+  )
+
+  const foo = result.values.find((value) => value.url.href === 'file:///foo.js')
+
+  t.is(foo.imports['./bar'], 'file:///real')
+
+  t.alike(result.return.assets, [new URL('file:///real/a.txt')])
+})
+
 test('resolution transform applied to addon', (t) => {
   function readModule(url) {
     if (url.href === 'file:///foo.js') {
