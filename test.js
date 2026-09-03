@@ -280,15 +280,12 @@ test('require, module missing', (t) => {
     return null
   }
 
-  try {
-    expand(traverse(new URL('file:///foo.js'), readModule))
-    t.fail()
-  } catch (err) {
-    t.comment(err.message)
-  }
+  t.exception(() => expand(traverse(new URL('file:///foo.js'), readModule)), {
+    code: 'MODULE_NOT_FOUND'
+  })
 })
 
-test('require, module missing, error code', (t) => {
+test('require, module missing, deferred', (t) => {
   function readModule(url) {
     if (url.href === 'file:///foo.js') {
       return "const bar = require('./bar.js')"
@@ -297,21 +294,124 @@ test('require, module missing, error code', (t) => {
     return null
   }
 
-  try {
-    expand(traverse(new URL('file:///foo.js'), readModule))
-    t.fail()
-  } catch (err) {
-    t.is(err.code, 'MODULE_NOT_FOUND')
-  }
+  const result = expand(traverse(new URL('file:///foo.js'), { deferUnresolved: true }, readModule))
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.js'),
+      source: "const bar = require('./bar.js')",
+      type: constants.SCRIPT,
+      imports: {
+        './bar.js': 'deferred:./bar.js'
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: './bar.js',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [12, 21, 29]
+          }
+        ],
+        exports: []
+      }
+    }
+  ])
 })
 
-test('module entry missing, error code', (t) => {
-  try {
-    expand(traverse(new URL('file:///foo.js'), () => null))
-    t.fail()
-  } catch (err) {
-    t.is(err.code, 'MODULE_NOT_FOUND')
+test('import, module missing', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.mjs') {
+      return "import bar from './bar.mjs'"
+    }
+
+    return null
   }
+
+  t.exception(() => expand(traverse(new URL('file:///foo.mjs'), readModule)), {
+    code: 'MODULE_NOT_FOUND'
+  })
+})
+
+test('import, module missing, deferred', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.mjs') {
+      return "import bar from './bar.mjs'"
+    }
+
+    return null
+  }
+
+  const result = expand(traverse(new URL('file:///foo.mjs'), { deferUnresolved: true }, readModule))
+
+  t.is(result.values.length, 1)
+  t.alike(result.values[0].imports, { './bar.mjs': 'deferred:./bar.mjs' })
+})
+
+test('dynamic import, module missing', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.mjs') {
+      return "const bar = await import('./bar.mjs')"
+    }
+
+    return null
+  }
+
+  t.exception(() => expand(traverse(new URL('file:///foo.mjs'), readModule)), {
+    code: 'MODULE_NOT_FOUND'
+  })
+})
+
+test('dynamic import, module missing, deferred', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.mjs') {
+      return "const bar = await import('./bar.mjs')"
+    }
+
+    return null
+  }
+
+  const result = expand(traverse(new URL('file:///foo.mjs'), { deferUnresolved: true }, readModule))
+
+  t.is(result.values.length, 1)
+  t.alike(result.values[0].imports, { './bar.mjs': 'deferred:./bar.mjs' })
+})
+
+test('addon missing, deferred', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require.addon('./bar')"
+    }
+
+    return null
+  }
+
+  const result = expand(traverse(new URL('file:///foo.js'), { deferUnresolved: true }, readModule))
+
+  t.is(result.values.length, 1)
+  t.alike(result.values[0].imports, { './bar': 'deferred:./bar' })
+})
+
+test('asset missing, deferred', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require.asset('./bar.txt')"
+    }
+
+    return null
+  }
+
+  const result = expand(traverse(new URL('file:///foo.js'), { deferUnresolved: true }, readModule))
+
+  t.is(result.values.length, 1)
+  t.alike(result.values[0].imports, { './bar.txt': 'deferred:./bar.txt' })
+})
+
+test('module entry missing', (t) => {
+  t.exception(() => expand(traverse(new URL('file:///foo.js'), () => null)), {
+    code: 'MODULE_NOT_FOUND'
+  })
 })
 
 test('require, same module twice', (t) => {
@@ -546,12 +646,10 @@ test('require.addon, addon missing', (t) => {
     return null
   }
 
-  try {
-    expand(traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule))
-    t.fail()
-  } catch (err) {
-    t.comment(err.message)
-  }
+  t.exception(
+    () => expand(traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule)),
+    { code: 'ADDON_NOT_FOUND' }
+  )
 })
 
 test('require.addon, addon missing, error code', (t) => {
@@ -567,12 +665,10 @@ test('require.addon, addon missing, error code', (t) => {
     return null
   }
 
-  try {
-    expand(traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule))
-    t.fail()
-  } catch (err) {
-    t.is(err.code, 'ADDON_NOT_FOUND')
-  }
+  t.exception(
+    () => expand(traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule)),
+    { code: 'ADDON_NOT_FOUND' }
+  )
 })
 
 test('require.addon, default specifier', (t) => {
@@ -1486,12 +1582,9 @@ test('require.asset, asset missing', (t) => {
     return null
   }
 
-  try {
-    expand(traverse(new URL('file:///foo.js'), readModule))
-    t.fail()
-  } catch (err) {
-    t.is(err.code, 'ASSET_NOT_FOUND')
-  }
+  t.exception(() => expand(traverse(new URL('file:///foo.js'), readModule)), {
+    code: 'ASSET_NOT_FOUND'
+  })
 })
 
 test('package.json#assets', (t) => {
@@ -2102,12 +2195,9 @@ test('resolutions map, module missing', (t) => {
     }
   }
 
-  try {
-    expand(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
-    t.fail()
-  } catch (err) {
-    t.comment(err.message)
-  }
+  t.exception(() => expand(traverse(new URL('file:///foo.js'), { resolutions }, readModule)), {
+    code: 'MODULE_NOT_FOUND'
+  })
 })
 
 test('resolutions map, builtin', (t) => {
@@ -2641,12 +2731,9 @@ test('imports attribute, invalid imports map', (t) => {
     return null
   }
 
-  try {
-    expand(traverse(new URL('file:///foo.js'), readModule))
-    t.fail()
-  } catch (err) {
-    t.is(err.code, 'INVALID_IMPORTS_MAP')
-  }
+  t.exception(() => expand(traverse(new URL('file:///foo.js'), readModule)), {
+    code: 'INVALID_IMPORTS_MAP'
+  })
 })
 
 test('aliases, .ts to .js', (t) => {
@@ -3612,20 +3699,19 @@ test('probe, custom probe reports addon missing', (t) => {
     return undefined
   }
 
-  try {
-    expand(
-      traverse(
-        new URL('file:///foo.js'),
-        { host, extensions: ['.bare'] },
-        readModule,
-        null,
-        probeModule
-      )
-    )
-    t.fail('should throw')
-  } catch (err) {
-    t.comment(err.message)
-  }
+  t.exception(
+    () =>
+      expand(
+        traverse(
+          new URL('file:///foo.js'),
+          { host, extensions: ['.bare'] },
+          readModule,
+          null,
+          probeModule
+        )
+      ),
+    { code: 'ADDON_NOT_FOUND' }
+  )
 
   t.absent(read.includes('file:///prebuilds/host/foo.bare'))
 })
@@ -3710,12 +3796,9 @@ test('addon entry, probe reports missing', (t) => {
     return false
   }
 
-  try {
-    expand(traverse(new URL('file:///foo.bare'), readModule, null, probeModule))
-    t.fail()
-  } catch (err) {
-    t.is(err.code, 'MODULE_NOT_FOUND')
-  }
+  t.exception(() => expand(traverse(new URL('file:///foo.bare'), readModule, null, probeModule)), {
+    code: 'MODULE_NOT_FOUND'
+  })
 })
 
 test('async iteration, async readModule and resolveModule', async (t) => {
@@ -3973,7 +4056,9 @@ test('data URL with UTF-8 charset', (t) => {
 test('data URL with unknown charset', (t) => {
   const entry = dataURL('module.exports = 42', 'text/javascript;charset=utf-16')
 
-  t.exception(() => expand(traverse(entry, () => null)), /UNKNOWN_DATA_URL_CHARSET/)
+  t.exception(() => expand(traverse(entry, () => null)), {
+    code: 'UNKNOWN_DATA_URL_CHARSET'
+  })
 })
 
 test('data URL without media type inherits module type from ES module referrer', (t) => {
@@ -4129,7 +4214,9 @@ test('data URL with binary media type', (t) => {
 test('data URL with unsupported media type', (t) => {
   const entry = dataURL('<a/>', 'application/xml')
 
-  t.exception(() => expand(traverse(entry, () => null)), /TYPE_INCOMPATIBLE/)
+  t.exception(() => expand(traverse(entry, () => null)), {
+    code: 'TYPE_INCOMPATIBLE'
+  })
 })
 
 test('data URL with incompatible type attribute', (t) => {
@@ -4143,7 +4230,9 @@ test('data URL with incompatible type attribute', (t) => {
     return null
   }
 
-  t.exception(() => expand(traverse(new URL('file:///foo.mjs'), readModule)), /TYPE_INCOMPATIBLE/)
+  t.exception(() => expand(traverse(new URL('file:///foo.mjs'), readModule)), {
+    code: 'TYPE_INCOMPATIBLE'
+  })
 })
 
 test('data URL with type attribute disambiguating JavaScript', (t) => {

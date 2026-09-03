@@ -43,6 +43,13 @@ interface TraverseOptions extends ResolveOptions {
    * @returns A `Resolver` that yields the candidate resolutions for `entry`.
    */
   resolve?: (entry: Import, parentURL: URL, opts?: ResolveOptions) => Resolver
+  /**
+   * Record a specifier that resolves nowhere under `deferredProtocol` rather
+   * than throwing, leaving it for whoever names it to resolve when they get
+   * there. Only for callers that reach a resolver again, such as a module
+   * system; a tool that only links wants the error.
+   */
+  deferUnresolved?: boolean
 }
 
 /**
