@@ -1642,6 +1642,128 @@ test('require.asset, parent directory', (t) => {
   t.alike(result.return.assets, [new URL('file:///a/bar.txt')])
 })
 
+test('package scope is read once per directory', (t) => {
+  const reads = []
+
+  function readModule(url) {
+    reads.push(url.href)
+
+    if (url.href === 'file:///foo.js') {
+      return "require.asset('./bar')"
+    }
+
+    if (url.href === 'file:///bar/package.json') {
+      return '{ "name": "bar" }'
+    }
+
+    if (url.href === 'file:///bar/a.txt' || url.href === 'file:///bar/b.txt') {
+      return 'hello'
+    }
+
+    return null
+  }
+
+  function listPrefix(url) {
+    if (url.href === 'file:///bar') {
+      return [new URL('file:///bar/a.txt'), new URL('file:///bar/b.txt')]
+    }
+
+    return []
+  }
+
+  const result = expand(traverse(new URL('file:///foo.js'), readModule, listPrefix))
+
+  t.is(
+    reads.filter((href) => href === 'file:///bar/package.json').length,
+    1,
+    'read once for both assets'
+  )
+
+  for (const href of ['file:///bar/a.txt', 'file:///bar/b.txt']) {
+    const asset = result.values.find((value) => value.url.href === href)
+
+    t.is(asset.imports['#package'], 'file:///bar/package.json')
+  }
+})
+
+test('missing package scope is probed once per directory', (t) => {
+  const reads = []
+
+  function readModule(url) {
+    reads.push(url.href)
+
+    if (url.href === 'file:///foo.js') {
+      return "require.asset('./bar')"
+    }
+
+    if (url.href === 'file:///bar/a.txt' || url.href === 'file:///bar/b.txt') {
+      return 'hello'
+    }
+
+    return null
+  }
+
+  function listPrefix(url) {
+    if (url.href === 'file:///bar') {
+      return [new URL('file:///bar/a.txt'), new URL('file:///bar/b.txt')]
+    }
+
+    return []
+  }
+
+  expand(traverse(new URL('file:///foo.js'), readModule, listPrefix))
+
+  t.is(
+    reads.filter((href) => href === 'file:///bar/package.json').length,
+    1,
+    'probed once for both assets'
+  )
+})
+
+test('asset prefix is expanded once', (t) => {
+  const prefixes = []
+
+  function readModule(url) {
+    if (url.href === 'file:///a/foo.js') {
+      return "require.asset('..'), require.asset('../.')"
+    }
+
+    if (url.href === 'file:///a/bar.txt') {
+      return 'hello'
+    }
+
+    return null
+  }
+
+  function listPrefix(url) {
+    prefixes.push(url.href)
+
+    if (url.href === 'file:///') {
+      return [new URL('file:///a/bar.txt')]
+    }
+
+    return []
+  }
+
+  const result = expand(
+    traverse(
+      new URL('file:///a/foo.js'),
+      { resolve: traverse.resolve.bare },
+      readModule,
+      listPrefix
+    )
+  )
+
+  const foo = result.values.find((value) => value.url.href === 'file:///a/foo.js')
+
+  t.is(foo.imports['..'], 'file:///')
+  t.is(foo.imports['../.'], 'file:///')
+
+  t.alike(prefixes, ['file:///'])
+
+  t.alike(result.return.assets, [new URL('file:///a/bar.txt')])
+})
+
 test('require.asset, asset missing', (t) => {
   function readModule(url) {
     if (url.href === 'file:///foo.js') {
