@@ -1573,6 +1573,75 @@ test('require.asset, directory', (t) => {
   t.alike(result.return.assets, [new URL('file:///bar/a.txt'), new URL('file:///bar/b.txt')])
 })
 
+test('require.asset, directory with trailing slash', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require.asset('./bar/')"
+    }
+
+    if (url.href === 'file:///bar/a.txt') {
+      return 'hello a'
+    }
+
+    return null
+  }
+
+  function listPrefix(url) {
+    if (url.href === 'file:///bar/') {
+      return [new URL('file:///bar/a.txt')]
+    }
+
+    return []
+  }
+
+  const result = expand(
+    traverse(new URL('file:///foo.js'), { resolve: traverse.resolve.bare }, readModule, listPrefix)
+  )
+
+  const foo = result.values.find((value) => value.url.href === 'file:///foo.js')
+
+  t.is(foo.imports['./bar/'], 'file:///bar/')
+
+  t.alike(result.return.assets, [new URL('file:///bar/a.txt')])
+})
+
+test('require.asset, parent directory', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///a/foo.js') {
+      return "const bar = require.asset('..')"
+    }
+
+    if (url.href === 'file:///a/bar.txt') {
+      return 'hello'
+    }
+
+    return null
+  }
+
+  function listPrefix(url) {
+    if (url.href === 'file:///') {
+      return [new URL('file:///a/bar.txt')]
+    }
+
+    return []
+  }
+
+  const result = expand(
+    traverse(
+      new URL('file:///a/foo.js'),
+      { resolve: traverse.resolve.bare },
+      readModule,
+      listPrefix
+    )
+  )
+
+  const foo = result.values.find((value) => value.url.href === 'file:///a/foo.js')
+
+  t.is(foo.imports['..'], 'file:///')
+
+  t.alike(result.return.assets, [new URL('file:///a/bar.txt')])
+})
+
 test('require.asset, asset missing', (t) => {
   function readModule(url) {
     if (url.href === 'file:///foo.js') {
