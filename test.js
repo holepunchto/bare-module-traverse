@@ -24,7 +24,7 @@ test('require', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
 
   t.alike(result.values, [
     {
@@ -97,7 +97,7 @@ test('import', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
 
   t.alike(result.values, [
     {
@@ -166,7 +166,7 @@ test('cyclic require', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
 
   t.alike(result.values, [
     {
@@ -225,7 +225,7 @@ test('cyclic import', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
 
   t.alike(result.values, [
     {
@@ -280,7 +280,7 @@ test('require, module missing', (t) => {
     return null
   }
 
-  t.exception(() => expand(traverse(new URL('file:///foo.js'), readModule)), {
+  t.exception(() => expandSync(traverse(new URL('file:///foo.js'), readModule)), {
     code: 'MODULE_NOT_FOUND'
   })
 })
@@ -294,7 +294,9 @@ test('require, module missing, deferred', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), { deferUnresolved: true }, readModule))
+  const result = expandSync(
+    traverse(new URL('file:///foo.js'), { deferUnresolved: true }, readModule)
+  )
 
   t.alike(result.values, [
     {
@@ -329,7 +331,7 @@ test('import, module missing', (t) => {
     return null
   }
 
-  t.exception(() => expand(traverse(new URL('file:///foo.mjs'), readModule)), {
+  t.exception(() => expandSync(traverse(new URL('file:///foo.mjs'), readModule)), {
     code: 'MODULE_NOT_FOUND'
   })
 })
@@ -343,7 +345,9 @@ test('import, module missing, deferred', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.mjs'), { deferUnresolved: true }, readModule))
+  const result = expandSync(
+    traverse(new URL('file:///foo.mjs'), { deferUnresolved: true }, readModule)
+  )
 
   t.is(result.values.length, 1)
   t.alike(result.values[0].imports, { './bar.mjs': 'deferred:./bar.mjs' })
@@ -358,7 +362,7 @@ test('dynamic import, module missing', (t) => {
     return null
   }
 
-  t.exception(() => expand(traverse(new URL('file:///foo.mjs'), readModule)), {
+  t.exception(() => expandSync(traverse(new URL('file:///foo.mjs'), readModule)), {
     code: 'MODULE_NOT_FOUND'
   })
 })
@@ -372,7 +376,9 @@ test('dynamic import, module missing, deferred', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.mjs'), { deferUnresolved: true }, readModule))
+  const result = expandSync(
+    traverse(new URL('file:///foo.mjs'), { deferUnresolved: true }, readModule)
+  )
 
   t.is(result.values.length, 1)
   t.alike(result.values[0].imports, { './bar.mjs': 'deferred:./bar.mjs' })
@@ -387,7 +393,9 @@ test('addon missing, deferred', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), { deferUnresolved: true }, readModule))
+  const result = expandSync(
+    traverse(new URL('file:///foo.js'), { deferUnresolved: true }, readModule)
+  )
 
   t.is(result.values.length, 1)
   t.alike(result.values[0].imports, { './bar': 'deferred:./bar' })
@@ -402,14 +410,16 @@ test('asset missing, deferred', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), { deferUnresolved: true }, readModule))
+  const result = expandSync(
+    traverse(new URL('file:///foo.js'), { deferUnresolved: true }, readModule)
+  )
 
   t.is(result.values.length, 1)
   t.alike(result.values[0].imports, { './bar.txt': 'deferred:./bar.txt' })
 })
 
 test('module entry missing', (t) => {
-  t.exception(() => expand(traverse(new URL('file:///foo.js'), () => null)), {
+  t.exception(() => expandSync(traverse(new URL('file:///foo.js'), () => null)), {
     code: 'MODULE_NOT_FOUND'
   })
 })
@@ -427,7 +437,7 @@ test('require, same module twice', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
 
   t.alike(result.values, [
     {
@@ -485,7 +495,7 @@ test('opts.visited, pre-seeded set skips modules', (t) => {
 
   const visited = new Set(['file:///bar.js'])
 
-  const result = expand(traverse(new URL('file:///foo.js'), { visited }, readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), { visited }, readModule))
 
   const urls = result.values.map((value) => value.url.href)
 
@@ -510,7 +520,7 @@ test('require.addon', (t) => {
     return null
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule)
   )
 
@@ -580,7 +590,7 @@ test('require.addon, referrer', (t) => {
     return null
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule)
   )
 
@@ -647,7 +657,8 @@ test('require.addon, addon missing', (t) => {
   }
 
   t.exception(
-    () => expand(traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule)),
+    () =>
+      expandSync(traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule)),
     { code: 'ADDON_NOT_FOUND' }
   )
 })
@@ -666,7 +677,8 @@ test('require.addon, addon missing, error code', (t) => {
   }
 
   t.exception(
-    () => expand(traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule)),
+    () =>
+      expandSync(traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule)),
     { code: 'ADDON_NOT_FOUND' }
   )
 })
@@ -688,7 +700,7 @@ test('require.addon, default specifier', (t) => {
     return null
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule)
   )
 
@@ -754,7 +766,7 @@ test('require.addon, builtin', (t) => {
     return null
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(
       new URL('file:///foo.js'),
       { host, extensions: ['.bare'], builtins: ['foo'] },
@@ -812,7 +824,7 @@ test('require.addon, linked', (t) => {
     return null
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(new URL('file:///foo.js'), { host: 'darwin-arm64', extensions: ['.bare'] }, readModule)
   )
 
@@ -874,7 +886,7 @@ test('require.addon, hosts list', (t) => {
     return null
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(
       new URL('file:///foo.js'),
       { hosts: ['host-a', 'host-b'], extensions: ['.bare'] },
@@ -974,7 +986,7 @@ test('require.addon, hosts list, host variants', (t) => {
     return null
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(
       new URL('file:///foo.js'),
       { hosts: ['host', 'host-a', 'host-a-b'], extensions: ['.bare'] },
@@ -1078,7 +1090,7 @@ test('require.addon, hosts list, linked', (t) => {
     return null
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(
       new URL('file:///foo.js'),
       {
@@ -1158,7 +1170,7 @@ test('require.addon, sibling addons', (t) => {
     return []
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule, listPrefix)
   )
 
@@ -1182,7 +1194,7 @@ test('require.asset', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
 
   t.alike(result.values, [
     {
@@ -1233,7 +1245,7 @@ test('require.asset, referrer', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
 
   t.alike(result.values, [
     {
@@ -1284,7 +1296,7 @@ test('require + require.asset', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
 
   t.alike(result.values, [
     {
@@ -1342,7 +1354,7 @@ test('require.asset then require with type attribute', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
 
   t.alike(result.values, [
     {
@@ -1400,7 +1412,7 @@ test('require with type attribute then require.asset', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
 
   t.alike(result.values, [
     {
@@ -1462,7 +1474,7 @@ test('require.asset does not follow the imports of a module asset', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
 
   t.alike(result.values, [
     {
@@ -1525,7 +1537,7 @@ test('require.asset, directory', (t) => {
     return []
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule, listPrefix))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule, listPrefix))
 
   t.alike(result.values, [
     {
@@ -1594,7 +1606,7 @@ test('require.asset, directory with trailing slash', (t) => {
     return []
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(new URL('file:///foo.js'), { resolve: traverse.resolve.bare }, readModule, listPrefix)
   )
 
@@ -1626,7 +1638,7 @@ test('require.asset, parent directory', (t) => {
     return []
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(
       new URL('file:///a/foo.js'),
       { resolve: traverse.resolve.bare },
@@ -1671,7 +1683,7 @@ test('package scope is read once per directory', (t) => {
     return []
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule, listPrefix))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule, listPrefix))
 
   t.is(
     reads.filter((href) => href === 'file:///bar/package.json').length,
@@ -1711,7 +1723,7 @@ test('missing package scope is probed once per directory', (t) => {
     return []
   }
 
-  expand(traverse(new URL('file:///foo.js'), readModule, listPrefix))
+  expandSync(traverse(new URL('file:///foo.js'), readModule, listPrefix))
 
   t.is(
     reads.filter((href) => href === 'file:///bar/package.json').length,
@@ -1745,7 +1757,7 @@ test('asset prefix is expanded once', (t) => {
     return []
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(
       new URL('file:///a/foo.js'),
       { resolve: traverse.resolve.bare },
@@ -1764,6 +1776,90 @@ test('asset prefix is expanded once', (t) => {
   t.alike(result.return.assets, [new URL('file:///a/bar.txt')])
 })
 
+test('require.asset, directory listed as resolved', (t) => {
+  const resolutions = []
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require.asset('./bar')"
+    }
+
+    if (url.href === 'file:///bar/a.txt') {
+      return 'hello a'
+    }
+
+    return null
+  }
+
+  function listPrefix(url) {
+    if (url.href !== 'file:///bar') return []
+
+    const urls = [new URL('file:///bar/a.txt')]
+
+    urls.resolved = true
+
+    return urls
+  }
+
+  function resolveModule(url) {
+    resolutions.push(url.href)
+
+    return url
+  }
+
+  const result = expandSync(
+    traverse(new URL('file:///foo.js'), readModule, listPrefix, null, resolveModule)
+  )
+
+  const foo = result.values.find((value) => value.url.href === 'file:///foo.js')
+
+  t.is(foo.imports['./bar'], 'file:///bar')
+
+  t.alike(result.return.assets, [new URL('file:///bar/a.txt')])
+
+  t.alike(resolutions, ['file:///bar'], 'only the prefix is postresolved')
+})
+
+test('require.asset, directory without artifacts', (t) => {
+  const prefixes = []
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require.asset('./bar')"
+    }
+
+    if (url.href === 'file:///bar/a.txt') {
+      return 'hello a'
+    }
+
+    if (url.href === 'file:///bar/b.txt') {
+      return 'hello b'
+    }
+
+    return null
+  }
+
+  function listPrefix(url, expand) {
+    prefixes.push({ href: url.href, expand })
+
+    if (url.href === 'file:///bar') {
+      return [new URL('file:///bar/a.txt'), new URL('file:///bar/b.txt')]
+    }
+
+    return []
+  }
+
+  const result = expandSync(
+    traverse(new URL('file:///foo.js'), { artifacts: false }, readModule, listPrefix)
+  )
+
+  const foo = result.values.find((value) => value.url.href === 'file:///foo.js')
+
+  t.is(foo.imports['./bar'], 'file:///bar')
+
+  t.alike(prefixes, [{ href: 'file:///bar', expand: false }])
+})
+
 test('require.asset, asset missing', (t) => {
   function readModule(url) {
     if (url.href === 'file:///foo.js') {
@@ -1773,7 +1869,7 @@ test('require.asset, asset missing', (t) => {
     return null
   }
 
-  t.exception(() => expand(traverse(new URL('file:///foo.js'), readModule)), {
+  t.exception(() => expandSync(traverse(new URL('file:///foo.js'), readModule)), {
     code: 'ASSET_NOT_FOUND'
   })
 })
@@ -1803,7 +1899,7 @@ test('package.json#assets', (t) => {
     return []
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule, listPrefix))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule, listPrefix))
 
   t.alike(result.values, [
     {
@@ -1870,7 +1966,7 @@ test('package.json#assets, pattern match', (t) => {
     return []
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule, listPrefix))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule, listPrefix))
 
   t.alike(result.values, [
     {
@@ -1939,7 +2035,7 @@ test('package.json#assets, negate', (t) => {
     return []
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule, listPrefix))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule, listPrefix))
 
   t.alike(result.values, [
     {
@@ -2008,7 +2104,7 @@ test('package.json#assets, negate with wildcard', (t) => {
     return []
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule, listPrefix))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule, listPrefix))
 
   const urls = result.values.map((value) => value.url.href)
 
@@ -2050,7 +2146,7 @@ test('package.json#assets, conditional pattern', (t) => {
   }
 
   {
-    const result = expand(
+    const result = expandSync(
       traverse(new URL('file:///foo.js'), { conditions: ['darwin'] }, readModule, listPrefix)
     )
 
@@ -2092,7 +2188,7 @@ test('package.json#assets, conditional pattern', (t) => {
     ])
   }
   {
-    const result = expand(
+    const result = expandSync(
       traverse(new URL('file:///foo.js'), { conditions: ['linux'] }, readModule, listPrefix)
     )
 
@@ -2160,7 +2256,7 @@ test('package.json#assets, also imported as module with type attribute', (t) => 
     return []
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule, listPrefix))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule, listPrefix))
 
   t.alike(result.values, [
     {
@@ -2224,7 +2320,7 @@ test('package with null json', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
 
   const urls = result.values.map((value) => value.url.href)
 
@@ -2259,7 +2355,7 @@ test('resolutions map', (t) => {
     'file:///baz.js': {}
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
 
   t.alike(result.values, [
     {
@@ -2323,7 +2419,7 @@ test('resolutions map, partial', (t) => {
     'file:///baz.js': {}
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
 
   t.alike(result.values, [
     {
@@ -2386,7 +2482,7 @@ test('resolutions map, module missing', (t) => {
     }
   }
 
-  t.exception(() => expand(traverse(new URL('file:///foo.js'), { resolutions }, readModule)), {
+  t.exception(() => expandSync(traverse(new URL('file:///foo.js'), { resolutions }, readModule)), {
     code: 'MODULE_NOT_FOUND'
   })
 })
@@ -2406,7 +2502,7 @@ test('resolutions map, builtin', (t) => {
     }
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
 
   t.alike(result.values, [
     {
@@ -2444,7 +2540,7 @@ test('resolutions map, #package entry', (t) => {
     'file:///package.json': {}
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
 
   t.alike(result.values, [
     {
@@ -2487,7 +2583,7 @@ test('resolutions map, missing #package entry', (t) => {
     }
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
 
   const urls = result.values.map((value) => value.url.href)
 
@@ -2515,7 +2611,7 @@ test('resolutions map, asset entry', (t) => {
     'file:///bar.txt': {}
   }
 
-  const result = expand(traverse(new URL('file:///foo.mjs'), { resolutions }, readModule))
+  const result = expandSync(traverse(new URL('file:///foo.mjs'), { resolutions }, readModule))
 
   t.alike(result.return.assets, [new URL('file:///bar.txt')])
 
@@ -2549,7 +2645,7 @@ test('resolutions map, nested conditional entry', (t) => {
     'file:///bar.js': {}
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
 
   const urls = result.values.map((value) => value.url.href)
 
@@ -2578,7 +2674,7 @@ test('imports map', (t) => {
     baz: 'file:///baz.js'
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), { imports }, readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), { imports }, readModule))
 
   t.alike(result.values, [
     {
@@ -2654,7 +2750,7 @@ test('imports map, deferred', (t) => {
 
   const defer = ['qux']
 
-  const result = expand(traverse(new URL('file:///foo.js'), { imports, defer }, readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), { imports, defer }, readModule))
 
   t.alike(result.values, [
     {
@@ -2725,7 +2821,7 @@ test('conditional imports, conditions matrix', (t) => {
     return null
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(new URL('file:///foo.js'), { conditions: [['a'], ['b']] }, readModule)
   )
 
@@ -2810,7 +2906,7 @@ test('imports attribute', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
 
   t.alike(result.values, [
     {
@@ -2898,7 +2994,7 @@ test('imports attribute, nested imports form', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
 
   const bar = result.values.find((value) => value.url.href === 'file:///bar.js')
 
@@ -2922,7 +3018,7 @@ test('imports attribute, invalid imports map', (t) => {
     return null
   }
 
-  t.exception(() => expand(traverse(new URL('file:///foo.js'), readModule)), {
+  t.exception(() => expandSync(traverse(new URL('file:///foo.js'), readModule)), {
     code: 'INVALID_IMPORTS_MAP'
   })
 })
@@ -2940,7 +3036,7 @@ test('aliases, .ts to .js', (t) => {
     return null
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(new URL('file:///foo.ts'), { aliases: { '.ts': '.js' } }, readModule)
   )
 
@@ -2991,7 +3087,7 @@ test('aliases, .mts to .mjs', (t) => {
     return null
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(new URL('file:///foo.mts'), { aliases: { '.mts': '.mjs' } }, readModule)
   )
 
@@ -3042,7 +3138,7 @@ test('aliases, .ts to .js with defaultType MODULE', (t) => {
     return null
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(
       new URL('file:///foo.ts'),
       {
@@ -3098,7 +3194,7 @@ test('aliases, extensionless .ts to .js, bare resolver', (t) => {
     return null
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(
       new URL('file:///foo.ts'),
       { resolve: traverse.resolve.bare, aliases: { '.ts': '.js' } },
@@ -3151,7 +3247,7 @@ test('aliases, extensionless .cts to .cjs, bare resolver', (t) => {
     return null
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(
       new URL('file:///foo.cts'),
       { resolve: traverse.resolve.bare, aliases: { '.cts': '.cjs' } },
@@ -3204,7 +3300,7 @@ test('aliases, extensionless .mts to .mjs, bare resolver', (t) => {
     return null
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(
       new URL('file:///foo.mts'),
       { resolve: traverse.resolve.bare, aliases: { '.mts': '.mjs' } },
@@ -3255,7 +3351,9 @@ test('aliases, url without extension is unchanged', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo'), { aliases: { '.ts': '.js' } }, readModule))
+  const result = expandSync(
+    traverse(new URL('file:///foo'), { aliases: { '.ts': '.js' } }, readModule)
+  )
 
   const urls = result.values.map((value) => value.url.href)
 
@@ -3275,7 +3373,7 @@ test('require, TypeScript source', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.ts'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.ts'), readModule))
 
   t.alike(result.values, [
     {
@@ -3322,7 +3420,7 @@ test('require, TypeScript source, .cts', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.cts'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.cts'), readModule))
 
   t.alike(result.values, [
     {
@@ -3371,7 +3469,7 @@ test('import, TypeScript source, .mts', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.mts'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.mts'), readModule))
 
   t.alike(result.values, [
     {
@@ -3424,7 +3522,7 @@ test('import, TypeScript source, package type module', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.ts'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.ts'), readModule))
 
   t.alike(result.values, [
     {
@@ -3484,7 +3582,7 @@ test('require, bundle extension', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
 
   const bar = result.values.find((value) => value.url.href === 'file:///bar.bundle')
 
@@ -3504,7 +3602,7 @@ test('require with bundle type attribute', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
 
   const bar = result.values.find((value) => value.url.href === 'file:///bar.js')
 
@@ -3524,7 +3622,7 @@ test('require, binary extension', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
 
   const bar = result.values.find((value) => value.url.href === 'file:///bar.bin')
 
@@ -3544,7 +3642,7 @@ test('require with binary type attribute', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
 
   const bar = result.values.find((value) => value.url.href === 'file:///bar.js')
 
@@ -3564,7 +3662,7 @@ test('require with module type attribute', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
 
   const bar = result.values.find((value) => value.url.href === 'file:///bar.js')
 
@@ -3592,7 +3690,7 @@ test('require with addon type attribute', (t) => {
     return undefined
   }
 
-  expand(traverse(new URL('file:///foo.js'), readModule, null, probeModule))
+  expandSync(traverse(new URL('file:///foo.js'), readModule, null, probeModule))
 
   t.alike(probed, ['file:///bar.js'])
 })
@@ -3610,7 +3708,7 @@ test('require with unknown type attribute', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
 
   const bar = result.values.find((value) => value.url.href === 'file:///bar.js')
 
@@ -3630,7 +3728,7 @@ test('require, unknown extension falls through to default type', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
 
   const bar = result.values.find((value) => value.url.href === 'file:///bar.css')
 
@@ -3658,7 +3756,7 @@ test('conditional exports resolve per condition', (t) => {
     return null
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(new URL('file:///foo.mjs'), { resolve: traverse.resolve.bare }, readModule)
   )
 
@@ -3696,7 +3794,7 @@ test('conditional exports collapse when equal', (t) => {
     return null
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(new URL('file:///foo.mjs'), { resolve: traverse.resolve.bare }, readModule)
   )
 
@@ -3726,7 +3824,9 @@ test('resolution transform canonicalizes and dedupes', (t) => {
     return url
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule, null, null, resolveModule))
+  const result = expandSync(
+    traverse(new URL('file:///foo.js'), readModule, null, null, resolveModule)
+  )
 
   const foo = result.values.find((value) => value.url.href === 'file:///foo.js')
 
@@ -3767,7 +3867,7 @@ test('resolution transform applied to asset', (t) => {
     return url
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(new URL('file:///foo.js'), readModule, listPrefix, null, resolveModule)
   )
 
@@ -3805,7 +3905,7 @@ test('resolution transform applied to asset directory', (t) => {
     return url
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(new URL('file:///foo.js'), readModule, listPrefix, null, resolveModule)
   )
 
@@ -3841,7 +3941,7 @@ test('resolution transform applied to addon', (t) => {
     return url
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(
       new URL('file:///foo.js'),
       { host, extensions: ['.bare'] },
@@ -3885,7 +3985,7 @@ test('resolution transform is called for every existing module', (t) => {
     return url
   }
 
-  expand(traverse(new URL('file:///foo.js'), readModule, null, null, resolveModule))
+  expandSync(traverse(new URL('file:///foo.js'), readModule, null, null, resolveModule))
 
   t.alike(resolved, ['file:///bar.js'])
 })
@@ -3917,7 +4017,7 @@ test('probe, custom probe reports addon exists', (t) => {
     return undefined
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(
       new URL('file:///foo.js'),
       { host, extensions: ['.bare'] },
@@ -3966,7 +4066,7 @@ test('probe, custom probe reports addon missing', (t) => {
 
   t.exception(
     () =>
-      expand(
+      expandSync(
         traverse(
           new URL('file:///foo.js'),
           { host, extensions: ['.bare'] },
@@ -4002,7 +4102,7 @@ test('probe, default probe reads addon exactly once', (t) => {
     return null
   }
 
-  const result = expand(
+  const result = expandSync(
     traverse(new URL('file:///foo.js'), { host, extensions: ['.bare'] }, readModule)
   )
 
@@ -4061,9 +4161,12 @@ test('addon entry, probe reports missing', (t) => {
     return false
   }
 
-  t.exception(() => expand(traverse(new URL('file:///foo.bare'), readModule, null, probeModule)), {
-    code: 'MODULE_NOT_FOUND'
-  })
+  t.exception(
+    () => expandSync(traverse(new URL('file:///foo.bare'), readModule, null, probeModule)),
+    {
+      code: 'MODULE_NOT_FOUND'
+    }
+  )
 })
 
 test('async iteration, async readModule and resolveModule', async (t) => {
@@ -4083,7 +4186,7 @@ test('async iteration, async readModule and resolveModule', async (t) => {
     return url
   }
 
-  const result = await asyncExpand(
+  const result = await expand(
     traverse(new URL('file:///foo.js'), readModule, null, null, resolveModule)
   )
 
@@ -4112,9 +4215,53 @@ test('async iteration, async listPrefix', async (t) => {
     }
   }
 
-  const result = await asyncExpand(traverse(new URL('file:///foo.js'), readModule, listPrefix))
+  const result = await expand(traverse(new URL('file:///foo.js'), readModule, listPrefix))
 
   t.alike(result.return.assets, [new URL('file:///bar/a.txt')])
+})
+
+test('async iteration, async listPrefix listed as resolved', async (t) => {
+  const resolutions = []
+
+  async function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "require.asset('./bar')"
+    }
+
+    if (url.href === 'file:///bar/a.txt') {
+      return 'hello a'
+    }
+
+    return null
+  }
+
+  function listPrefix(url) {
+    const listing = listAsync(url)
+
+    listing.resolved = true
+
+    return listing
+  }
+
+  async function* listAsync(url) {
+    if (url.href === 'file:///bar') {
+      yield new URL('file:///bar/a.txt')
+    }
+  }
+
+  async function resolveModule(url) {
+    resolutions.push(url.href)
+
+    return url
+  }
+
+  const result = await expand(
+    traverse(new URL('file:///foo.js'), readModule, listPrefix, null, resolveModule)
+  )
+
+  t.alike(result.return.assets, [new URL('file:///bar/a.txt')])
+
+  t.alike(resolutions, ['file:///bar'], 'only the prefix is postresolved')
 })
 
 test('async iteration, async default prefix read', async (t) => {
@@ -4130,7 +4277,7 @@ test('async iteration, async default prefix read', async (t) => {
     return null
   }
 
-  const result = await asyncExpand(traverse(new URL('file:///foo.js'), readModule))
+  const result = await expand(traverse(new URL('file:///foo.js'), readModule))
 
   t.alike(result.return.assets, [new URL('file:///bar.txt')])
 })
@@ -4150,7 +4297,7 @@ test('data URL entry', (t) => {
 
   const entry = dataURL('require("file:///bar.js")')
 
-  const result = expand(traverse(entry, readModule))
+  const result = expandSync(traverse(entry, readModule))
 
   t.absent(read.includes(entry.href))
 
@@ -4203,7 +4350,7 @@ test('data URL import', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.js'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
 
   t.absent(read.includes(entry.href))
 
@@ -4252,7 +4399,7 @@ test('data URL base64', (t) => {
 
   const entry = base64DataURL('{"bar":1}', 'application/json')
 
-  const result = expand(traverse(entry, readModule))
+  const result = expandSync(traverse(entry, readModule))
 
   t.alike(read, [])
 
@@ -4273,7 +4420,7 @@ test('data URL base64', (t) => {
 test('data URL entry with defaultType MODULE', (t) => {
   const entry = dataURL('export default 42', '')
 
-  const result = expand(traverse(entry, { defaultType: constants.MODULE }, () => null))
+  const result = expandSync(traverse(entry, { defaultType: constants.MODULE }, () => null))
 
   const dependency = result.values.find((value) => value.url.href === entry.href)
 
@@ -4283,7 +4430,7 @@ test('data URL entry with defaultType MODULE', (t) => {
 test('data URL without media type', (t) => {
   const entry = dataURL('module.exports = 42', '')
 
-  const result = expand(traverse(entry, () => null))
+  const result = expandSync(traverse(entry, () => null))
 
   t.alike(result.values, [
     {
@@ -4302,7 +4449,7 @@ test('data URL without media type', (t) => {
 test('data URL with UTF-8 charset', (t) => {
   const entry = dataURL('module.exports = 42', 'text/javascript;charset=utf-8')
 
-  const result = expand(traverse(entry, () => null))
+  const result = expandSync(traverse(entry, () => null))
 
   t.alike(result.values, [
     {
@@ -4321,7 +4468,7 @@ test('data URL with UTF-8 charset', (t) => {
 test('data URL with unknown charset', (t) => {
   const entry = dataURL('module.exports = 42', 'text/javascript;charset=utf-16')
 
-  t.exception(() => expand(traverse(entry, () => null)), {
+  t.exception(() => expandSync(traverse(entry, () => null)), {
     code: 'UNKNOWN_DATA_URL_CHARSET'
   })
 })
@@ -4337,7 +4484,7 @@ test('data URL without media type inherits module type from ES module referrer',
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.mjs'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.mjs'), readModule))
 
   const dependency = result.values.find((d) => d.url.href === entry.href)
 
@@ -4355,7 +4502,7 @@ test('data URL without media type inherits script type from CommonJS referrer', 
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.cjs'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.cjs'), readModule))
 
   const dependency = result.values.find((d) => d.url.href === entry.href)
 
@@ -4373,7 +4520,7 @@ test('data URL import inherits module type from ES module referrer', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.mjs'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.mjs'), readModule))
 
   const dependency = result.values.find((d) => d.url.href === entry.href)
 
@@ -4391,7 +4538,7 @@ test('data URL import inherits script type from CommonJS referrer', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.cjs'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.cjs'), readModule))
 
   const dependency = result.values.find((d) => d.url.href === entry.href)
 
@@ -4415,7 +4562,7 @@ test('data URL in resolutions map inherits module type from ES module referrer',
     }
   }
 
-  const result = expand(traverse(new URL('file:///foo.mjs'), { resolutions }, readModule))
+  const result = expandSync(traverse(new URL('file:///foo.mjs'), { resolutions }, readModule))
 
   const dependency = result.values.find((d) => d.url.href === entry.href)
 
@@ -4439,7 +4586,7 @@ test('data URL in resolutions map inherits script type from CommonJS referrer', 
     }
   }
 
-  const result = expand(traverse(new URL('file:///foo.cjs'), { resolutions }, readModule))
+  const result = expandSync(traverse(new URL('file:///foo.cjs'), { resolutions }, readModule))
 
   const dependency = result.values.find((d) => d.url.href === entry.href)
 
@@ -4449,7 +4596,7 @@ test('data URL in resolutions map inherits script type from CommonJS referrer', 
 test('data URL with JSON media type', (t) => {
   const entry = dataURL('{ "foo": 42 }', 'application/json')
 
-  const result = expand(traverse(entry, () => null))
+  const result = expandSync(traverse(entry, () => null))
 
   const dependency = result.values.find((d) => d.url.href === entry.href)
 
@@ -4459,7 +4606,7 @@ test('data URL with JSON media type', (t) => {
 test('data URL with text media type', (t) => {
   const entry = dataURL('hello', 'text/plain')
 
-  const result = expand(traverse(entry, () => null))
+  const result = expandSync(traverse(entry, () => null))
 
   const dependency = result.values.find((d) => d.url.href === entry.href)
 
@@ -4469,7 +4616,7 @@ test('data URL with text media type', (t) => {
 test('data URL with binary media type', (t) => {
   const entry = dataURL('hello', 'application/octet-stream')
 
-  const result = expand(traverse(entry, () => null))
+  const result = expandSync(traverse(entry, () => null))
 
   const dependency = result.values.find((d) => d.url.href === entry.href)
 
@@ -4479,7 +4626,7 @@ test('data URL with binary media type', (t) => {
 test('data URL with unsupported media type', (t) => {
   const entry = dataURL('<a/>', 'application/xml')
 
-  t.exception(() => expand(traverse(entry, () => null)), {
+  t.exception(() => expandSync(traverse(entry, () => null)), {
     code: 'TYPE_INCOMPATIBLE'
   })
 })
@@ -4495,7 +4642,7 @@ test('data URL with incompatible type attribute', (t) => {
     return null
   }
 
-  t.exception(() => expand(traverse(new URL('file:///foo.mjs'), readModule)), {
+  t.exception(() => expandSync(traverse(new URL('file:///foo.mjs'), readModule)), {
     code: 'TYPE_INCOMPATIBLE'
   })
 })
@@ -4511,14 +4658,14 @@ test('data URL with type attribute disambiguating JavaScript', (t) => {
     return null
   }
 
-  const result = expand(traverse(new URL('file:///foo.mjs'), readModule))
+  const result = expandSync(traverse(new URL('file:///foo.mjs'), readModule))
 
   const dependency = result.values.find((d) => d.url.href === entry.href)
 
   t.is(dependency.type, constants.SCRIPT)
 })
 
-function expand(iterable) {
+function expandSync(iterable) {
   const iterator = iterable[Symbol.iterator]()
   const values = []
 
@@ -4533,7 +4680,7 @@ function expand(iterable) {
   return { values, return: next.value }
 }
 
-async function asyncExpand(iterable) {
+async function expand(iterable) {
   const iterator = iterable[Symbol.asyncIterator]()
   const values = []
 

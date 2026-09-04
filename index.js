@@ -43,7 +43,7 @@ module.exports = exports = function traverse(
 
   return {
     *[Symbol.iterator]() {
-      const artifacts = { addons: [], assets: [] }
+      const artifacts = opts.artifacts === false ? null : { addons: [], assets: [] }
 
       const visited = opts.visited || new Set()
 
@@ -66,9 +66,13 @@ module.exports = exports = function traverse(
             const result = []
 
             if (typeof listPrefix === 'function') {
-              for (const url of listPrefix(value.prefix)) {
+              const listed = listPrefix(value.prefix, value.expand)
+
+              for (const url of listed) {
                 result.push(url)
               }
+
+              result.resolved = listed.resolved === true
             } else {
               if (readModule(value.prefix) !== null) {
                 result.push(value.prefix)
@@ -101,7 +105,7 @@ module.exports = exports = function traverse(
     },
 
     async *[Symbol.asyncIterator]() {
-      const artifacts = { addons: [], assets: [] }
+      const artifacts = opts.artifacts === false ? null : { addons: [], assets: [] }
 
       const visited = opts.visited || new Set()
 
@@ -124,9 +128,13 @@ module.exports = exports = function traverse(
             const result = []
 
             if (typeof listPrefix === 'function') {
-              for await (const url of listPrefix(value.prefix)) {
+              const listed = listPrefix(value.prefix, value.expand)
+
+              for await (const url of listed) {
                 result.push(url)
               }
+
+              result.resolved = listed.resolved === true
             } else {
               if ((await readModule(value.prefix)) !== null) {
                 result.push(value.prefix)
@@ -265,7 +273,7 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
         ...opts,
         referrerType: type
       })
-    } else if (type === constants.ADDON) {
+    } else if (type === constants.ADDON && artifacts !== null) {
       yield* exports.addons(url, artifacts, visited, opts)
     }
   }
@@ -307,7 +315,7 @@ exports.package = function* (url, source, artifacts, visited, opts = {}) {
       }
     }
 
-    if (info.assets) {
+    if (info.assets && artifacts !== null) {
       yield {
         children: exports.assets(info.assets, url, artifacts, visited, opts),
         deferred: false
@@ -348,15 +356,17 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
             deferred: false
           }
         } else if (asset) {
-          addURL(artifacts.assets, url)
+          if (artifacts !== null) {
+            addURL(artifacts.assets, url)
 
-          yield {
-            children: exports.module(url, null, {}, artifacts, visited, {
-              ...opts,
-              asset: true,
-              referrerType: type
-            }),
-            deferred: true
+            yield {
+              children: exports.module(url, null, {}, artifacts, visited, {
+                ...opts,
+                asset: true,
+                referrerType: type
+              }),
+              deferred: true
+            }
           }
         } else if (
           url.protocol !== builtinProtocol &&
@@ -503,16 +513,24 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
         resolved = true
       } else if (condition === 'asset') {
         const prefix = url
+        const expand = artifacts !== null
 
         let expanded = prefixes.get(prefix.href)
 
         if (expanded === undefined) {
+          const listed = yield { prefix, expand }
+
           const urls = []
 
           let prefixResolution = null
+          let found = false
 
-          for (const url of yield { prefix }) {
-            const resolution = yield* postresolve(url)
+          for (const url of listed) {
+            found = true
+
+            if (expand === false) break
+
+            const resolution = listed.resolved === true ? url : yield* postresolve(url)
 
             if (url.href === prefix.href) prefixResolution = resolution
 
@@ -527,7 +545,7 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
             urls.push(resolution)
           }
 
-          if (urls.length > 0) {
+          if (found) {
             expanded = { resolution: prefixResolution || (yield* postresolve(prefix)), urls }
 
             prefixes.set(prefix.href, expanded)
@@ -535,7 +553,9 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
         }
 
         if (expanded !== undefined) {
-          for (const url of expanded.urls) addURL(artifacts.assets, url)
+          if (expand) {
+            for (const url of expanded.urls) addURL(artifacts.assets, url)
+          }
 
           resolution = expanded.resolution
 
@@ -600,7 +620,7 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
       }
 
       if (resolved) {
-        if (condition === 'addon') addURL(artifacts.addons, resolution)
+        if (condition === 'addon' && artifacts !== null) addURL(artifacts.addons, resolution)
 
         resolutions++
       }
@@ -646,8 +666,10 @@ exports.addons = function* (parentURL, artifacts, visited, opts = {}) {
 
     prefix.pathname = prefix.pathname.replace(ADDON_EXTENSION, '') + '/'
 
-    for (const url of yield { prefix }) {
-      const resolution = yield* postresolve(url)
+    const listed = yield { prefix, expand: true }
+
+    for (const url of listed) {
+      const resolution = listed.resolved === true ? url : yield* postresolve(url)
 
       yield {
         children: exports.module(resolution, null, {}, artifacts, visited, opts),
@@ -712,7 +734,7 @@ exports.patternMatches = function* patternMatches(pattern, parentURL, matches, o
 
     const prefix = new URL(patternBase, parentURL)
 
-    for (const url of yield { prefix }) {
+    for (const url of yield { prefix, expand: true }) {
       if (patternIndex === -1) {
         if (patternNegate) removeURL(matches, url)
         else addURL(matches, url)

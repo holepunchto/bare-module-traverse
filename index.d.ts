@@ -35,6 +35,7 @@ type AliasableExtension =
 
 interface TraverseOptions extends ResolveOptions {
   defaultType?: number
+  artifacts?: boolean
   aliases?: Record<string, AliasableExtension>
   /**
    * @param entry - The import to resolve, as produced by `bare-module-lexer`.
@@ -83,7 +84,7 @@ declare function traverse(
 declare function traverse(
   entry: URL,
   readModule: (url: URL) => Promise<Buffer | string | null>,
-  listPrefix?: (url: URL) => AsyncIterable<URL>,
+  listPrefix?: (url: URL, expand: boolean) => AsyncIterable<URL>,
   probeModule?: (url: URL) => Promise<boolean | undefined>,
   resolveModule?: (url: URL) => Promise<URL>
 ): AsyncIterable<Dependency>
@@ -92,7 +93,7 @@ declare function traverse(
   entry: URL,
   opts: TraverseOptions,
   readModule: (url: URL) => Buffer | string | null,
-  listPrefix?: (url: URL) => Iterable<URL>,
+  listPrefix?: (url: URL, expand: true) => Iterable<URL>,
   probeModule?: (url: URL) => boolean | undefined,
   resolveModule?: (url: URL) => URL
 ): Iterable<Dependency>
@@ -101,7 +102,7 @@ declare function traverse(
   entry: URL,
   opts: TraverseOptions,
   readModule: (url: URL) => Promise<Buffer | string | null>,
-  listPrefix?: (url: URL) => AsyncIterable<URL>,
+  listPrefix?: (url: URL, expand: true) => AsyncIterable<URL>,
   probeModule?: (url: URL) => Promise<boolean | undefined>,
   resolveModule?: (url: URL) => Promise<URL>
 ): AsyncIterable<Dependency>
