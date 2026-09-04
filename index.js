@@ -192,6 +192,9 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
 
   if (probed !== undefined) opts = { ...opts, probed: undefined }
 
+  if (opts.packages === undefined) opts = { ...opts, packages: new Map() }
+  if (opts.prefixes === undefined) opts = { ...opts, prefixes: new Map() }
+
   attributes = attributes || {}
 
   const artifact = asset === true || moduleType(url, attributes, null, opts) === constants.ADDON
@@ -225,20 +228,16 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
   let info = null
 
   if (url.protocol !== 'data:') {
-    for (const packageURL of lookupPackageScope(url, opts)) {
-      const source = yield { module: packageURL, artifact: false }
+    const scope = yield* lookupPackage(url, opts)
 
-      if (source !== null) {
-        info = JSON.parse(source)
+    if (scope !== null) {
+      info = scope.info
 
-        imports['#package'] = packageURL.href
+      imports['#package'] = scope.url.href
 
-        yield {
-          children: exports.package(packageURL, source, artifacts, visited, opts),
-          deferred: false
-        }
-
-        break
+      yield {
+        children: exports.package(scope.url, scope.source, artifacts, visited, opts),
+        deferred: false
       }
     }
   }
@@ -465,7 +464,8 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
     builtinProtocol = 'builtin:',
     linkedProtocol = 'linked:',
     deferredProtocol = 'deferred:',
-    deferUnresolved = false
+    deferUnresolved = false,
+    prefixes = new Map()
   } = opts
 
   const matchedConditions = []
@@ -504,30 +504,44 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
       } else if (condition === 'asset') {
         const prefix = url
 
-        let prefixResolution = null
+        let expanded = prefixes.get(prefix.href)
 
-        for (const url of yield { prefix }) {
-          const resolution = yield* postresolve(url)
+        if (expanded === undefined) {
+          const urls = []
 
-          if (url.href === prefix.href) prefixResolution = resolution
+          let prefixResolution = null
 
-          yield {
-            children: exports.module(resolution, null, {}, artifacts, visited, {
-              ...opts,
-              asset: true
-            }),
-            deferred: true
+          for (const url of yield { prefix }) {
+            const resolution = yield* postresolve(url)
+
+            if (url.href === prefix.href) prefixResolution = resolution
+
+            yield {
+              children: exports.module(resolution, null, {}, artifacts, visited, {
+                ...opts,
+                asset: true
+              }),
+              deferred: true
+            }
+
+            urls.push(resolution)
           }
 
-          addURL(artifacts.assets, resolution)
+          if (urls.length > 0) {
+            expanded = { resolution: prefixResolution || (yield* postresolve(prefix)), urls }
 
-          resolved = true
+            prefixes.set(prefix.href, expanded)
+          }
         }
 
-        if (resolved) {
-          resolution = prefixResolution || (yield* postresolve(prefix))
+        if (expanded !== undefined) {
+          for (const url of expanded.urls) addURL(artifacts.assets, url)
+
+          resolution = expanded.resolution
 
           addResolution(imports, specifier, matchedConditions, resolution)
+
+          resolved = true
         }
       } else if (
         condition === 'addon' ||
@@ -733,6 +747,38 @@ exports.patternMatches = function* patternMatches(pattern, parentURL, matches, o
   }
 
   return matches
+}
+
+function* lookupPackage(url, opts) {
+  const { packages = new Map() } = opts
+
+  const pending = []
+
+  for (const packageURL of lookupPackageScope(url, opts)) {
+    const scope = packages.get(packageURL.href)
+
+    if (scope !== undefined) {
+      for (const href of pending) packages.set(href, scope)
+
+      return scope
+    }
+
+    pending.push(packageURL.href)
+
+    const source = yield { module: packageURL, artifact: false }
+
+    if (source !== null) {
+      const scope = { url: packageURL, source, info: JSON.parse(source) }
+
+      for (const href of pending) packages.set(href, scope)
+
+      return scope
+    }
+  }
+
+  for (const href of pending) packages.set(href, null)
+
+  return null
 }
 
 function* postresolve(url) {
