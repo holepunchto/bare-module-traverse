@@ -1,6 +1,6 @@
 {
   "name": "bare-module-traverse",
-  "version": "2.5.2",
+  "version": "2.5.3",
   "description": "Low-level module graph traversal for Bare",
   "exports": {
     ".": {
