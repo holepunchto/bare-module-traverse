@@ -4418,7 +4418,7 @@ test('data URL base64', (t) => {
 })
 
 test('data URL entry with defaultType MODULE', (t) => {
-  const entry = dataURL('export default 42', '')
+  const entry = dataURL('export default 42')
 
   const result = expandSync(traverse(entry, { defaultType: constants.MODULE }, () => null))
 
@@ -4430,20 +4430,9 @@ test('data URL entry with defaultType MODULE', (t) => {
 test('data URL without media type', (t) => {
   const entry = dataURL('module.exports = 42', '')
 
-  const result = expandSync(traverse(entry, () => null))
-
-  t.alike(result.values, [
-    {
-      url: entry,
-      source: 'module.exports = 42',
-      type: constants.SCRIPT,
-      imports: {},
-      lexer: {
-        imports: [],
-        exports: []
-      }
-    }
-  ])
+  t.exception(() => expandSync(traverse(entry, () => null)), {
+    code: 'UNKNOWN_DATA_URL_MEDIA_TYPE'
+  })
 })
 
 test('data URL with UTF-8 charset', (t) => {
@@ -4473,7 +4462,7 @@ test('data URL with unknown charset', (t) => {
   })
 })
 
-test('data URL without media type inherits module type from ES module referrer', (t) => {
+test('data URL without media type imported from ES module', (t) => {
   const entry = dataURL('export default 42', '')
 
   function readModule(url) {
@@ -4484,6 +4473,41 @@ test('data URL without media type inherits module type from ES module referrer',
     return null
   }
 
+  t.exception(() => expandSync(traverse(new URL('file:///foo.mjs'), readModule)), {
+    code: 'UNKNOWN_DATA_URL_MEDIA_TYPE'
+  })
+})
+
+test('data URL import is a module', (t) => {
+  const entry = dataURL('export default 42')
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.cjs') {
+      return `import ${JSON.stringify(entry.href)}`
+    }
+
+    return null
+  }
+
+  // The import names the type, so a script referrer still imports a module.
+  const result = expandSync(traverse(new URL('file:///foo.cjs'), readModule))
+
+  const dependency = result.values.find((d) => d.url.href === entry.href)
+
+  t.is(dependency.type, constants.MODULE)
+})
+
+test('data URL re-export is a module', (t) => {
+  const entry = dataURL('export default 42')
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.mjs') {
+      return `export { default } from ${JSON.stringify(entry.href)}`
+    }
+
+    return null
+  }
+
   const result = expandSync(traverse(new URL('file:///foo.mjs'), readModule))
 
   const dependency = result.values.find((d) => d.url.href === entry.href)
@@ -4491,26 +4515,79 @@ test('data URL without media type inherits module type from ES module referrer',
   t.is(dependency.type, constants.MODULE)
 })
 
-test('data URL without media type inherits script type from CommonJS referrer', (t) => {
-  const entry = dataURL('module.exports = 42', '')
+test('data URL require is a script', (t) => {
+  const entry = dataURL('module.exports = 42')
 
   function readModule(url) {
-    if (url.href === 'file:///foo.cjs') {
+    if (url.href === 'file:///foo.mjs') {
       return `require(${JSON.stringify(entry.href)})`
     }
 
     return null
   }
 
-  const result = expandSync(traverse(new URL('file:///foo.cjs'), readModule))
+  // The require names the type, so a module referrer still requires a script.
+  const result = expandSync(traverse(new URL('file:///foo.mjs'), readModule))
 
   const dependency = result.values.find((d) => d.url.href === entry.href)
 
   t.is(dependency.type, constants.SCRIPT)
 })
 
-test('data URL import inherits module type from ES module referrer', (t) => {
+test('data URL dynamic import without a type attribute', (t) => {
   const entry = dataURL('export default 42')
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.mjs') {
+      return `await import(${JSON.stringify(entry.href)})`
+    }
+
+    return null
+  }
+
+  t.exception(() => expandSync(traverse(new URL('file:///foo.mjs'), readModule)), {
+    code: 'AMBIGUOUS_MODULE_TYPE'
+  })
+})
+
+test('data URL dynamic import with a module type attribute', (t) => {
+  const entry = dataURL('export default 42')
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.mjs') {
+      return `await import(${JSON.stringify(entry.href)}, { with: { type: 'module' } })`
+    }
+
+    return null
+  }
+
+  const result = expandSync(traverse(new URL('file:///foo.mjs'), readModule))
+
+  const dependency = result.values.find((d) => d.url.href === entry.href)
+
+  t.is(dependency.type, constants.MODULE)
+})
+
+test('data URL dynamic import with a script type attribute', (t) => {
+  const entry = dataURL('module.exports = 42')
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.mjs') {
+      return `await import(${JSON.stringify(entry.href)}, { with: { type: 'script' } })`
+    }
+
+    return null
+  }
+
+  const result = expandSync(traverse(new URL('file:///foo.mjs'), readModule))
+
+  const dependency = result.values.find((d) => d.url.href === entry.href)
+
+  t.is(dependency.type, constants.SCRIPT)
+})
+
+test('data URL in resolutions map follows the default type', (t) => {
+  const entry = dataURL('module.exports = 42')
 
   function readModule(url) {
     if (url.href === 'file:///foo.mjs') {
@@ -4520,32 +4597,22 @@ test('data URL import inherits module type from ES module referrer', (t) => {
     return null
   }
 
-  const result = expandSync(traverse(new URL('file:///foo.mjs'), readModule))
-
-  const dependency = result.values.find((d) => d.url.href === entry.href)
-
-  t.is(dependency.type, constants.MODULE)
-})
-
-test('data URL import inherits script type from CommonJS referrer', (t) => {
-  const entry = dataURL('module.exports = 42')
-
-  function readModule(url) {
-    if (url.href === 'file:///foo.cjs') {
-      return `require(${JSON.stringify(entry.href)})`
+  const resolutions = {
+    'file:///foo.mjs': {
+      [entry.href]: entry.href
     }
-
-    return null
   }
 
-  const result = expandSync(traverse(new URL('file:///foo.cjs'), readModule))
+  // A resolutions map compresses away the condition that named the specifier,
+  // leaving no import to read the type from.
+  const result = expandSync(traverse(new URL('file:///foo.mjs'), { resolutions }, readModule))
 
   const dependency = result.values.find((d) => d.url.href === entry.href)
 
   t.is(dependency.type, constants.SCRIPT)
 })
 
-test('data URL in resolutions map inherits module type from ES module referrer', (t) => {
+test('data URL in resolutions map with defaultType MODULE', (t) => {
   const entry = dataURL('export default 42')
 
   function readModule(url) {
@@ -4562,35 +4629,13 @@ test('data URL in resolutions map inherits module type from ES module referrer',
     }
   }
 
-  const result = expandSync(traverse(new URL('file:///foo.mjs'), { resolutions }, readModule))
+  const result = expandSync(
+    traverse(new URL('file:///foo.mjs'), { resolutions, defaultType: constants.MODULE }, readModule)
+  )
 
   const dependency = result.values.find((d) => d.url.href === entry.href)
 
   t.is(dependency.type, constants.MODULE)
-})
-
-test('data URL in resolutions map inherits script type from CommonJS referrer', (t) => {
-  const entry = dataURL('module.exports = 42')
-
-  function readModule(url) {
-    if (url.href === 'file:///foo.cjs') {
-      return `require(${JSON.stringify(entry.href)})`
-    }
-
-    return null
-  }
-
-  const resolutions = {
-    'file:///foo.cjs': {
-      [entry.href]: entry.href
-    }
-  }
-
-  const result = expandSync(traverse(new URL('file:///foo.cjs'), { resolutions }, readModule))
-
-  const dependency = result.values.find((d) => d.url.href === entry.href)
-
-  t.is(dependency.type, constants.SCRIPT)
 })
 
 test('data URL with JSON media type', (t) => {

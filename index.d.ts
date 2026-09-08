@@ -34,7 +34,18 @@ type AliasableExtension =
   | '.txt'
 
 interface TraverseOptions extends ResolveOptions {
+  /**
+   * The type assumed for a module that names none of its own, such as an
+   * ambiguous extension or a `data:` URL that no import reaches. See
+   * `constants` for possible values.
+   */
   defaultType?: number
+  /**
+   * The type of the import that names the entry. A `data:` URL of JavaScript
+   * takes its type from this: `REQUIRE` names a script and `IMPORT` a module,
+   * while `IMPORT | DYNAMIC` names either and so must carry a `type` attribute.
+   */
+  importType?: number
   artifacts?: boolean
   aliases?: Record<string, AliasableExtension>
   /**
