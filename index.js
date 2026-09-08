@@ -271,7 +271,7 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
     if (type === constants.SCRIPT || type === constants.MODULE) {
       yield* exports.imports(url, source, imports, artifacts, lexer, visited, {
         ...opts,
-        referrerType: type
+        importType: 0
       })
     } else if (type === constants.ADDON && artifacts !== null) {
       yield* exports.addons(url, artifacts, visited, opts)
@@ -363,7 +363,7 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
               children: exports.module(url, null, {}, artifacts, visited, {
                 ...opts,
                 asset: true,
-                referrerType: type
+                importType: 0
               }),
               deferred: true
             }
@@ -376,7 +376,7 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
           yield {
             children: exports.module(url, null, {}, artifacts, visited, {
               ...opts,
-              referrerType: type
+              importType: 0
             }),
             deferred: false
           }
@@ -611,7 +611,10 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
           }
 
           yield {
-            children: exports.module(resolution, source, attributes, artifacts, visited, opts),
+            children: exports.module(resolution, source, attributes, artifacts, visited, {
+              ...opts,
+              importType: entry.type
+            }),
             deferred: false
           }
 
@@ -876,22 +879,22 @@ function typeForAttribute(type) {
 }
 
 function dataURLModuleType(url, attributes, opts = {}) {
-  const { defaultType = constants.SCRIPT, referrerType } = opts
-
   const { mime } = parseDataURL(url)
+
+  if (mime === null) {
+    throw errors.UNKNOWN_DATA_URL_MEDIA_TYPE(`Data URL '${url.href}' does not declare a media type`)
+  }
 
   const asserted = typeof attributes.type === 'string' ? typeForAttribute(attributes.type) : null
 
-  if (mime === null || mime.subtype === 'javascript') {
+  if (mime.subtype === 'javascript') {
     if (asserted === constants.SCRIPT || asserted === constants.MODULE) return asserted
 
     if (asserted !== null) {
       throw errors.TYPE_INCOMPATIBLE(`Module '${url.href}' is not of type '${attributes.type}'`)
     }
 
-    if (referrerType) return referrerType
-
-    return defaultType === constants.MODULE ? constants.MODULE : constants.SCRIPT
+    return javaScriptDataURLModuleType(url, opts)
   }
 
   let type
@@ -913,6 +916,27 @@ function dataURLModuleType(url, attributes, opts = {}) {
   }
 
   return type
+}
+
+// A data URL carries no extension and 'text/javascript' spans both module
+// systems, so the type follows how the module was named: `require()` names a
+// script and `import` a module. A dynamic `import()` names either and so must
+// say which, as must a caller naming a data URL with no import to read, who
+// answers with `defaultType`.
+function javaScriptDataURLModuleType(url, opts) {
+  const { defaultType = constants.SCRIPT, importType = 0 } = opts
+
+  if (importType & lex.constants.REQUIRE) return constants.SCRIPT
+
+  if (importType & lex.constants.IMPORT) {
+    if ((importType & lex.constants.DYNAMIC) === 0) return constants.MODULE
+
+    throw errors.AMBIGUOUS_MODULE_TYPE(
+      `Module '${url.href}' must declare whether it is of type 'script' or 'module'`
+    )
+  }
+
+  return defaultType === constants.MODULE ? constants.MODULE : constants.SCRIPT
 }
 
 function parseDataURL(url) {
