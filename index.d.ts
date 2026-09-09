@@ -11,7 +11,15 @@ import { type Import, type Export } from 'bare-module-lexer'
 interface Dependency {
   url: URL
   source: string | Buffer
+  /** The type the module is loaded as. See `constants` for possible values. */
   type: number
+  /**
+   * The type the module has on its own, ignoring import attributes, or `0` if
+   * it has no type of its own. This differs from `type` only when an import
+   * attribute asked for a different type, so a loader can use it to tell
+   * whether an attribute changed the type.
+   */
+  naturalType: number
   imports: ImportsMap
   lexer: {
     imports: Import[]
@@ -35,15 +43,16 @@ type AliasableExtension =
 
 interface TraverseOptions extends ResolveOptions {
   /**
-   * The type assumed for a module that names none of its own, such as an
-   * ambiguous extension or a `data:` URL that no import reaches. See
+   * The type to assume for a module that has no type of its own, such as one
+   * with an ambiguous extension or a `data:` URL that no import reaches. See
    * `constants` for possible values.
    */
   defaultType?: number
   /**
-   * The type of the import that names the entry. A `data:` URL of JavaScript
-   * takes its type from this: `REQUIRE` names a script and `IMPORT` a module,
-   * while `IMPORT | DYNAMIC` names either and so must carry a `type` attribute.
+   * The type of the import that led to the entry. A JavaScript `data:` URL
+   * takes its type from this: `REQUIRE` means a script and `IMPORT` a module,
+   * while `IMPORT | DYNAMIC` could mean either and so needs a `type`
+   * attribute.
    */
   importType?: number
   artifacts?: boolean

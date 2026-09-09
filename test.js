@@ -31,6 +31,7 @@ test('require', (t) => {
       url: new URL('file:///foo.js'),
       source: "const bar = require('./bar.js')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './bar.js': 'file:///bar.js'
       },
@@ -51,6 +52,7 @@ test('require', (t) => {
       url: new URL('file:///bar.js'),
       source: "const baz = require('./baz.js')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './baz.js': 'file:///baz.js'
       },
@@ -71,6 +73,7 @@ test('require', (t) => {
       url: new URL('file:///baz.js'),
       source: 'module.exports = 42',
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {},
       lexer: {
         imports: [],
@@ -104,6 +107,7 @@ test('import', (t) => {
       url: new URL('file:///foo.js'),
       source: "import './bar.js'",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './bar.js': 'file:///bar.js'
       },
@@ -124,6 +128,7 @@ test('import', (t) => {
       url: new URL('file:///bar.js'),
       source: "import './baz.js'",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './baz.js': 'file:///baz.js'
       },
@@ -144,6 +149,7 @@ test('import', (t) => {
       url: new URL('file:///baz.js'),
       source: 'export default 42',
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {},
       lexer: {
         imports: [],
@@ -173,6 +179,7 @@ test('cyclic require', (t) => {
       url: new URL('file:///foo.js'),
       source: "require('./bar.js')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './bar.js': 'file:///bar.js'
       },
@@ -193,6 +200,7 @@ test('cyclic require', (t) => {
       url: new URL('file:///bar.js'),
       source: "require('./foo.js')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './foo.js': 'file:///foo.js'
       },
@@ -232,6 +240,7 @@ test('cyclic import', (t) => {
       url: new URL('file:///foo.js'),
       source: "import './bar.js'",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './bar.js': 'file:///bar.js'
       },
@@ -252,6 +261,7 @@ test('cyclic import', (t) => {
       url: new URL('file:///bar.js'),
       source: "import './foo.js'",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './foo.js': 'file:///foo.js'
       },
@@ -303,6 +313,7 @@ test('require, module missing, deferred', (t) => {
       url: new URL('file:///foo.js'),
       source: "const bar = require('./bar.js')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './bar.js': 'deferred:./bar.js'
       },
@@ -444,6 +455,7 @@ test('require, same module twice', (t) => {
       url: new URL('file:///foo.js'),
       source: "require('./bar.js'), require('./bar.js')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './bar.js': 'file:///bar.js'
       },
@@ -471,6 +483,7 @@ test('require, same module twice', (t) => {
       url: new URL('file:///bar.js'),
       source: 'module.exports = 42',
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {},
       lexer: {
         imports: [],
@@ -529,6 +542,7 @@ test('require.addon', (t) => {
       url: new URL('file:///foo.js'),
       source: "const bar = require.addon('.')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         '#package': 'file:///package.json',
         '.': 'file:///prebuilds/host/foo.bare'
@@ -550,6 +564,7 @@ test('require.addon', (t) => {
       url: new URL('file:///prebuilds/host/foo.bare'),
       source: '<native code>',
       type: constants.ADDON,
+      naturalType: constants.ADDON,
       imports: {
         '#package': 'file:///package.json'
       },
@@ -562,6 +577,7 @@ test('require.addon', (t) => {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo" }',
       type: constants.JSON,
+      naturalType: constants.JSON,
       imports: {},
       lexer: {
         imports: [],
@@ -599,6 +615,7 @@ test('require.addon, referrer', (t) => {
       url: new URL('file:///foo.js'),
       source: "const bar = require.addon('.', __filename)",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         '#package': 'file:///package.json',
         '.': 'file:///prebuilds/host/foo.bare'
@@ -620,6 +637,7 @@ test('require.addon, referrer', (t) => {
       url: new URL('file:///prebuilds/host/foo.bare'),
       source: '<native code>',
       type: constants.ADDON,
+      naturalType: constants.ADDON,
       imports: {
         '#package': 'file:///package.json'
       },
@@ -632,6 +650,7 @@ test('require.addon, referrer', (t) => {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo" }',
       type: constants.JSON,
+      naturalType: constants.JSON,
       imports: {},
       lexer: {
         imports: [],
@@ -709,6 +728,7 @@ test('require.addon, default specifier', (t) => {
       url: new URL('file:///foo.js'),
       source: 'const bar = require.addon()',
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         '#package': 'file:///package.json',
         '.': 'file:///prebuilds/host/foo.bare'
@@ -730,6 +750,7 @@ test('require.addon, default specifier', (t) => {
       url: new URL('file:///prebuilds/host/foo.bare'),
       source: '<native code>',
       type: constants.ADDON,
+      naturalType: constants.ADDON,
       imports: {
         '#package': 'file:///package.json'
       },
@@ -742,6 +763,7 @@ test('require.addon, default specifier', (t) => {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo" }',
       type: constants.JSON,
+      naturalType: constants.JSON,
       imports: {},
       lexer: {
         imports: [],
@@ -779,6 +801,7 @@ test('require.addon, builtin', (t) => {
       url: new URL('file:///foo.js'),
       source: "const bar = require.addon('.')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         '#package': 'file:///package.json',
         '.': 'builtin:foo'
@@ -800,6 +823,7 @@ test('require.addon, builtin', (t) => {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo" }',
       type: constants.JSON,
+      naturalType: constants.JSON,
       imports: {},
       lexer: {
         imports: [],
@@ -833,6 +857,7 @@ test('require.addon, linked', (t) => {
       url: new URL('file:///foo.js'),
       source: "const bar = require.addon('.')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         '#package': 'file:///package.json',
         '.': 'linked:foo.framework/foo'
@@ -854,6 +879,7 @@ test('require.addon, linked', (t) => {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo" }',
       type: constants.JSON,
+      naturalType: constants.JSON,
       imports: {},
       lexer: {
         imports: [],
@@ -899,6 +925,7 @@ test('require.addon, hosts list', (t) => {
       url: new URL('file:///foo.js'),
       source: "module.exports = require.addon('.')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         '#package': 'file:///package.json',
         '.': {
@@ -923,6 +950,7 @@ test('require.addon, hosts list', (t) => {
       url: new URL('file:///prebuilds/host-b/foo.bare'),
       source: '<native code b>',
       type: constants.ADDON,
+      naturalType: constants.ADDON,
       imports: {
         '#package': 'file:///package.json'
       },
@@ -935,6 +963,7 @@ test('require.addon, hosts list', (t) => {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo" }',
       type: constants.JSON,
+      naturalType: constants.JSON,
       imports: {},
       lexer: {
         imports: [],
@@ -945,6 +974,7 @@ test('require.addon, hosts list', (t) => {
       url: new URL('file:///prebuilds/host-a/foo.bare'),
       source: '<native code a>',
       type: constants.ADDON,
+      naturalType: constants.ADDON,
       imports: {
         '#package': 'file:///package.json'
       },
@@ -999,6 +1029,7 @@ test('require.addon, hosts list, host variants', (t) => {
       url: new URL('file:///foo.js'),
       source: "module.exports = require.addon('.')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         '#package': 'file:///package.json',
         '.': {
@@ -1026,6 +1057,7 @@ test('require.addon, hosts list, host variants', (t) => {
       url: new URL('file:///prebuilds/host-a-b/foo.bare'),
       source: '<native code a b>',
       type: constants.ADDON,
+      naturalType: constants.ADDON,
       imports: {
         '#package': 'file:///package.json'
       },
@@ -1038,6 +1070,7 @@ test('require.addon, hosts list, host variants', (t) => {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo" }',
       type: constants.JSON,
+      naturalType: constants.JSON,
       imports: {},
       lexer: {
         imports: [],
@@ -1048,6 +1081,7 @@ test('require.addon, hosts list, host variants', (t) => {
       url: new URL('file:///prebuilds/host-a/foo.bare'),
       source: '<native code a>',
       type: constants.ADDON,
+      naturalType: constants.ADDON,
       imports: {
         '#package': 'file:///package.json'
       },
@@ -1060,6 +1094,7 @@ test('require.addon, hosts list, host variants', (t) => {
       url: new URL('file:///prebuilds/host/foo.bare'),
       source: '<native code>',
       type: constants.ADDON,
+      naturalType: constants.ADDON,
       imports: {
         '#package': 'file:///package.json'
       },
@@ -1106,6 +1141,7 @@ test('require.addon, hosts list, linked', (t) => {
       url: new URL('file:///foo.js'),
       source: "module.exports = require.addon('.')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         '#package': 'file:///package.json',
         '.': {
@@ -1130,6 +1166,7 @@ test('require.addon, hosts list, linked', (t) => {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo" }',
       type: constants.JSON,
+      naturalType: constants.JSON,
       imports: {},
       lexer: {
         imports: [],
@@ -1201,6 +1238,7 @@ test('require.asset', (t) => {
       url: new URL('file:///foo.js'),
       source: "const bar = require.asset('./bar.txt')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './bar.txt': 'file:///bar.txt'
       },
@@ -1221,6 +1259,7 @@ test('require.asset', (t) => {
       url: new URL('file:///bar.txt'),
       source: 'hello world',
       type: constants.TEXT,
+      naturalType: constants.TEXT,
       imports: {},
       lexer: {
         imports: [],
@@ -1252,6 +1291,7 @@ test('require.asset, referrer', (t) => {
       url: new URL('file:///foo.js'),
       source: "const bar = require.asset('./bar.txt', __filename)",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './bar.txt': 'file:///bar.txt'
       },
@@ -1272,6 +1312,7 @@ test('require.asset, referrer', (t) => {
       url: new URL('file:///bar.txt'),
       source: 'hello world',
       type: constants.TEXT,
+      naturalType: constants.TEXT,
       imports: {},
       lexer: {
         imports: [],
@@ -1303,6 +1344,7 @@ test('require + require.asset', (t) => {
       url: new URL('file:///foo.js'),
       source: "require('./bar.js'), require.asset('./bar.js')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './bar.js': 'file:///bar.js'
       },
@@ -1330,6 +1372,7 @@ test('require + require.asset', (t) => {
       url: new URL('file:///bar.js'),
       source: 'module.exports = 42',
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {},
       lexer: {
         imports: [],
@@ -1339,6 +1382,87 @@ test('require + require.asset', (t) => {
   ])
 
   t.alike(result.return.assets, [new URL('file:///bar.js')])
+})
+
+test('require then require with conflicting type attribute', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "require('./bar.js'); require('./bar.js', { with: { type: 'binary' } })"
+    }
+
+    if (url.href === 'file:///bar.js') {
+      return 'module.exports = 42'
+    }
+
+    return null
+  }
+
+  t.exception(() => expandSync(traverse(new URL('file:///foo.js'), readModule)), {
+    code: 'TYPE_INCOMPATIBLE'
+  })
+})
+
+test('require with type attribute then require without', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "require('./bar.js', { with: { type: 'binary' } }); require('./bar.js')"
+    }
+
+    if (url.href === 'file:///bar.js') {
+      return 'module.exports = 42'
+    }
+
+    return null
+  }
+
+  // Whichever order they appear in, the plain require must not end up with the
+  // type the other import asked for.
+  t.exception(() => expandSync(traverse(new URL('file:///foo.js'), readModule)), {
+    code: 'TYPE_INCOMPATIBLE'
+  })
+})
+
+test('require then require with redundant type attribute', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "require('./bar.json'); require('./bar.json', { with: { type: 'json' } })"
+    }
+
+    if (url.href === 'file:///bar.json') {
+      return '{ "foo": 42 }'
+    }
+
+    return null
+  }
+
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
+
+  const dependency = result.values.find((d) => d.url.href === 'file:///bar.json')
+
+  t.is(dependency.type, constants.JSON)
+})
+
+test('require with the same type attribute twice', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return `
+        require('./bar', { with: { type: 'text' } })
+        require('./bar', { with: { type: 'text' } })
+      `
+    }
+
+    if (url.href === 'file:///bar') {
+      return 'hello'
+    }
+
+    return null
+  }
+
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
+
+  const dependency = result.values.find((d) => d.url.href === 'file:///bar')
+
+  t.is(dependency.type, constants.TEXT)
 })
 
 test('require.asset then require with type attribute', (t) => {
@@ -1361,6 +1485,7 @@ test('require.asset then require with type attribute', (t) => {
       url: new URL('file:///foo.js'),
       source: "require.asset('./bar.js'); require('./bar.js', { with: { type: 'text' } })",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './bar.js': 'file:///bar.js'
       },
@@ -1388,6 +1513,7 @@ test('require.asset then require with type attribute', (t) => {
       url: new URL('file:///bar.js'),
       source: 'module.exports = 42',
       type: constants.TEXT,
+      naturalType: constants.SCRIPT,
       imports: {},
       lexer: {
         imports: [],
@@ -1419,6 +1545,7 @@ test('require with type attribute then require.asset', (t) => {
       url: new URL('file:///foo.js'),
       source: "require('./bar.js', { with: { type: 'text' } }); require.asset('./bar.js')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './bar.js': 'file:///bar.js'
       },
@@ -1446,6 +1573,7 @@ test('require with type attribute then require.asset', (t) => {
       url: new URL('file:///bar.js'),
       source: 'module.exports = 42',
       type: constants.TEXT,
+      naturalType: constants.SCRIPT,
       imports: {},
       lexer: {
         imports: [],
@@ -1481,6 +1609,7 @@ test('require.asset does not follow the imports of a module asset', (t) => {
       url: new URL('file:///foo.js'),
       source: "require.asset('./bar.js')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './bar.js': 'file:///bar.js'
       },
@@ -1501,6 +1630,7 @@ test('require.asset does not follow the imports of a module asset', (t) => {
       url: new URL('file:///bar.js'),
       source: "require('./baz.js')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {},
       lexer: {
         imports: [],
@@ -1544,6 +1674,7 @@ test('require.asset, directory', (t) => {
       url: new URL('file:///foo.js'),
       source: "const bar = require.asset('./bar')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './bar': 'file:///bar'
       },
@@ -1564,6 +1695,7 @@ test('require.asset, directory', (t) => {
       url: new URL('file:///bar/a.txt'),
       source: 'hello a',
       type: constants.TEXT,
+      naturalType: constants.TEXT,
       imports: {},
       lexer: {
         imports: [],
@@ -1574,6 +1706,7 @@ test('require.asset, directory', (t) => {
       url: new URL('file:///bar/b.txt'),
       source: 'hello b',
       type: constants.TEXT,
+      naturalType: constants.TEXT,
       imports: {},
       lexer: {
         imports: [],
@@ -1906,6 +2039,7 @@ test('package.json#assets', (t) => {
       url: new URL('file:///foo.js'),
       source: '',
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         '#package': 'file:///package.json'
       },
@@ -1918,6 +2052,7 @@ test('package.json#assets', (t) => {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo", "assets": ["bar/"] }',
       type: constants.JSON,
+      naturalType: constants.JSON,
       imports: {},
       lexer: {
         imports: [],
@@ -1928,6 +2063,7 @@ test('package.json#assets', (t) => {
       url: new URL('file:///bar/baz.txt'),
       source: 'hello world',
       type: constants.TEXT,
+      naturalType: constants.TEXT,
       imports: { '#package': 'file:///package.json' },
       lexer: {
         imports: [],
@@ -1973,6 +2109,7 @@ test('package.json#assets, pattern match', (t) => {
       url: new URL('file:///foo.js'),
       source: '',
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         '#package': 'file:///package.json'
       },
@@ -1985,6 +2122,7 @@ test('package.json#assets, pattern match', (t) => {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo", "assets": ["bar/*.txt"] }',
       type: constants.JSON,
+      naturalType: constants.JSON,
       imports: {},
       lexer: {
         imports: [],
@@ -1995,6 +2133,7 @@ test('package.json#assets, pattern match', (t) => {
       url: new URL('file:///bar/baz.txt'),
       source: 'hello world',
       type: constants.TEXT,
+      naturalType: constants.TEXT,
       imports: {
         '#package': 'file:///package.json'
       },
@@ -2042,6 +2181,7 @@ test('package.json#assets, negate', (t) => {
       url: new URL('file:///foo.js'),
       source: '',
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         '#package': 'file:///package.json'
       },
@@ -2054,6 +2194,7 @@ test('package.json#assets, negate', (t) => {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo", "assets": ["bar/", "!bar/qux.txt"] }',
       type: constants.JSON,
+      naturalType: constants.JSON,
       imports: {},
       lexer: {
         imports: [],
@@ -2064,6 +2205,7 @@ test('package.json#assets, negate', (t) => {
       url: new URL('file:///bar/baz.txt'),
       source: 'hello world',
       type: constants.TEXT,
+      naturalType: constants.TEXT,
       imports: {
         '#package': 'file:///package.json'
       },
@@ -2155,6 +2297,7 @@ test('package.json#assets, conditional pattern', (t) => {
         url: new URL('file:///foo.js'),
         source: '',
         type: constants.SCRIPT,
+        naturalType: constants.SCRIPT,
         imports: {
           '#package': 'file:///package.json'
         },
@@ -2167,6 +2310,7 @@ test('package.json#assets, conditional pattern', (t) => {
         url: new URL('file:///package.json'),
         source: '{ "name": "foo", "assets": [{ "darwin": "darwin/", "linux": "linux/" }] }',
         type: constants.JSON,
+        naturalType: constants.JSON,
         imports: {},
         lexer: {
           imports: [],
@@ -2177,6 +2321,7 @@ test('package.json#assets, conditional pattern', (t) => {
         url: new URL('file:///darwin/baz.txt'),
         source: 'hello darwin',
         type: constants.TEXT,
+        naturalType: constants.TEXT,
         imports: {
           '#package': 'file:///package.json'
         },
@@ -2197,6 +2342,7 @@ test('package.json#assets, conditional pattern', (t) => {
         url: new URL('file:///foo.js'),
         source: '',
         type: constants.SCRIPT,
+        naturalType: constants.SCRIPT,
         imports: {
           '#package': 'file:///package.json'
         },
@@ -2209,6 +2355,7 @@ test('package.json#assets, conditional pattern', (t) => {
         url: new URL('file:///package.json'),
         source: '{ "name": "foo", "assets": [{ "darwin": "darwin/", "linux": "linux/" }] }',
         type: constants.JSON,
+        naturalType: constants.JSON,
         imports: {},
         lexer: {
           imports: [],
@@ -2219,6 +2366,7 @@ test('package.json#assets, conditional pattern', (t) => {
         url: new URL('file:///linux/baz.txt'),
         source: 'hello linux',
         type: constants.TEXT,
+        naturalType: constants.TEXT,
         imports: {
           '#package': 'file:///package.json'
         },
@@ -2263,6 +2411,7 @@ test('package.json#assets, also imported as module with type attribute', (t) => 
       url: new URL('file:///foo.js'),
       source: "require('./bar/baz.js', { with: { type: 'text' } })",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         '#package': 'file:///package.json',
         './bar/baz.js': 'file:///bar/baz.js'
@@ -2284,6 +2433,7 @@ test('package.json#assets, also imported as module with type attribute', (t) => 
       url: new URL('file:///bar/baz.js'),
       source: 'module.exports = 42',
       type: constants.TEXT,
+      naturalType: constants.SCRIPT,
       imports: {
         '#package': 'file:///package.json'
       },
@@ -2296,6 +2446,7 @@ test('package.json#assets, also imported as module with type attribute', (t) => 
       url: new URL('file:///package.json'),
       source: '{ "name": "foo", "assets": ["bar/"] }',
       type: constants.JSON,
+      naturalType: constants.JSON,
       imports: {},
       lexer: {
         imports: [],
@@ -2362,6 +2513,7 @@ test('resolutions map', (t) => {
       url: new URL('file:///foo.js'),
       source: "const bar = require('./bar.js')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './bar.js': 'file:///bar.js'
       },
@@ -2374,6 +2526,7 @@ test('resolutions map', (t) => {
       url: new URL('file:///bar.js'),
       source: "const baz = require('./baz.js')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './baz.js': 'file:///baz.js'
       },
@@ -2386,6 +2539,7 @@ test('resolutions map', (t) => {
       url: new URL('file:///baz.js'),
       source: 'module.exports = 42',
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {},
       lexer: {
         imports: [],
@@ -2426,6 +2580,7 @@ test('resolutions map, partial', (t) => {
       url: new URL('file:///foo.js'),
       source: "const bar = require('./bar.js')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './bar.js': 'file:///bar.js'
       },
@@ -2438,6 +2593,7 @@ test('resolutions map, partial', (t) => {
       url: new URL('file:///bar.js'),
       source: "const baz = require('./baz.js')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './baz.js': 'file:///baz.js'
       },
@@ -2458,6 +2614,7 @@ test('resolutions map, partial', (t) => {
       url: new URL('file:///baz.js'),
       source: 'module.exports = 42',
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {},
       lexer: {
         imports: [],
@@ -2509,6 +2666,7 @@ test('resolutions map, builtin', (t) => {
       url: new URL('file:///foo.js'),
       source: "const bar = require('./bar.js')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './bar.js': 'builtin:bar.js'
       },
@@ -2547,6 +2705,7 @@ test('resolutions map, #package entry', (t) => {
       url: new URL('file:///foo.js'),
       source: 'module.exports = 42',
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         '#package': 'file:///package.json'
       },
@@ -2559,6 +2718,7 @@ test('resolutions map, #package entry', (t) => {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo" }',
       type: constants.JSON,
+      naturalType: constants.JSON,
       imports: {},
       lexer: {
         imports: [],
@@ -2681,6 +2841,7 @@ test('imports map', (t) => {
       url: new URL('file:///foo.js'),
       source: "const bar = require('bar')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         bar: 'file:///bar.js'
       },
@@ -2701,6 +2862,7 @@ test('imports map', (t) => {
       url: new URL('file:///bar.js'),
       source: "const baz = require('baz')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         baz: 'file:///baz.js'
       },
@@ -2721,6 +2883,7 @@ test('imports map', (t) => {
       url: new URL('file:///baz.js'),
       source: 'module.exports = 42',
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {},
       lexer: {
         imports: [],
@@ -2757,6 +2920,7 @@ test('imports map, deferred', (t) => {
       url: new URL('file:///foo.js'),
       source: "const bar = require('bar')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         bar: 'file:///bar.js'
       },
@@ -2777,6 +2941,7 @@ test('imports map, deferred', (t) => {
       url: new URL('file:///bar.js'),
       source: "const baz = require('baz')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         baz: 'deferred:qux'
       },
@@ -2830,6 +2995,7 @@ test('conditional imports, conditions matrix', (t) => {
       url: new URL('file:///foo.js'),
       source: "const bar = require('#bar')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         '#package': 'file:///package.json',
         '#bar': { a: 'file:///a.js', b: 'file:///b.js' }
@@ -2851,6 +3017,7 @@ test('conditional imports, conditions matrix', (t) => {
       url: new URL('file:///b.js'),
       source: "module.exports = 'b'",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         '#package': 'file:///package.json'
       },
@@ -2864,6 +3031,7 @@ test('conditional imports, conditions matrix', (t) => {
       source:
         '{ "name": "foo", "imports": { "#bar": { "a": "./a.js", "b": "./b.js", "c": "./c.js" } } }',
       type: constants.JSON,
+      naturalType: constants.JSON,
       imports: {},
       lexer: {
         imports: [],
@@ -2874,6 +3042,7 @@ test('conditional imports, conditions matrix', (t) => {
       url: new URL('file:///a.js'),
       source: "module.exports = 'a'",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         '#package': 'file:///package.json'
       },
@@ -2913,6 +3082,7 @@ test('imports attribute', (t) => {
       url: new URL('file:///foo.js'),
       source: "const bar = require('./bar.js', { with: { imports: './imports.json' } })",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './imports.json': 'file:///imports.json',
         './bar.js': 'file:///bar.js'
@@ -2934,6 +3104,7 @@ test('imports attribute', (t) => {
       url: new URL('file:///bar.js'),
       source: "const baz = require('baz')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         baz: 'file:///baz.js'
       },
@@ -2954,6 +3125,7 @@ test('imports attribute', (t) => {
       url: new URL('file:///baz.js'),
       source: 'module.exports = 42',
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {},
       lexer: {
         imports: [],
@@ -2964,6 +3136,7 @@ test('imports attribute', (t) => {
       url: new URL('file:///imports.json'),
       source: '{ "baz": "/baz.js" }',
       type: constants.JSON,
+      naturalType: constants.JSON,
       imports: {},
       lexer: {
         imports: [],
@@ -3045,6 +3218,7 @@ test('aliases, .ts to .js', (t) => {
       url: new URL('file:///foo.js'),
       source: "const bar = require('./bar.ts')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './bar.ts': 'file:///bar.js'
       },
@@ -3065,6 +3239,7 @@ test('aliases, .ts to .js', (t) => {
       url: new URL('file:///bar.js'),
       source: 'module.exports = 42',
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {},
       lexer: {
         imports: [],
@@ -3096,6 +3271,7 @@ test('aliases, .mts to .mjs', (t) => {
       url: new URL('file:///foo.mjs'),
       source: "import './bar.mts'",
       type: constants.MODULE,
+      naturalType: constants.MODULE,
       imports: {
         './bar.mts': 'file:///bar.mjs'
       },
@@ -3116,6 +3292,7 @@ test('aliases, .mts to .mjs', (t) => {
       url: new URL('file:///bar.mjs'),
       source: 'export default 42',
       type: constants.MODULE,
+      naturalType: constants.MODULE,
       imports: {},
       lexer: {
         imports: [],
@@ -3154,6 +3331,7 @@ test('aliases, .ts to .js with defaultType MODULE', (t) => {
       url: new URL('file:///foo.js'),
       source: "import './bar.ts'",
       type: constants.MODULE,
+      naturalType: constants.MODULE,
       imports: { './bar.ts': 'file:///bar.js' },
       lexer: {
         imports: [
@@ -3172,6 +3350,7 @@ test('aliases, .ts to .js with defaultType MODULE', (t) => {
       url: new URL('file:///bar.js'),
       source: 'export default 42',
       type: constants.MODULE,
+      naturalType: constants.MODULE,
       imports: {},
       lexer: {
         imports: [],
@@ -3207,6 +3386,7 @@ test('aliases, extensionless .ts to .js, bare resolver', (t) => {
       url: new URL('file:///foo.js'),
       source: "const bar = require('./bar')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: { './bar': 'file:///bar.js' },
       lexer: {
         imports: [
@@ -3225,6 +3405,7 @@ test('aliases, extensionless .ts to .js, bare resolver', (t) => {
       url: new URL('file:///bar.js'),
       source: 'module.exports = 42',
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {},
       lexer: {
         imports: [],
@@ -3260,6 +3441,7 @@ test('aliases, extensionless .cts to .cjs, bare resolver', (t) => {
       url: new URL('file:///foo.cjs'),
       source: "const bar = require('./bar')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: { './bar': 'file:///bar.cjs' },
       lexer: {
         imports: [
@@ -3278,6 +3460,7 @@ test('aliases, extensionless .cts to .cjs, bare resolver', (t) => {
       url: new URL('file:///bar.cjs'),
       source: 'module.exports = 42',
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {},
       lexer: {
         imports: [],
@@ -3313,6 +3496,7 @@ test('aliases, extensionless .mts to .mjs, bare resolver', (t) => {
       url: new URL('file:///foo.mjs'),
       source: "import './bar'",
       type: constants.MODULE,
+      naturalType: constants.MODULE,
       imports: {
         './bar': 'file:///bar.mjs'
       },
@@ -3333,6 +3517,7 @@ test('aliases, extensionless .mts to .mjs, bare resolver', (t) => {
       url: new URL('file:///bar.mjs'),
       source: 'export default 42',
       type: constants.MODULE,
+      naturalType: constants.MODULE,
       imports: {},
       lexer: {
         imports: [],
@@ -3380,6 +3565,7 @@ test('require, TypeScript source', (t) => {
       url: new URL('file:///foo.ts'),
       source: "const bar: number = require('./bar.ts')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: { './bar.ts': 'file:///bar.ts' },
       lexer: {
         imports: [
@@ -3398,6 +3584,7 @@ test('require, TypeScript source', (t) => {
       url: new URL('file:///bar.ts'),
       source: 'module.exports = 42',
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {},
       lexer: {
         imports: [],
@@ -3427,6 +3614,7 @@ test('require, TypeScript source, .cts', (t) => {
       url: new URL('file:///foo.cts'),
       source: "const bar = require('./bar.cts')",
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         './bar.cts': 'file:///bar.cts'
       },
@@ -3447,6 +3635,7 @@ test('require, TypeScript source, .cts', (t) => {
       url: new URL('file:///bar.cts'),
       source: 'module.exports = 42',
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {},
       lexer: {
         imports: [],
@@ -3476,6 +3665,7 @@ test('import, TypeScript source, .mts', (t) => {
       url: new URL('file:///foo.mts'),
       source: "import { type Bar, baz } from './bar.mts'",
       type: constants.MODULE,
+      naturalType: constants.MODULE,
       imports: {
         './bar.mts': 'file:///bar.mts'
       },
@@ -3496,6 +3686,7 @@ test('import, TypeScript source, .mts', (t) => {
       url: new URL('file:///bar.mts'),
       source: 'export type Bar = number\nexport const baz = 42',
       type: constants.MODULE,
+      naturalType: constants.MODULE,
       imports: {},
       lexer: {
         imports: [],
@@ -3529,6 +3720,7 @@ test('import, TypeScript source, package type module', (t) => {
       url: new URL('file:///foo.ts'),
       source: "import './bar.ts'",
       type: constants.MODULE,
+      naturalType: constants.MODULE,
       imports: {
         '#package': 'file:///package.json',
         './bar.ts': 'file:///bar.ts'
@@ -3550,6 +3742,7 @@ test('import, TypeScript source, package type module', (t) => {
       url: new URL('file:///bar.ts'),
       source: 'export default 42',
       type: constants.MODULE,
+      naturalType: constants.MODULE,
       imports: { '#package': 'file:///package.json' },
       lexer: {
         imports: [],
@@ -3560,6 +3753,7 @@ test('import, TypeScript source, package type module', (t) => {
       url: new URL('file:///package.json'),
       source: '{ "type": "module" }',
       type: constants.JSON,
+      naturalType: constants.JSON,
       imports: {},
       lexer: {
         imports: [],
@@ -4306,6 +4500,7 @@ test('data URL entry', (t) => {
       url: entry,
       source: 'require("file:///bar.js")',
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         'file:///bar.js': 'file:///bar.js'
       },
@@ -4326,6 +4521,7 @@ test('data URL entry', (t) => {
       url: new URL('file:///bar.js'),
       source: 'module.exports = 42',
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {},
       lexer: {
         imports: [],
@@ -4359,6 +4555,7 @@ test('data URL import', (t) => {
       url: new URL('file:///foo.js'),
       source: `const x = require('${entry.href}')`,
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {
         [entry.href]: entry.href
       },
@@ -4379,6 +4576,7 @@ test('data URL import', (t) => {
       url: entry,
       source: '{"foo":42}',
       type: constants.JSON,
+      naturalType: constants.JSON,
       imports: {},
       lexer: {
         imports: [],
@@ -4408,6 +4606,7 @@ test('data URL base64', (t) => {
       url: entry,
       source: Buffer.from('{"bar":1}'),
       type: constants.JSON,
+      naturalType: constants.JSON,
       imports: {},
       lexer: {
         imports: [],
@@ -4445,6 +4644,7 @@ test('data URL with UTF-8 charset', (t) => {
       url: entry,
       source: 'module.exports = 42',
       type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
       imports: {},
       lexer: {
         imports: [],
@@ -4489,7 +4689,7 @@ test('data URL import is a module', (t) => {
     return null
   }
 
-  // The import names the type, so a script referrer still imports a module.
+  // The import decides the type, so a script can still import a module.
   const result = expandSync(traverse(new URL('file:///foo.cjs'), readModule))
 
   const dependency = result.values.find((d) => d.url.href === entry.href)
@@ -4526,7 +4726,7 @@ test('data URL require is a script', (t) => {
     return null
   }
 
-  // The require names the type, so a module referrer still requires a script.
+  // The require decides the type, so a module can still require a script.
   const result = expandSync(traverse(new URL('file:///foo.mjs'), readModule))
 
   const dependency = result.values.find((d) => d.url.href === entry.href)
@@ -4603,8 +4803,8 @@ test('data URL in resolutions map follows the default type', (t) => {
     }
   }
 
-  // A resolutions map compresses away the condition that named the specifier,
-  // leaving no import to read the type from.
+  // A resolutions map drops the condition the specifier was resolved under, so
+  // there is no import left to read the type from.
   const result = expandSync(traverse(new URL('file:///foo.mjs'), { resolutions }, readModule))
 
   const dependency = result.values.find((d) => d.url.href === entry.href)

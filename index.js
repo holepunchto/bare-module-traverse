@@ -192,9 +192,19 @@ exports.alias = function alias(url, opts = {}) {
 }
 
 exports.module = function* (url, source, attributes, artifacts, visited, opts = {}) {
-  const { resolutions = null, asset = false, probed } = opts
+  const { resolutions = null, asset = false, probed, types } = opts
 
-  if (visited.has(url.href)) return false
+  attributes = attributes || {}
+
+  if (visited.has(url.href)) {
+    // An asset is only read for its bytes, so it doesn't care what type the
+    // module is imported as elsewhere.
+    if (asset === false && types !== undefined) {
+      assertTypeAgrees(url, attributes, types.get(url.href), opts)
+    }
+
+    return false
+  }
 
   visited.add(url.href)
 
@@ -202,8 +212,7 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
 
   if (opts.packages === undefined) opts = { ...opts, packages: new Map() }
   if (opts.prefixes === undefined) opts = { ...opts, prefixes: new Map() }
-
-  attributes = attributes || {}
+  if (opts.types === undefined) opts = { ...opts, types: new Map() }
 
   const artifact = asset === true || moduleType(url, attributes, null, opts) === constants.ADDON
 
@@ -264,6 +273,9 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
   }
 
   const type = moduleType(url, attributes, info, opts)
+  const naturalType = naturalModuleType(url, attributes, info, type, opts)
+
+  if (asset === false) opts.types.set(url.href, { type, asserted: attributes.type, info })
 
   const lexer = { imports: [], exports: [] }
 
@@ -283,6 +295,7 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
       url: exports.alias(url, opts),
       source,
       type,
+      naturalType,
       imports: compressImportsMap(imports),
       lexer
     }
@@ -310,6 +323,7 @@ exports.package = function* (url, source, artifacts, visited, opts = {}) {
         url,
         source,
         type: constants.JSON,
+        naturalType: constants.JSON,
         imports: {},
         lexer: { imports: [], exports: [] }
       }
@@ -400,6 +414,7 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
       url: exports.alias(url, opts),
       source,
       type,
+      naturalType: type,
       imports: compressImportsMap(imports),
       lexer
     }
@@ -810,6 +825,17 @@ function* postresolve(url) {
   return (yield { resolution: url }) || url
 }
 
+// The type a module has on its own, ignoring import attributes. A JavaScript
+// data: URL has no type of its own, so this returns 0; its type depends on how
+// it is imported.
+function naturalModuleType(url, attributes, info, type, opts) {
+  if (attributes.type === undefined) return type
+
+  if (url.protocol === 'data:') return 0
+
+  return moduleType(url, {}, info, opts)
+}
+
 function moduleType(url, attributes, info, opts = {}) {
   const { defaultType = constants.SCRIPT, aliases = null } = opts
 
@@ -855,6 +881,46 @@ function moduleType(url, attributes, info, opts = {}) {
   }
 
   return defaultType
+}
+
+// A URL has a single type within a graph, and the first import to reach it
+// decides what that is. Later imports have to agree, so an attribute on one
+// import cannot quietly change the type another import sees.
+function assertTypeAgrees(url, attributes, recorded, opts) {
+  if (recorded === undefined) return
+  if (attributes.type === recorded.asserted) return
+
+  const expected =
+    typeof attributes.type === 'string'
+      ? typeForAttribute(attributes.type)
+      : moduleType(url, {}, recorded.info, opts)
+
+  if (expected === recorded.type) return
+
+  throw errors.TYPE_INCOMPATIBLE(
+    `Module '${url.href}' is already of type '${attributeForType(recorded.type)}' in the graph`
+  )
+}
+
+function attributeForType(type) {
+  switch (type) {
+    case constants.SCRIPT:
+      return 'script'
+    case constants.MODULE:
+      return 'module'
+    case constants.JSON:
+      return 'json'
+    case constants.BUNDLE:
+      return 'bundle'
+    case constants.ADDON:
+      return 'addon'
+    case constants.BINARY:
+      return 'binary'
+    case constants.TEXT:
+      return 'text'
+  }
+
+  return 'unknown'
 }
 
 function typeForAttribute(type) {
@@ -918,11 +984,11 @@ function dataURLModuleType(url, attributes, opts = {}) {
   return type
 }
 
-// A data URL carries no extension and 'text/javascript' spans both module
-// systems, so the type follows how the module was named: `require()` names a
-// script and `import` a module. A dynamic `import()` names either and so must
-// say which, as must a caller naming a data URL with no import to read, who
-// answers with `defaultType`.
+// A data URL has no extension, and 'text/javascript' covers both module
+// systems, so the type follows how the module was imported: `require()` means a
+// script and `import` a module. A dynamic `import()` could mean either, so it
+// has to say which. When there is no import to read at all, `defaultType`
+// decides.
 function javaScriptDataURLModuleType(url, opts) {
   const { defaultType = constants.SCRIPT, importType = 0 } = opts
 
