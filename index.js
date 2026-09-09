@@ -406,7 +406,10 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
   const lexer = { imports: [], exports: [] }
 
   if (type === constants.SCRIPT || type === constants.MODULE) {
-    lexer.exports = lex(source).exports
+    const lexed = lex(source)
+
+    lexer.imports = lexed.imports
+    lexer.exports = lexed.exports
   }
 
   yield {
