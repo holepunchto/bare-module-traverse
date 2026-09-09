@@ -128,6 +128,9 @@ next.value = {
     url: URL,
     source: 'string' | Buffer,
     type: constants.SCRIPT,
+    // The type the module has on its own, ignoring import attributes, or 0 if
+    // it has no type of its own.
+    naturalType: constants.SCRIPT,
     imports: {
       // See https://github.com/holepunchto/bare-module#imports
     },
