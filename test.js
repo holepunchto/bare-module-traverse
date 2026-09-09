@@ -2518,7 +2518,15 @@ test('resolutions map', (t) => {
         './bar.js': 'file:///bar.js'
       },
       lexer: {
-        imports: [],
+        imports: [
+          {
+            specifier: './bar.js',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [12, 21, 29]
+          }
+        ],
         exports: []
       }
     },
@@ -2531,7 +2539,15 @@ test('resolutions map', (t) => {
         './baz.js': 'file:///baz.js'
       },
       lexer: {
-        imports: [],
+        imports: [
+          {
+            specifier: './baz.js',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [12, 21, 29]
+          }
+        ],
         exports: []
       }
     },
@@ -2585,7 +2601,15 @@ test('resolutions map, partial', (t) => {
         './bar.js': 'file:///bar.js'
       },
       lexer: {
-        imports: [],
+        imports: [
+          {
+            specifier: './bar.js',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [12, 21, 29]
+          }
+        ],
         exports: []
       }
     },
@@ -2671,11 +2695,63 @@ test('resolutions map, builtin', (t) => {
         './bar.js': 'builtin:bar.js'
       },
       lexer: {
-        imports: [],
+        imports: [
+          {
+            specifier: './bar.js',
+            type: REQUIRE,
+            names: [],
+            attributes: {},
+            position: [12, 21, 29]
+          }
+        ],
         exports: []
       }
     }
   ])
+})
+
+test('resolutions map lexes the source it was given', (t) => {
+  const source = "module.exports = require('./bar.js')"
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') return source
+    if (url.href === 'file:///bar.js') return 'module.exports = 42'
+
+    return null
+  }
+
+  // A resolutions map says what a specifier resolves to, not what the source
+  // declared. The two answer different questions, so a preresolved module
+  // reports the same lexer as one that was resolved here.
+  const preresolved = expandSync(
+    traverse(
+      new URL('file:///foo.js'),
+      {
+        resolutions: {
+          'file:///foo.js': { './bar.js': 'file:///bar.js' },
+          'file:///bar.js': {}
+        }
+      },
+      readModule
+    )
+  )
+
+  const resolved = expandSync(traverse(new URL('file:///foo.js'), readModule))
+
+  t.alike(preresolved.values[0].lexer, resolved.values[0].lexer, 'the same lexer either way')
+
+  t.alike(preresolved.values[0].lexer, {
+    imports: [
+      {
+        specifier: './bar.js',
+        type: REQUIRE | REEXPORT,
+        names: [],
+        attributes: {},
+        position: [17, 26, 34]
+      }
+    ],
+    exports: []
+  })
 })
 
 test('resolutions map, #package entry', (t) => {
