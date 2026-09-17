@@ -353,7 +353,7 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
 
   if (typeof imports !== 'object' || imports === null) return false
 
-  const type = moduleType(url, {}, null, opts)
+  let info = null
 
   for (const [specifier, entry] of Object.entries(imports)) {
     const stack = [{ entry, asset: false }]
@@ -365,8 +365,18 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
         const url = new URL(entry)
 
         if (specifier === '#package') {
+          const scope = yield* readPackage(url, opts)
+
+          if (scope !== null && info === null) info = scope.info
+
           yield {
-            children: exports.package(url, null, artifacts, visited, opts),
+            children: exports.package(
+              url,
+              scope === null ? null : scope.source,
+              artifacts,
+              visited,
+              opts
+            ),
             deferred: false
           }
         } else if (asset) {
@@ -402,6 +412,8 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
       }
     }
   }
+
+  const type = moduleType(url, {}, info, opts)
 
   const lexer = { imports: [], exports: [] }
 
@@ -790,6 +802,22 @@ exports.patternMatches = function* patternMatches(pattern, parentURL, matches, o
   }
 
   return matches
+}
+
+function* readPackage(url, opts) {
+  const { packages = new Map() } = opts
+
+  const cached = packages.get(url.href)
+
+  if (cached !== undefined) return cached
+
+  const source = yield { module: url, artifact: false }
+
+  const scope = source === null ? null : { url, source, info: JSON.parse(source) }
+
+  packages.set(url.href, scope)
+
+  return scope
 }
 
 function* lookupPackage(url, opts) {

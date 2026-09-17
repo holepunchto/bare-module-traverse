@@ -2804,6 +2804,42 @@ test('resolutions map, #package entry', (t) => {
   ])
 })
 
+test('resolutions map, #package entry declaring a module type', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "import bar from './bar.js'"
+    }
+
+    if (url.href === 'file:///bar.js') {
+      return 'export default 42'
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "type": "module" }'
+    }
+
+    return null
+  }
+
+  const resolutions = {
+    'file:///foo.js': {
+      '#package': 'file:///package.json',
+      './bar.js': 'file:///bar.js'
+    },
+    'file:///bar.js': {
+      '#package': 'file:///package.json'
+    },
+    'file:///package.json': {}
+  }
+
+  const result = expandSync(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
+
+  const types = new Map(result.values.map((value) => [value.url.href, value.type]))
+
+  t.is(types.get('file:///foo.js'), constants.MODULE)
+  t.is(types.get('file:///bar.js'), constants.MODULE)
+})
+
 test('resolutions map, missing #package entry', (t) => {
   function readModule(url) {
     if (url.href === 'file:///foo.js') {
