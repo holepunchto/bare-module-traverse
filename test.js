@@ -3065,6 +3065,66 @@ test('resolutions map, asset entry not listed but probed', (t) => {
   t.alike(result.return.assets, [new URL('file:///bar')])
 })
 
+test('require.addon, builtin matched by an addon condition', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "require.addon('.')"
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo", "version": "1.2.3" }'
+    }
+
+    return null
+  }
+
+  const result = expandSync(
+    traverse(
+      new URL('file:///foo.js'),
+      { builtins: [{ addon: 'foo' }], resolve: traverse.resolve.bare },
+      readModule
+    )
+  )
+
+  t.alike(
+    result.values[0].imports['.'],
+    { addon: 'builtin:foo@1.2.3' },
+    'the addon condition is not repeated'
+  )
+})
+
+test('resolutions map, artifact entry with repeated conditions', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "require.addon('.'), require.asset('./bar.txt')"
+    }
+
+    if (url.href === 'file:///bar.txt') {
+      return 'hello world'
+    }
+
+    return null
+  }
+
+  const resolutions = {
+    'file:///foo.js': {
+      '.': { addon: { addon: 'builtin:foo' } },
+      './bar.txt': { asset: { asset: 'file:///bar.txt' } }
+    }
+  }
+
+  const result = expandSync(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
+
+  const foo = result.values.find((value) => value.url.href === 'file:///foo.js')
+
+  t.alike(foo.imports, {
+    '.': { addon: 'builtin:foo' },
+    './bar.txt': { asset: 'file:///bar.txt' }
+  })
+  t.alike(result.return.addons, [new URL('builtin:foo')])
+  t.alike(result.return.assets, [new URL('file:///bar.txt')])
+})
+
 test('resolutions map from a traversal, addon', (t) => {
   const result = roundTrip(
     {
