@@ -1176,11 +1176,54 @@ function compressImportsMapEntry(resolved) {
     return compressArtifactImportsMapEntry(resolved)
   }
 
+  return compressConditions(resolved)
+}
+
+// Only the condition an addon or asset was resolved for tells it apart from a
+// module, so those conditions must survive compression. Below them, nothing
+// more needs telling apart.
+const artifactConditions = ['addon', 'asset']
+
+function compressArtifactImportsMapEntry(resolved) {
+  const artifacts = {}
+  const rest = {}
+
+  for (const [condition, entry] of Object.entries(resolved)) {
+    if (artifactConditions.includes(condition)) {
+      artifacts[condition] = compressConditions(entry)
+    } else {
+      rest[condition] = entry
+    }
+  }
+
+  const conditions = Object.keys(rest)
+
+  if (conditions.length === 0) return artifacts
+
+  let compressed = compressConditions(rest)
+
+  if (typeof compressed === 'string') {
+    compressed = { [conditions.length === 1 ? conditions[0] : 'default']: compressed }
+  }
+
+  const { default: fallback, ...matched } = compressed
+
+  // A `default` ahead of an artifact would be matched for it instead.
+  const entry = { ...matched, ...artifacts }
+
+  if (fallback !== undefined) entry.default = fallback
+
+  return entry
+}
+
+function compressConditions(resolved) {
+  if (typeof resolved === 'string') return resolved
+
   let entries = []
   let primary = null
 
   for (const entry of Object.entries(resolved)) {
-    entry[1] = compressImportsMapEntry(entry[1])
+    entry[1] = compressConditions(entry[1])
 
     entries.push(entry)
 
@@ -1200,42 +1243,6 @@ function compressImportsMapEntry(resolved) {
   if (entries.length === 1) return entries[0][1]
 
   return Object.fromEntries(entries)
-}
-
-// Only the condition an addon or asset was resolved for tells it apart from a
-// module, so those conditions must survive compression.
-const artifactConditions = ['addon', 'asset']
-
-function compressArtifactImportsMapEntry(resolved) {
-  const artifacts = {}
-  const rest = {}
-
-  for (const [condition, entry] of Object.entries(resolved)) {
-    if (artifactConditions.includes(condition)) {
-      artifacts[condition] = compressImportsMapEntry(entry)
-    } else {
-      rest[condition] = entry
-    }
-  }
-
-  const conditions = Object.keys(rest)
-
-  if (conditions.length === 0) return artifacts
-
-  let compressed = compressImportsMapEntry(rest)
-
-  if (typeof compressed === 'string') {
-    compressed = { [conditions.length === 1 ? conditions[0] : 'default']: compressed }
-  }
-
-  const { default: fallback, ...matched } = compressed
-
-  // A `default` ahead of an artifact would be matched for it instead.
-  const entry = { ...matched, ...artifacts }
-
-  if (fallback !== undefined) entry.default = fallback
-
-  return entry
 }
 
 function mixinImports(target, imports, url) {
