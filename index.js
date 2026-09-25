@@ -356,10 +356,10 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
   let info = null
 
   for (const [specifier, entry] of Object.entries(imports)) {
-    const stack = [{ entry, asset: false }]
+    const stack = [{ entry, addon: false, asset: false }]
 
     while (stack.length > 0) {
-      const { entry, asset } = stack.pop()
+      const { entry, addon, asset } = stack.pop()
 
       if (typeof entry === 'string') {
         const url = new URL(entry)
@@ -379,24 +379,31 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
             ),
             deferred: false
           }
+        } else if (url.protocol === deferredProtocol) {
+          continue
+        } else if (url.protocol === builtinProtocol || url.protocol === linkedProtocol) {
+          if (addon && artifacts !== null) addURL(artifacts.addons, url)
         } else if (asset) {
           if (artifacts !== null) {
-            addURL(artifacts.assets, url)
+            const expanded = yield* expandAsset(url, artifacts, visited, { ...opts, importType: 0 })
 
-            yield {
-              children: exports.module(url, null, {}, artifacts, visited, {
-                ...opts,
-                asset: true,
-                importType: 0
-              }),
-              deferred: true
+            // Nothing to expand is left for the module itself to report.
+            if (expanded === undefined) {
+              addURL(artifacts.assets, url)
+
+              yield {
+                children: exports.module(url, null, {}, artifacts, visited, {
+                  ...opts,
+                  asset: true,
+                  importType: 0
+                }),
+                deferred: true
+              }
             }
           }
-        } else if (
-          url.protocol !== builtinProtocol &&
-          url.protocol !== linkedProtocol &&
-          url.protocol !== deferredProtocol
-        ) {
+        } else {
+          if (addon && artifacts !== null) addURL(artifacts.addons, url)
+
           yield {
             children: exports.module(url, null, {}, artifacts, visited, {
               ...opts,
@@ -407,7 +414,11 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
         }
       } else {
         for (const [condition, child] of Object.entries(entry)) {
-          stack.push({ entry: child, asset: asset || condition === 'asset' })
+          stack.push({
+            entry: child,
+            addon: addon || condition === 'addon',
+            asset: asset || condition === 'asset'
+          })
         }
       }
     }
@@ -417,7 +428,7 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
 
   const lexer = { imports: [], exports: [] }
 
-  if (type === constants.SCRIPT || type === constants.MODULE) {
+  if (opts.asset !== true && (type === constants.SCRIPT || type === constants.MODULE)) {
     const lexed = lex(source)
 
     lexer.imports = lexed.imports
@@ -504,8 +515,7 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
     builtinProtocol = 'builtin:',
     linkedProtocol = 'linked:',
     deferredProtocol = 'deferred:',
-    deferUnresolved = false,
-    prefixes = new Map()
+    deferUnresolved = false
   } = opts
 
   const matchedConditions = []
@@ -542,51 +552,9 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
 
         resolved = true
       } else if (condition === 'asset') {
-        const prefix = url
-        const expand = artifacts !== null
-
-        let expanded = prefixes.get(prefix.href)
-
-        if (expanded === undefined) {
-          const listed = yield { prefix, expand }
-
-          const urls = []
-
-          let prefixResolution = null
-          let found = false
-
-          for (const url of listed) {
-            found = true
-
-            if (expand === false) break
-
-            const resolution = listed.resolved === true ? url : yield* postresolve(url)
-
-            if (url.href === prefix.href) prefixResolution = resolution
-
-            yield {
-              children: exports.module(resolution, null, {}, artifacts, visited, {
-                ...opts,
-                asset: true
-              }),
-              deferred: true
-            }
-
-            urls.push(resolution)
-          }
-
-          if (found) {
-            expanded = { resolution: prefixResolution || (yield* postresolve(prefix)), urls }
-
-            prefixes.set(prefix.href, expanded)
-          }
-        }
+        const expanded = yield* expandAsset(url, artifacts, visited, opts)
 
         if (expanded !== undefined) {
-          if (expand) {
-            for (const url of expanded.urls) addURL(artifacts.assets, url)
-          }
-
           resolution = expanded.resolution
 
           addResolution(imports, specifier, matchedConditions, resolution)
@@ -850,6 +818,55 @@ function* lookupPackage(url, opts) {
   for (const href of pending) packages.set(href, null)
 
   return null
+}
+
+function* expandAsset(prefix, artifacts, visited, opts) {
+  const { prefixes = new Map() } = opts
+
+  const expand = artifacts !== null
+
+  let expanded = prefixes.get(prefix.href)
+
+  if (expanded === undefined) {
+    const listed = yield { prefix, expand }
+
+    const urls = []
+
+    let prefixResolution = null
+    let found = false
+
+    for (const url of listed) {
+      found = true
+
+      if (expand === false) break
+
+      const resolution = listed.resolved === true ? url : yield* postresolve(url)
+
+      if (url.href === prefix.href) prefixResolution = resolution
+
+      yield {
+        children: exports.module(resolution, null, {}, artifacts, visited, {
+          ...opts,
+          asset: true
+        }),
+        deferred: true
+      }
+
+      urls.push(resolution)
+    }
+
+    if (found) {
+      expanded = { resolution: prefixResolution || (yield* postresolve(prefix)), urls }
+
+      prefixes.set(prefix.href, expanded)
+    }
+  }
+
+  if (expanded !== undefined && expand) {
+    for (const url of expanded.urls) addURL(artifacts.assets, url)
+  }
+
+  return expanded
 }
 
 function* postresolve(url) {
@@ -1155,6 +1172,10 @@ function compressImportsMap(imports) {
 function compressImportsMapEntry(resolved) {
   if (typeof resolved === 'string') return resolved
 
+  if (artifactConditions.some((condition) => condition in resolved)) {
+    return compressArtifactImportsMapEntry(resolved)
+  }
+
   let entries = []
   let primary = null
 
@@ -1179,6 +1200,42 @@ function compressImportsMapEntry(resolved) {
   if (entries.length === 1) return entries[0][1]
 
   return Object.fromEntries(entries)
+}
+
+// Only the condition an addon or asset was resolved for tells it apart from a
+// module, so those conditions must survive compression.
+const artifactConditions = ['addon', 'asset']
+
+function compressArtifactImportsMapEntry(resolved) {
+  const artifacts = {}
+  const rest = {}
+
+  for (const [condition, entry] of Object.entries(resolved)) {
+    if (artifactConditions.includes(condition)) {
+      artifacts[condition] = compressImportsMapEntry(entry)
+    } else {
+      rest[condition] = entry
+    }
+  }
+
+  const conditions = Object.keys(rest)
+
+  if (conditions.length === 0) return artifacts
+
+  let compressed = compressImportsMapEntry(rest)
+
+  if (typeof compressed === 'string') {
+    compressed = { [conditions.length === 1 ? conditions[0] : 'default']: compressed }
+  }
+
+  const { default: fallback, ...matched } = compressed
+
+  // A `default` ahead of an artifact would be matched for it instead.
+  const entry = { ...matched, ...artifacts }
+
+  if (fallback !== undefined) entry.default = fallback
+
+  return entry
 }
 
 function mixinImports(target, imports, url) {
