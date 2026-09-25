@@ -409,7 +409,7 @@ test('addon missing, deferred', (t) => {
   )
 
   t.is(result.values.length, 1)
-  t.alike(result.values[0].imports, { './bar': 'deferred:./bar' })
+  t.alike(result.values[0].imports, { './bar': { addon: 'deferred:./bar' } })
 })
 
 test('asset missing, deferred', (t) => {
@@ -426,7 +426,7 @@ test('asset missing, deferred', (t) => {
   )
 
   t.is(result.values.length, 1)
-  t.alike(result.values[0].imports, { './bar.txt': 'deferred:./bar.txt' })
+  t.alike(result.values[0].imports, { './bar.txt': { asset: 'deferred:./bar.txt' } })
 })
 
 test('module entry missing', (t) => {
@@ -545,7 +545,7 @@ test('require.addon', (t) => {
       naturalType: constants.SCRIPT,
       imports: {
         '#package': 'file:///package.json',
-        '.': 'file:///prebuilds/host/foo.bare'
+        '.': { addon: 'file:///prebuilds/host/foo.bare' }
       },
       lexer: {
         imports: [
@@ -618,7 +618,7 @@ test('require.addon, referrer', (t) => {
       naturalType: constants.SCRIPT,
       imports: {
         '#package': 'file:///package.json',
-        '.': 'file:///prebuilds/host/foo.bare'
+        '.': { addon: 'file:///prebuilds/host/foo.bare' }
       },
       lexer: {
         imports: [
@@ -731,7 +731,7 @@ test('require.addon, default specifier', (t) => {
       naturalType: constants.SCRIPT,
       imports: {
         '#package': 'file:///package.json',
-        '.': 'file:///prebuilds/host/foo.bare'
+        '.': { addon: 'file:///prebuilds/host/foo.bare' }
       },
       lexer: {
         imports: [
@@ -804,7 +804,7 @@ test('require.addon, builtin', (t) => {
       naturalType: constants.SCRIPT,
       imports: {
         '#package': 'file:///package.json',
-        '.': 'builtin:foo'
+        '.': { addon: 'builtin:foo' }
       },
       lexer: {
         imports: [
@@ -860,7 +860,7 @@ test('require.addon, linked', (t) => {
       naturalType: constants.SCRIPT,
       imports: {
         '#package': 'file:///package.json',
-        '.': 'linked:foo.framework/foo'
+        '.': { addon: 'linked:foo.framework/foo' }
       },
       lexer: {
         imports: [
@@ -929,8 +929,10 @@ test('require.addon, hosts list', (t) => {
       imports: {
         '#package': 'file:///package.json',
         '.': {
-          a: 'file:///prebuilds/host-a/foo.bare',
-          b: 'file:///prebuilds/host-b/foo.bare'
+          addon: {
+            a: 'file:///prebuilds/host-a/foo.bare',
+            b: 'file:///prebuilds/host-b/foo.bare'
+          }
         }
       },
       lexer: {
@@ -1033,11 +1035,13 @@ test('require.addon, hosts list, host variants', (t) => {
       imports: {
         '#package': 'file:///package.json',
         '.': {
-          a: {
-            b: 'file:///prebuilds/host-a-b/foo.bare',
-            default: 'file:///prebuilds/host-a/foo.bare'
-          },
-          default: 'file:///prebuilds/host/foo.bare'
+          addon: {
+            a: {
+              b: 'file:///prebuilds/host-a-b/foo.bare',
+              default: 'file:///prebuilds/host-a/foo.bare'
+            },
+            default: 'file:///prebuilds/host/foo.bare'
+          }
         }
       },
       lexer: {
@@ -1145,8 +1149,10 @@ test('require.addon, hosts list, linked', (t) => {
       imports: {
         '#package': 'file:///package.json',
         '.': {
-          darwin: 'linked:foo.framework/foo',
-          linux: 'linked:libfoo.so'
+          addon: {
+            darwin: 'linked:foo.framework/foo',
+            linux: 'linked:libfoo.so'
+          }
         }
       },
       lexer: {
@@ -1240,7 +1246,7 @@ test('require.asset', (t) => {
       type: constants.SCRIPT,
       naturalType: constants.SCRIPT,
       imports: {
-        './bar.txt': 'file:///bar.txt'
+        './bar.txt': { asset: 'file:///bar.txt' }
       },
       lexer: {
         imports: [
@@ -1293,7 +1299,7 @@ test('require.asset, referrer', (t) => {
       type: constants.SCRIPT,
       naturalType: constants.SCRIPT,
       imports: {
-        './bar.txt': 'file:///bar.txt'
+        './bar.txt': { asset: 'file:///bar.txt' }
       },
       lexer: {
         imports: [
@@ -1346,7 +1352,7 @@ test('require + require.asset', (t) => {
       type: constants.SCRIPT,
       naturalType: constants.SCRIPT,
       imports: {
-        './bar.js': 'file:///bar.js'
+        './bar.js': { require: 'file:///bar.js', asset: 'file:///bar.js' }
       },
       lexer: {
         imports: [
@@ -1487,7 +1493,7 @@ test('require.asset then require with type attribute', (t) => {
       type: constants.SCRIPT,
       naturalType: constants.SCRIPT,
       imports: {
-        './bar.js': 'file:///bar.js'
+        './bar.js': { require: 'file:///bar.js', asset: 'file:///bar.js' }
       },
       lexer: {
         imports: [
@@ -1547,7 +1553,7 @@ test('require with type attribute then require.asset', (t) => {
       type: constants.SCRIPT,
       naturalType: constants.SCRIPT,
       imports: {
-        './bar.js': 'file:///bar.js'
+        './bar.js': { require: 'file:///bar.js', asset: 'file:///bar.js' }
       },
       lexer: {
         imports: [
@@ -1611,7 +1617,7 @@ test('require.asset does not follow the imports of a module asset', (t) => {
       type: constants.SCRIPT,
       naturalType: constants.SCRIPT,
       imports: {
-        './bar.js': 'file:///bar.js'
+        './bar.js': { asset: 'file:///bar.js' }
       },
       lexer: {
         imports: [
@@ -1676,7 +1682,7 @@ test('require.asset, directory', (t) => {
       type: constants.SCRIPT,
       naturalType: constants.SCRIPT,
       imports: {
-        './bar': 'file:///bar'
+        './bar': { asset: 'file:///bar' }
       },
       lexer: {
         imports: [
@@ -1745,7 +1751,7 @@ test('require.asset, directory with trailing slash', (t) => {
 
   const foo = result.values.find((value) => value.url.href === 'file:///foo.js')
 
-  t.is(foo.imports['./bar/'], 'file:///bar/')
+  t.alike(foo.imports['./bar/'], { asset: 'file:///bar/' })
 
   t.alike(result.return.assets, [new URL('file:///bar/a.txt')])
 })
@@ -1782,7 +1788,7 @@ test('require.asset, parent directory', (t) => {
 
   const foo = result.values.find((value) => value.url.href === 'file:///a/foo.js')
 
-  t.is(foo.imports['..'], 'file:///')
+  t.alike(foo.imports['..'], { asset: 'file:///' })
 
   t.alike(result.return.assets, [new URL('file:///a/bar.txt')])
 })
@@ -1901,8 +1907,8 @@ test('asset prefix is expanded once', (t) => {
 
   const foo = result.values.find((value) => value.url.href === 'file:///a/foo.js')
 
-  t.is(foo.imports['..'], 'file:///')
-  t.is(foo.imports['../.'], 'file:///')
+  t.alike(foo.imports['..'], { asset: 'file:///' })
+  t.alike(foo.imports['../.'], { asset: 'file:///' })
 
   t.alike(prefixes, ['file:///'])
 
@@ -1946,7 +1952,7 @@ test('require.asset, directory listed as resolved', (t) => {
 
   const foo = result.values.find((value) => value.url.href === 'file:///foo.js')
 
-  t.is(foo.imports['./bar'], 'file:///bar')
+  t.alike(foo.imports['./bar'], { asset: 'file:///bar' })
 
   t.alike(result.return.assets, [new URL('file:///bar/a.txt')])
 
@@ -1988,7 +1994,7 @@ test('require.asset, directory without artifacts', (t) => {
 
   const foo = result.values.find((value) => value.url.href === 'file:///foo.js')
 
-  t.is(foo.imports['./bar'], 'file:///bar')
+  t.alike(foo.imports['./bar'], { asset: 'file:///bar' })
 
   t.alike(prefixes, [{ href: 'file:///bar', expand: false }])
 })
@@ -2895,6 +2901,294 @@ test('resolutions map, asset entry', (t) => {
   const bar = result.values.find((value) => value.url.href === 'file:///bar.txt')
 
   t.is(bar.type, constants.TEXT)
+})
+
+// A traversal handed the imports it recorded must arrive at the same graph, as
+// that is what a bundle or a loader does with them.
+test('resolutions map from a traversal, asset', (t) => {
+  const result = roundTrip({
+    'file:///foo.js': "require.asset('./bar.md')",
+    'file:///bar.md': '# Changelog'
+  })
+
+  t.alike(result.imports, { './bar.md': { asset: 'file:///bar.md' } })
+  t.alike(result.recorded.return.assets, [new URL('file:///bar.md')])
+  t.alike(result.preresolved.values, result.recorded.values)
+  t.alike(result.preresolved.return, result.recorded.return)
+})
+
+test('resolutions map from a traversal, module and asset', (t) => {
+  const result = roundTrip({
+    'file:///foo.js': "require('./bar.js'), require.asset('./bar.js')",
+    'file:///bar.js': 'module.exports = 42'
+  })
+
+  t.alike(result.imports, {
+    './bar.js': { require: 'file:///bar.js', asset: 'file:///bar.js' }
+  })
+  t.alike(result.recorded.return.assets, [new URL('file:///bar.js')])
+  t.alike(result.preresolved.values, result.recorded.values)
+  t.alike(result.preresolved.return, result.recorded.return)
+})
+
+test('resolutions map from a traversal, asset through conditional exports', (t) => {
+  const result = roundTrip({
+    'file:///foo.js': "require.asset('bar')",
+    'file:///node_modules/bar/package.json': '{ "exports": { "default": "./bar.md" } }',
+    'file:///node_modules/bar/bar.md': '# Changelog'
+  })
+
+  t.alike(result.imports, {
+    bar: { asset: 'file:///node_modules/bar/bar.md' }
+  })
+  t.alike(result.recorded.return.assets, [new URL('file:///node_modules/bar/bar.md')])
+  t.alike(result.preresolved.values, result.recorded.values)
+  t.alike(result.preresolved.return, result.recorded.return)
+})
+
+test('resolutions map from a traversal, asset missing, deferred', (t) => {
+  const result = roundTrip(
+    {
+      'file:///foo.js': "require.asset('./bar.md')"
+    },
+    { deferUnresolved: true }
+  )
+
+  t.alike(result.imports, { './bar.md': { asset: 'deferred:./bar.md' } })
+  t.alike(result.recorded.return.assets, [])
+  t.alike(result.preresolved.values, result.recorded.values)
+  t.alike(result.preresolved.return, result.recorded.return)
+})
+
+test('resolutions map from a traversal, asset directory', (t) => {
+  const result = roundTrip({
+    'file:///foo.js': "require.asset('./bar')",
+    'file:///bar/a.md': '# A',
+    'file:///bar/b/c.md': '# C'
+  })
+
+  t.alike(result.imports, { './bar': { asset: 'file:///bar' } })
+  t.alike(result.recorded.return.assets, [
+    new URL('file:///bar/a.md'),
+    new URL('file:///bar/b/c.md')
+  ])
+  t.alike(result.preresolved.values, result.recorded.values)
+  t.alike(result.preresolved.return, result.recorded.return)
+})
+
+test('resolutions map from a traversal, asset directory with trailing slash', (t) => {
+  const result = roundTrip(
+    {
+      'file:///foo.js': "require.asset('./bar/')",
+      'file:///bar/a.md': '# A'
+    },
+    { resolve: traverse.resolve.bare }
+  )
+
+  t.alike(result.imports, { './bar/': { asset: 'file:///bar/' } })
+  t.alike(result.recorded.return.assets, [new URL('file:///bar/a.md')])
+  t.alike(result.preresolved.values, result.recorded.values)
+  t.alike(result.preresolved.return, result.recorded.return)
+})
+
+test('resolutions map from a traversal, asset directory holding a module', (t) => {
+  const result = roundTrip({
+    'file:///foo.js': "require.asset('./bar')",
+    'file:///bar/a.js': "require('./b.js')",
+    'file:///bar/b.js': 'module.exports = 42'
+  })
+
+  t.alike(result.recorded.return.assets, [new URL('file:///bar/a.js'), new URL('file:///bar/b.js')])
+  t.alike(result.preresolved.values, result.recorded.values)
+  t.alike(result.preresolved.return, result.recorded.return)
+})
+
+test('resolutions map from a traversal, asset directory without artifacts', (t) => {
+  const result = roundTrip(
+    {
+      'file:///foo.js': "require.asset('./bar')",
+      'file:///bar/a.md': '# A'
+    },
+    { artifacts: false }
+  )
+
+  t.alike(result.imports, { './bar': { asset: 'file:///bar' } })
+  t.alike(result.preresolved.values, result.recorded.values)
+  t.alike(result.preresolved.return, result.recorded.return)
+})
+
+test('resolutions map, asset entry missing', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "require.asset('./bar')"
+    }
+
+    return null
+  }
+
+  const resolutions = {
+    'file:///foo.js': {
+      './bar': { asset: 'file:///bar' }
+    }
+  }
+
+  t.exception(() => expandSync(traverse(new URL('file:///foo.js'), { resolutions }, readModule)), {
+    code: 'MODULE_NOT_FOUND'
+  })
+})
+
+test('resolutions map, asset entry not listed but probed', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "require.asset('./bar')"
+    }
+
+    return null
+  }
+
+  const resolutions = {
+    'file:///foo.js': {
+      './bar': { asset: 'file:///bar' }
+    }
+  }
+
+  const result = expandSync(
+    traverse(
+      new URL('file:///foo.js'),
+      { resolutions },
+      readModule,
+      () => [],
+      () => true
+    )
+  )
+
+  t.alike(result.return.assets, [new URL('file:///bar')])
+})
+
+test('resolutions map from a traversal, addon', (t) => {
+  const result = roundTrip(
+    {
+      'file:///foo.js': "require.addon('.')",
+      'file:///package.json': '{ "name": "foo" }',
+      'file:///prebuilds/host/foo.bare': '<native code>'
+    },
+    { host, extensions: ['.bare'] }
+  )
+
+  t.alike(result.imports['.'], { addon: 'file:///prebuilds/host/foo.bare' })
+  t.alike(result.recorded.return.addons, [new URL('file:///prebuilds/host/foo.bare')])
+  t.alike(result.preresolved.values, result.recorded.values)
+  t.alike(result.preresolved.return, result.recorded.return)
+})
+
+test('resolutions map from a traversal, linked addon', (t) => {
+  const result = roundTrip(
+    {
+      'file:///foo.js': "require.addon('.')",
+      'file:///package.json': '{ "name": "foo" }'
+    },
+    { host: 'darwin-arm64', extensions: ['.bare'] }
+  )
+
+  t.alike(result.imports['.'], { addon: 'linked:foo.framework/foo' })
+  t.alike(result.recorded.return.addons, [new URL('linked:foo.framework/foo')])
+  t.alike(result.preresolved.values, result.recorded.values)
+  t.alike(result.preresolved.return, result.recorded.return)
+})
+
+test('resolutions map from a traversal, addon for several hosts', (t) => {
+  const result = roundTrip(
+    {
+      'file:///foo.js': "require.addon('.')",
+      'file:///package.json': '{ "name": "foo" }',
+      'file:///prebuilds/host-a/foo.bare': '<native code a>',
+      'file:///prebuilds/host-b/foo.bare': '<native code b>'
+    },
+    { hosts: ['host-a', 'host-b'], extensions: ['.bare'] }
+  )
+
+  t.alike(result.imports['.'], {
+    addon: {
+      a: 'file:///prebuilds/host-a/foo.bare',
+      b: 'file:///prebuilds/host-b/foo.bare'
+    }
+  })
+  t.alike(result.recorded.return.addons, [
+    new URL('file:///prebuilds/host-a/foo.bare'),
+    new URL('file:///prebuilds/host-b/foo.bare')
+  ])
+  t.alike(result.preresolved.values, result.recorded.values)
+  t.alike(result.preresolved.return, result.recorded.return)
+})
+
+test('resolutions map from a traversal, addon missing, deferred', (t) => {
+  const result = roundTrip(
+    {
+      'file:///foo.js': "require.addon('./bar')"
+    },
+    { deferUnresolved: true }
+  )
+
+  t.alike(result.imports, { './bar': { addon: 'deferred:./bar' } })
+  t.alike(result.recorded.return.addons, [])
+  t.alike(result.preresolved.values, result.recorded.values)
+  t.alike(result.preresolved.return, result.recorded.return)
+})
+
+test('resolutions map, asset entry beside other conditions', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "require('./bar'), require.asset('./bar'), require.asset('./baz')"
+    }
+
+    if (url.href === 'file:///bar.js' || url.href === 'file:///baz.js') {
+      return 'module.exports = 42'
+    }
+
+    if (url.href === 'file:///bar.md' || url.href === 'file:///baz.md') {
+      return '# Changelog'
+    }
+
+    return null
+  }
+
+  const resolutions = {
+    'file:///foo.js': {
+      './bar': {
+        default: 'file:///bar.js',
+        asset: 'file:///bar.md'
+      },
+      './baz': {
+        require: 'file:///baz.js',
+        import: 'file:///baz.js',
+        asset: { bare: 'file:///baz.md', default: 'file:///baz.md' }
+      }
+    }
+  }
+
+  const result = expandSync(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
+
+  const foo = result.values.find((value) => value.url.href === 'file:///foo.js')
+
+  t.alike(
+    Object.entries(foo.imports['./bar']),
+    [
+      ['asset', 'file:///bar.md'],
+      ['default', 'file:///bar.js']
+    ],
+    'the asset is kept ahead of the default'
+  )
+
+  t.alike(
+    Object.entries(foo.imports['./baz']),
+    [
+      ['asset', 'file:///baz.md'],
+      ['default', 'file:///baz.js']
+    ],
+    'the other conditions are compressed on their own'
+  )
+
+  t.alike(result.return.assets, [new URL('file:///bar.md'), new URL('file:///baz.md')])
 })
 
 test('resolutions map, nested conditional entry', (t) => {
@@ -4179,7 +4473,7 @@ test('resolution transform applied to asset', (t) => {
 
   const foo = result.values.find((value) => value.url.href === 'file:///foo.js')
 
-  t.is(foo.imports['./bar.txt'], 'file:///real/bar.txt')
+  t.alike(foo.imports['./bar.txt'], { asset: 'file:///real/bar.txt' })
 
   t.alike(result.return.assets, [new URL('file:///real/bar.txt')])
 })
@@ -4217,7 +4511,7 @@ test('resolution transform applied to asset directory', (t) => {
 
   const foo = result.values.find((value) => value.url.href === 'file:///foo.js')
 
-  t.is(foo.imports['./bar'], 'file:///real')
+  t.alike(foo.imports['./bar'], { asset: 'file:///real' })
 
   t.alike(result.return.assets, [new URL('file:///real/a.txt')])
 })
@@ -4260,7 +4554,7 @@ test('resolution transform applied to addon', (t) => {
 
   const foo = result.values.find((value) => value.url.href === 'file:///foo.js')
 
-  t.is(foo.imports['.'], 'file:///real/foo.bare')
+  t.alike(foo.imports['.'], { addon: 'file:///real/foo.bare' })
 
   t.alike(result.return.addons, [new URL('file:///real/foo.bare')])
 
@@ -5021,6 +5315,38 @@ test('data URL with type attribute disambiguating JavaScript', (t) => {
 
   t.is(dependency.type, constants.SCRIPT)
 })
+
+function roundTrip(modules, opts = {}) {
+  const readModule = (url) => modules[url.href] ?? null
+
+  function listPrefix(url) {
+    if (url.href in modules) return [url]
+
+    const prefix = url.href.endsWith('/') ? url.href : url.href + '/'
+
+    return Object.keys(modules)
+      .filter((href) => href.startsWith(prefix))
+      .map((href) => new URL(href))
+  }
+
+  const recorded = expandSync(traverse(new URL('file:///foo.js'), opts, readModule, listPrefix))
+
+  const resolutions = {}
+
+  for (const { url, imports } of recorded.values) resolutions[url.href] = imports
+
+  const preresolved = expandSync(
+    traverse(new URL('file:///foo.js'), { ...opts, resolutions }, readModule, listPrefix)
+  )
+
+  // The order modules are visited in is of no consequence.
+  const byURL = (a, b) => (a.url.href < b.url.href ? -1 : a.url.href > b.url.href ? 1 : 0)
+
+  recorded.values.sort(byURL)
+  preresolved.values.sort(byURL)
+
+  return { imports: resolutions['file:///foo.js'], recorded, preresolved }
+}
 
 function expandSync(iterable) {
   const iterator = iterable[Symbol.iterator]()
