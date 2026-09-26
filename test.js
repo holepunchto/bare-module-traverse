@@ -4229,6 +4229,47 @@ test('import, TypeScript source, package type module', (t) => {
   ])
 })
 
+test('import, extensionless, package type module', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo') {
+      return 'export {}'
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "type": "module" }'
+    }
+
+    return null
+  }
+
+  const result = expandSync(traverse(new URL('file:///foo'), readModule))
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo'),
+      source: 'export {}',
+      type: constants.MODULE,
+      naturalType: constants.MODULE,
+      imports: { '#package': 'file:///package.json' },
+      lexer: {
+        imports: [],
+        exports: []
+      }
+    },
+    {
+      url: new URL('file:///package.json'),
+      source: '{ "type": "module" }',
+      type: constants.JSON,
+      naturalType: constants.JSON,
+      imports: {},
+      lexer: {
+        imports: [],
+        exports: []
+      }
+    }
+  ])
+})
+
 test('require, bundle extension', (t) => {
   function readModule(url) {
     if (url.href === 'file:///foo.js') {
