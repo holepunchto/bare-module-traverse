@@ -897,9 +897,7 @@ function moduleType(url, attributes, info, opts = {}) {
 
   const match = url.pathname.match(/\.[a-z]+$/)
 
-  if (match === null) return defaultType
-
-  let [extension] = match
+  let extension = match === null ? '.js' : match[0]
 
   if (aliases !== null && extension in aliases) extension = aliases[extension]
 
