@@ -993,6 +993,116 @@ test('require.addon, hosts list', (t) => {
   ])
 })
 
+test('require.addon, webassembly fallback', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require.addon('.')"
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    if (url.href === 'file:///prebuilds/wasi-wasm32/foo.wasm') {
+      return '<webassembly>'
+    }
+
+    return null
+  }
+
+  const result = expandSync(
+    traverse(new URL('file:///foo.js'), { resolve: traverse.resolve.bare }, readModule)
+  )
+
+  t.alike(result.values, [
+    {
+      url: new URL('file:///foo.js'),
+      source: "const bar = require.addon('.')",
+      type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
+      imports: {
+        '#package': 'file:///package.json',
+        '.': { addon: 'file:///prebuilds/wasi-wasm32/foo.wasm' }
+      },
+      lexer: {
+        imports: [
+          {
+            specifier: '.',
+            type: REQUIRE | ADDON,
+            names: [],
+            attributes: {},
+            position: [12, 27, 28]
+          }
+        ],
+        exports: []
+      }
+    },
+    {
+      url: new URL('file:///prebuilds/wasi-wasm32/foo.wasm'),
+      source: '<webassembly>',
+      type: constants.ADDON,
+      naturalType: constants.SCRIPT,
+      imports: {
+        '#package': 'file:///package.json'
+      },
+      lexer: {
+        imports: [],
+        exports: []
+      }
+    },
+    {
+      url: new URL('file:///package.json'),
+      source: '{ "name": "foo" }',
+      type: constants.JSON,
+      naturalType: constants.JSON,
+      imports: {},
+      lexer: {
+        imports: [],
+        exports: []
+      }
+    }
+  ])
+
+  t.alike(result.return.addons, [new URL('file:///prebuilds/wasi-wasm32/foo.wasm')])
+})
+
+test('require.addon, addon not loadable', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require.addon('.')"
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    if (url.href === 'file:///prebuilds/host/foo.bare') {
+      return '<native code>'
+    }
+
+    if (url.href === 'file:///prebuilds/wasi-wasm32/foo.wasm') {
+      return '<webassembly>'
+    }
+
+    return null
+  }
+
+  const result = expandSync(
+    traverse(
+      new URL('file:///foo.js'),
+      {
+        hosts: [host, 'wasi-wasm32'],
+        extensions: ['.bare'],
+        loadable: (url) => url.pathname.endsWith('.wasm')
+      },
+      readModule
+    )
+  )
+
+  t.alike(result.values[0].imports['.'], { addon: 'file:///prebuilds/wasi-wasm32/foo.wasm' })
+  t.alike(result.return.addons, [new URL('file:///prebuilds/wasi-wasm32/foo.wasm')])
+})
+
 test('require.addon, hosts list, host variants', (t) => {
   function readModule(url) {
     if (url.href === 'file:///foo.js') {
@@ -2716,6 +2826,43 @@ test('resolutions map, builtin', (t) => {
   ])
 })
 
+test('resolutions map, webassembly addon', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require.addon('.')"
+    }
+
+    if (url.href === 'file:///prebuilds/wasi-wasm32/foo.wasm') {
+      return '<webassembly>'
+    }
+
+    return null
+  }
+
+  const resolutions = {
+    'file:///foo.js': {
+      '.': { addon: 'file:///prebuilds/wasi-wasm32/foo.wasm' }
+    },
+    'file:///prebuilds/wasi-wasm32/foo.wasm': {}
+  }
+
+  const result = expandSync(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
+
+  t.alike(result.values[1], {
+    url: new URL('file:///prebuilds/wasi-wasm32/foo.wasm'),
+    source: '<webassembly>',
+    type: constants.ADDON,
+    naturalType: constants.SCRIPT,
+    imports: {},
+    lexer: {
+      imports: [],
+      exports: []
+    }
+  })
+
+  t.alike(result.return.addons, [new URL('file:///prebuilds/wasi-wasm32/foo.wasm')])
+})
+
 test('resolutions map lexes the source it was given', (t) => {
   const source = "module.exports = require('./bar.js')"
 
@@ -3177,6 +3324,53 @@ test('resolutions map from a traversal, addon for several hosts', (t) => {
     new URL('file:///prebuilds/host-a/foo.bare'),
     new URL('file:///prebuilds/host-b/foo.bare')
   ])
+  t.alike(result.preresolved.values, result.recorded.values)
+  t.alike(result.preresolved.return, result.recorded.return)
+})
+
+test('resolutions map from a traversal, webassembly addon', (t) => {
+  const result = roundTrip(
+    {
+      'file:///foo.js': "require.addon('.')",
+      'file:///package.json': '{ "name": "foo" }',
+      'file:///prebuilds/wasi-wasm32/foo.wasm': '<webassembly>'
+    },
+    { hosts: [host, 'wasi-wasm32'], extensions: ['.bare'] }
+  )
+
+  const addon = result.preresolved.values.find(
+    (value) => value.url.href === 'file:///prebuilds/wasi-wasm32/foo.wasm'
+  )
+
+  t.alike(result.imports['.'], { addon: 'file:///prebuilds/wasi-wasm32/foo.wasm' })
+  t.is(addon.type, constants.ADDON)
+  t.is(addon.source, '<webassembly>')
+  t.alike(result.preresolved.values, result.recorded.values)
+  t.alike(result.preresolved.return, result.recorded.return)
+})
+
+test('resolutions map from a traversal, type attribute', (t) => {
+  const result = roundTrip({
+    'file:///foo.js': "require('./bar.txt', { with: { type: 'binary' } })",
+    'file:///bar.txt': '<binary>'
+  })
+
+  const bar = result.preresolved.values.find((value) => value.url.href === 'file:///bar.txt')
+
+  t.is(bar.type, constants.BINARY)
+  t.alike(result.preresolved.values, result.recorded.values)
+  t.alike(result.preresolved.return, result.recorded.return)
+})
+
+test('resolutions map from a traversal, type attribute on static import', (t) => {
+  const result = roundTrip({
+    'file:///foo.js': "import bar from './bar.txt' with { type: 'binary' }",
+    'file:///bar.txt': '<binary>'
+  })
+
+  const bar = result.preresolved.values.find((value) => value.url.href === 'file:///bar.txt')
+
+  t.is(bar.type, constants.BINARY)
   t.alike(result.preresolved.values, result.recorded.values)
   t.alike(result.preresolved.return, result.recorded.return)
 })
@@ -4350,6 +4544,34 @@ test('require with binary type attribute', (t) => {
   t.is(bar.type, constants.BINARY)
 })
 
+test('require with binary type attribute, resolutions map', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "require('./bar.js', { with: { type: 'binary' } })"
+    }
+
+    if (url.href === 'file:///bar.js') {
+      return '<binary>'
+    }
+
+    return null
+  }
+
+  const resolutions = {
+    'file:///foo.js': {
+      './bar.js': 'file:///bar.js'
+    },
+    'file:///bar.js': {}
+  }
+
+  const result = expandSync(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
+
+  const bar = result.values.find((value) => value.url.href === 'file:///bar.js')
+
+  t.is(bar.type, constants.BINARY)
+  t.is(bar.naturalType, constants.SCRIPT)
+})
+
 test('require with module type attribute', (t) => {
   function readModule(url) {
     if (url.href === 'file:///foo.js') {
@@ -5416,6 +5638,253 @@ test('data URL with type attribute disambiguating JavaScript', (t) => {
 
   t.is(dependency.type, constants.SCRIPT)
 })
+
+test('host attribute', (t) => {
+  const result = traverseHosted({
+    'file:///foo.js': "require('bar', { with: { host: 'wasi-wasm32' } })"
+  })
+
+  t.alike(result.imports('file:///node_modules/bar/binding.js')['.'], {
+    addon: 'file:///node_modules/bar/prebuilds/wasi-wasm32/bar.wasm'
+  })
+})
+
+test('host attribute, static import', (t) => {
+  const result = traverseHosted(
+    {
+      'file:///foo.mjs': "import bar from 'bar' with { host: 'wasi-wasm32' }"
+    },
+    'file:///foo.mjs'
+  )
+
+  t.alike(result.imports('file:///node_modules/bar/binding.js')['.'], {
+    addon: 'file:///node_modules/bar/prebuilds/wasi-wasm32/bar.wasm'
+  })
+})
+
+test('host attribute, transitive dependency', (t) => {
+  const result = traverseHosted({
+    'file:///foo.js': "require('baz', { with: { host: 'wasi-wasm32' } })"
+  })
+
+  t.alike(result.imports('file:///node_modules/bar/binding.js')['.'], {
+    addon: 'file:///node_modules/bar/prebuilds/wasi-wasm32/bar.wasm'
+  })
+})
+
+test('host attribute, other addons keep the default hosts', (t) => {
+  const result = traverseHosted({
+    'file:///foo.js': "require('bar', { with: { host: 'wasi-wasm32' } }); require('qux')"
+  })
+
+  t.alike(result.imports('file:///node_modules/bar/binding.js')['.'], {
+    addon: 'file:///node_modules/bar/prebuilds/wasi-wasm32/bar.wasm'
+  })
+  t.alike(result.imports('file:///node_modules/qux/binding.js')['.'], {
+    addon: 'file:///node_modules/qux/prebuilds/host/qux.bare'
+  })
+})
+
+test('host attribute, shared module without addons', (t) => {
+  t.execution(() =>
+    traverseHosted({
+      'file:///foo.js': "require('pure'); require('bar', { with: { host: 'wasi-wasm32' } })"
+    })
+  )
+})
+
+test('host attribute after default import', (t) => {
+  t.exception(
+    () =>
+      traverseHosted({
+        'file:///foo.js': "require('bar'); require('bar', { with: { host: 'wasi-wasm32' } })"
+      }),
+    { code: 'ADDON_HOST_INCOMPATIBLE' }
+  )
+})
+
+test('default import after host attribute', (t) => {
+  t.exception(
+    () =>
+      traverseHosted({
+        'file:///foo.js': "require('bar', { with: { host: 'wasi-wasm32' } }); require('bar')"
+      }),
+    { code: 'ADDON_HOST_INCOMPATIBLE' }
+  )
+})
+
+test('host attribute after default import of a transitive dependency', (t) => {
+  t.exception(
+    () =>
+      traverseHosted({
+        'file:///foo.js': "require('bar'); require('baz', { with: { host: 'wasi-wasm32' } })"
+      }),
+    { code: 'ADDON_HOST_INCOMPATIBLE' }
+  )
+})
+
+test('host attribute, no webassembly prebuild', (t) => {
+  t.exception(
+    () =>
+      traverseHosted({
+        'file:///foo.js': "require('qux', { with: { host: 'wasi-wasm32' } })"
+      }),
+    { code: 'ADDON_NOT_FOUND' }
+  )
+})
+
+test('host attribute, native addon file', (t) => {
+  t.exception(
+    () =>
+      traverseHosted({
+        'file:///foo.js': "require('./native.js', { with: { host: 'wasi-wasm32' } })",
+        'file:///native.js': "require('./native.bare')",
+        'file:///native.bare': '<native code>'
+      }),
+    { code: 'ADDON_HOST_INCOMPATIBLE' }
+  )
+})
+
+test('host attribute, native host', (t) => {
+  t.exception(
+    () =>
+      traverseHosted({
+        'file:///foo.js': "require('bar', { with: { host: 'win32-x64' } })"
+      }),
+    { code: 'UNKNOWN_ADDON_HOST' }
+  )
+})
+
+test('resolutions map from a traversal, host attribute', (t) => {
+  const result = roundTrip(
+    {
+      ...hostedModules,
+      'file:///foo.js': "require('baz', { with: { host: 'wasi-wasm32' } }); require('qux')"
+    },
+    { resolve: traverse.resolve.bare, host }
+  )
+
+  t.alike(result.preresolved.values, result.recorded.values)
+  t.alike(result.preresolved.return, result.recorded.return)
+})
+
+test('wasi attribute', (t) => {
+  const result = traverseHosted({
+    'file:///foo.js': "require('bar', { with: { host: 'wasi-wasm32', wasi: './caps.js' } })",
+    'file:///caps.js': 'module.exports = () => ({})'
+  })
+
+  const addon = result.values.find(
+    (value) => value.url.href === 'file:///node_modules/bar/prebuilds/wasi-wasm32/bar.wasm'
+  )
+
+  t.is(addon.wasi, 'file:///caps.js')
+  t.ok(result.values.some((value) => value.url.href === 'file:///caps.js'))
+})
+
+test('wasi attribute, webassembly fallback', (t) => {
+  const result = traverseHosted({
+    'file:///foo.js': "require('web', { with: { wasi: './caps.js' } })",
+    'file:///caps.js': 'module.exports = () => ({})'
+  })
+
+  const addon = result.values.find(
+    (value) => value.url.href === 'file:///node_modules/web/prebuilds/wasi-wasm32/web.wasm'
+  )
+
+  t.is(addon.wasi, 'file:///caps.js')
+})
+
+test('wasi attribute, native addon', (t) => {
+  const result = traverseHosted({
+    'file:///foo.js': "require('bar', { with: { wasi: './caps.js' } }); require('bar')",
+    'file:///caps.js': 'module.exports = () => ({})'
+  })
+
+  const addon = result.values.find(
+    (value) => value.url.href === 'file:///node_modules/bar/prebuilds/host/bar.bare'
+  )
+
+  t.is(addon.wasi, undefined)
+})
+
+test('wasi attribute, transitive dependency', (t) => {
+  const result = traverseHosted({
+    'file:///foo.js': "require('baz', { with: { host: 'wasi-wasm32', wasi: './caps.js' } })",
+    'file:///caps.js': 'module.exports = () => ({})'
+  })
+
+  const addon = result.values.find(
+    (value) => value.url.href === 'file:///node_modules/bar/prebuilds/wasi-wasm32/bar.wasm'
+  )
+
+  t.is(addon.wasi, 'file:///caps.js')
+})
+
+test('wasi attribute, conflicting provider', (t) => {
+  t.exception(
+    () =>
+      traverseHosted({
+        'file:///foo.js':
+          "require('web', { with: { wasi: './a.js' } }); require('web', { with: { wasi: './b.js' } })",
+        'file:///a.js': 'module.exports = () => ({})',
+        'file:///b.js': 'module.exports = () => ({})'
+      }),
+    { code: 'ADDON_WASI_INCOMPATIBLE' }
+  )
+})
+
+test('resolutions map from a traversal, wasi attribute', (t) => {
+  const result = roundTrip(
+    {
+      ...hostedModules,
+      'file:///foo.js': "require('baz', { with: { host: 'wasi-wasm32', wasi: './caps.js' } })",
+      'file:///caps.js': 'module.exports = () => ({})'
+    },
+    { resolve: traverse.resolve.bare, host }
+  )
+
+  t.alike(result.preresolved.values, result.recorded.values)
+  t.alike(result.preresolved.return, result.recorded.return)
+})
+
+// `bar`, `qux` and `web` have addons, `bar` for both the default host and
+// `wasi-wasm32`, `qux` only for the default host and `web` only for
+// `wasi-wasm32`. `baz` and `pure` have none, and `baz` depends on `bar`.
+const hostedModules = {
+  'file:///node_modules/bar/package.json': '{ "name": "bar" }',
+  'file:///node_modules/bar/index.js': "module.exports = require('./binding')",
+  'file:///node_modules/bar/binding.js': "module.exports = require.addon('.')",
+  'file:///node_modules/bar/prebuilds/host/bar.bare': '<native code>',
+  'file:///node_modules/bar/prebuilds/wasi-wasm32/bar.wasm': '<webassembly>',
+  'file:///node_modules/qux/package.json': '{ "name": "qux" }',
+  'file:///node_modules/qux/index.js': "module.exports = require('./binding')",
+  'file:///node_modules/qux/binding.js': "module.exports = require.addon('.')",
+  'file:///node_modules/qux/prebuilds/host/qux.bare': '<native code>',
+  'file:///node_modules/baz/package.json': '{ "name": "baz" }',
+  'file:///node_modules/baz/index.js': "module.exports = require('bar')",
+  'file:///node_modules/pure/package.json': '{ "name": "pure" }',
+  'file:///node_modules/pure/index.js': 'module.exports = 42',
+  'file:///node_modules/web/package.json': '{ "name": "web" }',
+  'file:///node_modules/web/index.js': "module.exports = require.addon('.')",
+  'file:///node_modules/web/prebuilds/wasi-wasm32/web.wasm': '<webassembly>'
+}
+
+function traverseHosted(modules, entry = 'file:///foo.js') {
+  modules = { ...hostedModules, ...modules }
+
+  const result = expandSync(
+    traverse(
+      new URL(entry),
+      { resolve: traverse.resolve.bare, host },
+      (url) => modules[url.href] ?? null
+    )
+  )
+
+  result.imports = (href) => result.values.find((value) => value.url.href === href).imports
+
+  return result
+}
 
 function roundTrip(modules, opts = {}) {
   const readModule = (url) => modules[url.href] ?? null

@@ -219,11 +219,15 @@ Options are the same as `traverse()` for all functions.
 
 ### `const generator = traverse.package(url, source, artifacts, visited[, options])`
 
-### `const generator = traverse.preresolved(url, source, resolutions, artifacts, visited[, options])`
+### `const generator = traverse.preresolved(url, source, attributes, resolutions, artifacts, visited[, options])`
 
 ### `const generator = traverse.imports(parentURL, source, imports, artifacts, lexer, visited[, options])`
 
 ### `const generator = traverse.link(entry, specifier, condition, parentURL, imports, artifacts, visited[, options])`
+
+### `traverse.assertAddonContext(url, scope, context, addonContexts)`
+
+Record in `addonContexts` that the package at `scope` loads its addons in `context`, an object of the `host` and the URL of the `wasi` provider, either `null` for the defaults. Throws if it was recorded for another context, or if `url` doesn't load on `context.host`.
 
 ### `const generator = traverse.addons(parentURL, artifacts, visited[, options])`
 

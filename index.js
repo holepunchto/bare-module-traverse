@@ -192,9 +192,28 @@ exports.alias = function alias(url, opts = {}) {
 }
 
 exports.module = function* (url, source, attributes, artifacts, visited, opts = {}) {
-  const { resolutions = null, asset = false, probed, types } = opts
-
   attributes = attributes || {}
+
+  if (opts.contexts === undefined) opts = { ...opts, contexts: new Map() }
+  if (opts.addonContexts === undefined) opts = { ...opts, addonContexts: new Map() }
+
+  // The host and WASI attributes set the context that the addons of the module
+  // and everything it imports load in. A graph is walked again for each context
+  // it is imported under, even where it was visited before.
+  if (attributes.host !== undefined || attributes.wasi !== undefined) {
+    const { addonHost = null, addonWASI = null } = opts
+
+    const host = attributes.host === undefined ? addonHost : addonHostForAttribute(attributes.host)
+    const wasi = attributes.wasi === undefined ? addonWASI : attributes.wasi
+
+    if (host !== addonHost || wasi !== addonWASI) {
+      opts = { ...opts, addonHost: host, addonWASI: wasi }
+
+      visited = visitedFor(opts.contexts, contextKey(host, wasi))
+    }
+  }
+
+  const { resolutions = null, asset = false, probed, types } = opts
 
   if (visited.has(url.href)) {
     // An asset is only read for its bytes, so it doesn't care what type the
@@ -214,7 +233,9 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
   if (opts.prefixes === undefined) opts = { ...opts, prefixes: new Map() }
   if (opts.types === undefined) opts = { ...opts, types: new Map() }
 
-  const artifact = asset === true || moduleType(url, attributes, null, opts) === constants.ADDON
+  const artifact =
+    asset === true ||
+    (moduleType(url, attributes, null, opts) === constants.ADDON && !isWebAssembly(url))
 
   if (source === null) {
     if (url.protocol === 'data:') {
@@ -235,7 +256,9 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
   }
 
   if (resolutions) {
-    if (yield* exports.preresolved(url, source, resolutions, artifacts, visited, opts)) {
+    if (
+      yield* exports.preresolved(url, source, attributes, resolutions, artifacts, visited, opts)
+    ) {
       return true
     }
   }
@@ -291,14 +314,17 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
   }
 
   yield {
-    dependency: {
-      url: exports.alias(url, opts),
-      source,
-      type,
-      naturalType,
-      imports: compressImportsMap(imports),
-      lexer
-    }
+    dependency: withWASI(
+      {
+        url: exports.alias(url, opts),
+        source,
+        type,
+        naturalType,
+        imports: compressImportsMap(imports),
+        lexer
+      },
+      opts
+    )
   }
 
   return true
@@ -342,7 +368,15 @@ exports.package = function* (url, source, artifacts, visited, opts = {}) {
   return false
 }
 
-exports.preresolved = function* (url, source, resolutions, artifacts, visited, opts = {}) {
+exports.preresolved = function* (
+  url,
+  source,
+  attributes,
+  resolutions,
+  artifacts,
+  visited,
+  opts = {}
+) {
   const {
     builtinProtocol = 'builtin:',
     linkedProtocol = 'linked:',
@@ -352,6 +386,17 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
   const imports = resolutions[url.href]
 
   if (typeof imports !== 'object' || imports === null) return false
+
+  attributes = attributes || {}
+
+  const parentURL = url
+
+  // The resolutions map leaves out the import attributes, so they are read
+  // from the source instead.
+  const lexed =
+    opts.asset !== true && isJavaScript(moduleType(url, attributes, null, opts))
+      ? lex(source)
+      : null
 
   let info = null
 
@@ -382,7 +427,11 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
         } else if (url.protocol === deferredProtocol) {
           continue
         } else if (url.protocol === builtinProtocol || url.protocol === linkedProtocol) {
-          if (addon && artifacts !== null) addURL(artifacts.addons, url)
+          if (addon) {
+            assertImportedAddonContext(url, imports, parentURL, opts)
+
+            if (artifacts !== null) addURL(artifacts.addons, url)
+          }
         } else if (asset) {
           if (artifacts !== null) {
             const expanded = yield* expandAsset(url, artifacts, visited, { ...opts, importType: 0 })
@@ -402,13 +451,24 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
             }
           }
         } else {
-          if (addon && artifacts !== null) addURL(artifacts.addons, url)
+          if (addon) {
+            assertImportedAddonContext(url, imports, parentURL, opts)
+
+            if (artifacts !== null) addURL(artifacts.addons, url)
+          }
 
           yield {
-            children: exports.module(url, null, {}, artifacts, visited, {
-              ...opts,
-              importType: 0
-            }),
+            children: exports.module(
+              url,
+              null,
+              addon ? { type: 'addon' } : importAttributes(lexed, specifier, imports),
+              artifacts,
+              visited,
+              {
+                ...opts,
+                importType: 0
+              }
+            ),
             deferred: false
           }
         }
@@ -424,26 +484,27 @@ exports.preresolved = function* (url, source, resolutions, artifacts, visited, o
     }
   }
 
-  const type = moduleType(url, {}, info, opts)
+  const type = moduleType(url, attributes, info, opts)
 
   const lexer = { imports: [], exports: [] }
 
-  if (opts.asset !== true && (type === constants.SCRIPT || type === constants.MODULE)) {
-    const lexed = lex(source)
-
+  if (lexed !== null && isJavaScript(type)) {
     lexer.imports = lexed.imports
     lexer.exports = lexed.exports
   }
 
   yield {
-    dependency: {
-      url: exports.alias(url, opts),
-      source,
-      type,
-      naturalType: type,
-      imports: compressImportsMap(imports),
-      lexer
-    }
+    dependency: withWASI(
+      {
+        url: exports.alias(url, opts),
+        source,
+        type,
+        naturalType: naturalModuleType(url, attributes, info, type, opts),
+        imports: compressImportsMap(imports),
+        lexer
+      },
+      opts
+    )
   }
 
   return true
@@ -491,8 +552,10 @@ exports.link = function* (
   visited,
   opts = {}
 ) {
-  if (entry.attributes.imports) {
-    const specifier = entry.attributes.imports
+  for (const name of ['imports', 'wasi']) {
+    const specifier = entry.attributes[name]
+
+    if (!specifier) continue
 
     yield* resolveImport(
       { type: 0, specifier, names: [], attributes: {}, position: [0, 0, 0] },
@@ -515,7 +578,8 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
     builtinProtocol = 'builtin:',
     linkedProtocol = 'linked:',
     deferredProtocol = 'deferred:',
-    deferUnresolved = false
+    deferUnresolved = false,
+    loadable = null
   } = opts
 
   const matchedConditions = []
@@ -524,7 +588,11 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
 
   matchedConditions.push(condition)
 
-  const resolver = resolve(entry, parentURL, opts)
+  const resolver = resolve(
+    entry,
+    parentURL,
+    condition === 'addon' && opts.addonHost ? { ...opts, hosts: [opts.addonHost] } : opts
+  )
   const candidates = []
 
   let next = resolver.next()
@@ -548,6 +616,8 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
         url.protocol === linkedProtocol ||
         url.protocol === deferredProtocol
       ) {
+        if (condition === 'addon') assertImportedAddonContext(url, imports, parentURL, opts)
+
         addResolution(imports, specifier, matchedConditions, url)
 
         resolved = true
@@ -565,7 +635,7 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
         condition === 'addon' ||
         moduleType(url, entry.attributes, null, opts) === constants.ADDON
       ) {
-        let exists = yield { probe: url }
+        let exists = isWebAssembly(url) ? undefined : yield { probe: url }
         let source = null
 
         if (exists === undefined) {
@@ -573,13 +643,15 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
           exists = source !== null
         }
 
-        if (exists) {
-          resolution = yield* postresolve(url)
+        if (exists) resolution = yield* postresolve(url)
+
+        if (exists && (loadable === null || loadable(resolution))) {
+          assertImportedAddonContext(resolution, imports, parentURL, opts)
 
           addResolution(imports, specifier, matchedConditions, exports.alias(resolution, opts))
 
           yield {
-            children: exports.module(resolution, source, {}, artifacts, visited, {
+            children: exports.module(resolution, source, { type: 'addon' }, artifacts, visited, {
               ...opts,
               probed: true
             }),
@@ -606,6 +678,10 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
 
           if (attributes.imports) {
             attributes = { ...attributes, imports: imports[attributes.imports].default }
+          }
+
+          if (attributes.wasi) {
+            attributes = { ...attributes, wasi: imports[attributes.wasi].default }
           }
 
           yield {
@@ -657,7 +733,109 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
   }
 }
 
-const ADDON_EXTENSION = /\.(bare|node)$/
+const ADDON_EXTENSION = /\.(bare|node|wasm)$/
+
+function importAttributes(lexed, specifier, imports) {
+  const attributes = {}
+
+  if (lexed === null) return attributes
+
+  for (const entry of lexed.imports) {
+    if (entry.specifier !== specifier) continue
+
+    for (const name of ['type', 'host', 'wasi']) {
+      if (typeof entry.attributes[name] === 'string') attributes[name] = entry.attributes[name]
+    }
+  }
+
+  if (attributes.wasi !== undefined) attributes.wasi = defaultResolution(imports[attributes.wasi])
+
+  return attributes
+}
+
+function defaultResolution(entry) {
+  return typeof entry === 'string' ? entry : entry.default
+}
+
+// Only hosts that load on any platform may be asked for, so that an import
+// can't pick the native addons of another platform.
+const portableHosts = ['wasi-wasm32']
+
+function addonHostForAttribute(host) {
+  if (portableHosts.includes(host)) return host
+
+  throw errors.UNKNOWN_ADDON_HOST(`Addon host '${host}' is not supported`)
+}
+
+function contextKey(host, wasi) {
+  return JSON.stringify([host, wasi])
+}
+
+function visitedFor(contexts, key) {
+  let visited = contexts.get(key)
+
+  if (visited === undefined) contexts.set(key, (visited = new Set()))
+
+  return visited
+}
+
+function withWASI(dependency, opts) {
+  const { addonWASI = null } = opts
+
+  if (addonWASI !== null && dependency.type === constants.ADDON && isWebAssembly(dependency.url)) {
+    dependency.wasi = addonWASI
+  }
+
+  return dependency
+}
+
+function assertImportedAddonContext(url, imports, parentURL, opts) {
+  const { addonHost = null, addonWASI = null, addonContexts } = opts
+
+  exports.assertAddonContext(
+    url,
+    imports['#package'] || parentURL.href,
+    { host: addonHost, wasi: addonWASI },
+    addonContexts
+  )
+}
+
+exports.assertAddonContext = function assertAddonContext(url, scope, context, addonContexts) {
+  if (url.protocol === 'builtin:') return
+
+  const { host = null } = context
+
+  if (host !== null && !isWebAssembly(url)) {
+    throw errors.ADDON_HOST_INCOMPATIBLE(
+      `Addon '${url.href}' is not a WebAssembly addon, but '${host}' was asked for`
+    )
+  }
+
+  // Only WebAssembly addons are given WASI capabilities.
+  const wasi = isWebAssembly(url) ? context.wasi || null : null
+
+  const recorded = addonContexts.get(scope)
+
+  if (recorded === undefined) {
+    addonContexts.set(scope, { host, wasi })
+  } else if (recorded.host !== host) {
+    throw errors.ADDON_HOST_INCOMPATIBLE(
+      `Addons of '${scope}' are already resolved for ${recorded.host === null ? 'the default hosts' : `'${recorded.host}'`}`
+    )
+  } else if (recorded.wasi !== wasi) {
+    throw errors.ADDON_WASI_INCOMPATIBLE(
+      `Addons of '${scope}' are already given ${recorded.wasi === null ? 'the default WASI capabilities' : `the WASI capabilities of '${recorded.wasi}'`}`
+    )
+  }
+}
+
+function isJavaScript(type) {
+  return type === constants.SCRIPT || type === constants.MODULE
+}
+
+function isWebAssembly(url) {
+  return url.pathname.endsWith('.wasm')
+}
 
 exports.addons = function* (parentURL, artifacts, visited, opts = {}) {
   let yielded = false

@@ -174,9 +174,22 @@ declare namespace traverse {
     opts?: TraverseOptions
   ): Traversal
 
+  interface AddonContext {
+    host: string | null
+    wasi: string | null
+  }
+
+  export function assertAddonContext(
+    url: URL,
+    scope: string,
+    context: Partial<AddonContext>,
+    addonContexts: Map<string, AddonContext>
+  ): void
+
   export function preresolved(
     url: URL,
     source: string | Buffer,
+    attributes: Record<string, string> | null,
     resolution: ResolutionsMap,
     artifacts: Artifacts,
     visited: Set<string>,
