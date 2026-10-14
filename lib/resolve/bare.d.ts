@@ -5,6 +5,11 @@ interface BareResolveOptions extends ResolveOptions {
   linked?: boolean
   host?: string
   hosts?: string[]
+  /**
+   * The conditions that may be targeted in addition to those of each host,
+   * either a list or a list of lists to try in turn.
+   */
+  conditions?: string[] | string[][]
 }
 
 /**
