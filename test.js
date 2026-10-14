@@ -561,6 +561,17 @@ test('require.addon', (t) => {
       }
     },
     {
+      url: new URL('file:///package.json'),
+      source: '{ "name": "foo" }',
+      type: constants.JSON,
+      naturalType: constants.JSON,
+      imports: {},
+      lexer: {
+        imports: [],
+        exports: []
+      }
+    },
+    {
       url: new URL('file:///prebuilds/host/foo.bare'),
       source: '<native code>',
       type: constants.ADDON,
@@ -568,17 +579,6 @@ test('require.addon', (t) => {
       imports: {
         '#package': 'file:///package.json'
       },
-      lexer: {
-        imports: [],
-        exports: []
-      }
-    },
-    {
-      url: new URL('file:///package.json'),
-      source: '{ "name": "foo" }',
-      type: constants.JSON,
-      naturalType: constants.JSON,
-      imports: {},
       lexer: {
         imports: [],
         exports: []
@@ -634,6 +634,17 @@ test('require.addon, referrer', (t) => {
       }
     },
     {
+      url: new URL('file:///package.json'),
+      source: '{ "name": "foo" }',
+      type: constants.JSON,
+      naturalType: constants.JSON,
+      imports: {},
+      lexer: {
+        imports: [],
+        exports: []
+      }
+    },
+    {
       url: new URL('file:///prebuilds/host/foo.bare'),
       source: '<native code>',
       type: constants.ADDON,
@@ -641,17 +652,6 @@ test('require.addon, referrer', (t) => {
       imports: {
         '#package': 'file:///package.json'
       },
-      lexer: {
-        imports: [],
-        exports: []
-      }
-    },
-    {
-      url: new URL('file:///package.json'),
-      source: '{ "name": "foo" }',
-      type: constants.JSON,
-      naturalType: constants.JSON,
-      imports: {},
       lexer: {
         imports: [],
         exports: []
@@ -747,6 +747,17 @@ test('require.addon, default specifier', (t) => {
       }
     },
     {
+      url: new URL('file:///package.json'),
+      source: '{ "name": "foo" }',
+      type: constants.JSON,
+      naturalType: constants.JSON,
+      imports: {},
+      lexer: {
+        imports: [],
+        exports: []
+      }
+    },
+    {
       url: new URL('file:///prebuilds/host/foo.bare'),
       source: '<native code>',
       type: constants.ADDON,
@@ -754,17 +765,6 @@ test('require.addon, default specifier', (t) => {
       imports: {
         '#package': 'file:///package.json'
       },
-      lexer: {
-        imports: [],
-        exports: []
-      }
-    },
-    {
-      url: new URL('file:///package.json'),
-      source: '{ "name": "foo" }',
-      type: constants.JSON,
-      naturalType: constants.JSON,
-      imports: {},
       lexer: {
         imports: [],
         exports: []
@@ -949,19 +949,6 @@ test('require.addon, hosts list', (t) => {
       }
     },
     {
-      url: new URL('file:///prebuilds/host-b/foo.bare'),
-      source: '<native code b>',
-      type: constants.ADDON,
-      naturalType: constants.ADDON,
-      imports: {
-        '#package': 'file:///package.json'
-      },
-      lexer: {
-        imports: [],
-        exports: []
-      }
-    },
-    {
       url: new URL('file:///package.json'),
       source: '{ "name": "foo" }',
       type: constants.JSON,
@@ -975,6 +962,19 @@ test('require.addon, hosts list', (t) => {
     {
       url: new URL('file:///prebuilds/host-a/foo.bare'),
       source: '<native code a>',
+      type: constants.ADDON,
+      naturalType: constants.ADDON,
+      imports: {
+        '#package': 'file:///package.json'
+      },
+      lexer: {
+        imports: [],
+        exports: []
+      }
+    },
+    {
+      url: new URL('file:///prebuilds/host-b/foo.bare'),
+      source: '<native code b>',
       type: constants.ADDON,
       naturalType: constants.ADDON,
       imports: {
@@ -1038,6 +1038,17 @@ test('require.addon, webassembly fallback', (t) => {
       }
     },
     {
+      url: new URL('file:///package.json'),
+      source: '{ "name": "foo" }',
+      type: constants.JSON,
+      naturalType: constants.JSON,
+      imports: {},
+      lexer: {
+        imports: [],
+        exports: []
+      }
+    },
+    {
       url: new URL('file:///prebuilds/wasi-wasm32/foo.wasm'),
       source: '<webassembly>',
       type: constants.ADDON,
@@ -1045,17 +1056,6 @@ test('require.addon, webassembly fallback', (t) => {
       imports: {
         '#package': 'file:///package.json'
       },
-      lexer: {
-        imports: [],
-        exports: []
-      }
-    },
-    {
-      url: new URL('file:///package.json'),
-      source: '{ "name": "foo" }',
-      type: constants.JSON,
-      naturalType: constants.JSON,
-      imports: {},
       lexer: {
         imports: [],
         exports: []
@@ -1168,24 +1168,24 @@ test('require.addon, hosts list, host variants', (t) => {
       }
     },
     {
-      url: new URL('file:///prebuilds/host-a-b/foo.bare'),
-      source: '<native code a b>',
-      type: constants.ADDON,
-      naturalType: constants.ADDON,
-      imports: {
-        '#package': 'file:///package.json'
-      },
+      url: new URL('file:///package.json'),
+      source: '{ "name": "foo" }',
+      type: constants.JSON,
+      naturalType: constants.JSON,
+      imports: {},
       lexer: {
         imports: [],
         exports: []
       }
     },
     {
-      url: new URL('file:///package.json'),
-      source: '{ "name": "foo" }',
-      type: constants.JSON,
-      naturalType: constants.JSON,
-      imports: {},
+      url: new URL('file:///prebuilds/host/foo.bare'),
+      source: '<native code>',
+      type: constants.ADDON,
+      naturalType: constants.ADDON,
+      imports: {
+        '#package': 'file:///package.json'
+      },
       lexer: {
         imports: [],
         exports: []
@@ -1205,8 +1205,8 @@ test('require.addon, hosts list, host variants', (t) => {
       }
     },
     {
-      url: new URL('file:///prebuilds/host/foo.bare'),
-      source: '<native code>',
+      url: new URL('file:///prebuilds/host-a-b/foo.bare'),
+      source: '<native code a b>',
       type: constants.ADDON,
       naturalType: constants.ADDON,
       imports: {
@@ -2546,6 +2546,17 @@ test('package.json#assets, also imported as module with type attribute', (t) => 
       }
     },
     {
+      url: new URL('file:///package.json'),
+      source: '{ "name": "foo", "assets": ["bar/"] }',
+      type: constants.JSON,
+      naturalType: constants.JSON,
+      imports: {},
+      lexer: {
+        imports: [],
+        exports: []
+      }
+    },
+    {
       url: new URL('file:///bar/baz.js'),
       source: 'module.exports = 42',
       type: constants.TEXT,
@@ -2553,17 +2564,6 @@ test('package.json#assets, also imported as module with type attribute', (t) => 
       imports: {
         '#package': 'file:///package.json'
       },
-      lexer: {
-        imports: [],
-        exports: []
-      }
-    },
-    {
-      url: new URL('file:///package.json'),
-      source: '{ "name": "foo", "assets": ["bar/"] }',
-      type: constants.JSON,
-      naturalType: constants.JSON,
-      imports: {},
       lexer: {
         imports: [],
         exports: []
@@ -3674,19 +3674,6 @@ test('conditional imports, conditions matrix', (t) => {
       }
     },
     {
-      url: new URL('file:///b.js'),
-      source: "module.exports = 'b'",
-      type: constants.SCRIPT,
-      naturalType: constants.SCRIPT,
-      imports: {
-        '#package': 'file:///package.json'
-      },
-      lexer: {
-        imports: [],
-        exports: []
-      }
-    },
-    {
       url: new URL('file:///package.json'),
       source:
         '{ "name": "foo", "imports": { "#bar": { "a": "./a.js", "b": "./b.js", "c": "./c.js" } } }',
@@ -3701,6 +3688,19 @@ test('conditional imports, conditions matrix', (t) => {
     {
       url: new URL('file:///a.js'),
       source: "module.exports = 'a'",
+      type: constants.SCRIPT,
+      naturalType: constants.SCRIPT,
+      imports: {
+        '#package': 'file:///package.json'
+      },
+      lexer: {
+        imports: [],
+        exports: []
+      }
+    },
+    {
+      url: new URL('file:///b.js'),
+      source: "module.exports = 'b'",
       type: constants.SCRIPT,
       naturalType: constants.SCRIPT,
       imports: {
@@ -3761,6 +3761,17 @@ test('imports attribute', (t) => {
       }
     },
     {
+      url: new URL('file:///imports.json'),
+      source: '{ "baz": "/baz.js" }',
+      type: constants.JSON,
+      naturalType: constants.JSON,
+      imports: {},
+      lexer: {
+        imports: [],
+        exports: []
+      }
+    },
+    {
       url: new URL('file:///bar.js'),
       source: "const baz = require('baz')",
       type: constants.SCRIPT,
@@ -3786,17 +3797,6 @@ test('imports attribute', (t) => {
       source: 'module.exports = 42',
       type: constants.SCRIPT,
       naturalType: constants.SCRIPT,
-      imports: {},
-      lexer: {
-        imports: [],
-        exports: []
-      }
-    },
-    {
-      url: new URL('file:///imports.json'),
-      source: '{ "baz": "/baz.js" }',
-      type: constants.JSON,
-      naturalType: constants.JSON,
       imports: {},
       lexer: {
         imports: [],
@@ -4399,17 +4399,6 @@ test('import, TypeScript source, package type module', (t) => {
       }
     },
     {
-      url: new URL('file:///bar.ts'),
-      source: 'export default 42',
-      type: constants.MODULE,
-      naturalType: constants.MODULE,
-      imports: { '#package': 'file:///package.json' },
-      lexer: {
-        imports: [],
-        exports: [{ name: 'default', position: [0, 7, 14] }]
-      }
-    },
-    {
       url: new URL('file:///package.json'),
       source: '{ "type": "module" }',
       type: constants.JSON,
@@ -4418,6 +4407,17 @@ test('import, TypeScript source, package type module', (t) => {
       lexer: {
         imports: [],
         exports: []
+      }
+    },
+    {
+      url: new URL('file:///bar.ts'),
+      source: 'export default 42',
+      type: constants.MODULE,
+      naturalType: constants.MODULE,
+      imports: { '#package': 'file:///package.json' },
+      lexer: {
+        imports: [],
+        exports: [{ name: 'default', position: [0, 7, 14] }]
       }
     }
   ])
@@ -5848,9 +5848,219 @@ test('resolutions map from a traversal, wasi attribute', (t) => {
   t.alike(result.preresolved.return, result.recorded.return)
 })
 
+test('host attribute, conditional import', (t) => {
+  const result = traverseHosted({
+    'file:///foo.js': "require('split', { with: { host: 'wasi-wasm32' } })"
+  })
+
+  t.is(
+    result.imports('file:///node_modules/split/binding.js')['#binding'],
+    'file:///node_modules/split-wasi-wasm32/index.js'
+  )
+  t.alike(result.imports('file:///node_modules/split-wasi-wasm32/index.js')['.'], {
+    addon: 'file:///node_modules/split-wasi-wasm32/prebuilds/wasi-wasm32/split-wasi-wasm32.wasm'
+  })
+})
+
+test('host attribute, conditional import without a host attribute', (t) => {
+  const result = traverseHosted({
+    'file:///foo.js': "require('split')"
+  })
+
+  t.alike(result.imports('file:///node_modules/split/binding.js')['#binding'], {
+    host: 'file:///node_modules/split-host/index.js',
+    wasi: 'file:///node_modules/split-wasi-wasm32/index.js'
+  })
+})
+
+test('host attribute, conditional import that lists the native host first', (t) => {
+  t.exception(
+    () =>
+      traverseHosted({
+        'file:///foo.js': "require('split', { with: { host: 'wasi-wasm32' } })",
+        'file:///node_modules/split/package.json': JSON.stringify({
+          name: 'split',
+          imports: {
+            '#binding': {
+              host: 'split-host',
+              wasi: { wasm32: 'split-wasi-wasm32' }
+            }
+          }
+        })
+      }),
+    { code: 'ADDON_NOT_FOUND' }
+  )
+})
+
+test('host attribute, conditional import after default import', (t) => {
+  t.exception(
+    () =>
+      traverseHosted({
+        'file:///foo.js': "require('split'); require('split', { with: { host: 'wasi-wasm32' } })"
+      }),
+    {
+      code: 'ADDON_HOST_INCOMPATIBLE',
+      message:
+        /Addons of 'file:\/\/\/node_modules\/split-wasi-wasm32\/package\.json' are already resolved for the default hosts/
+    }
+  )
+})
+
+test('default import after host attribute, conditional import', (t) => {
+  t.exception(
+    () =>
+      traverseHosted({
+        'file:///foo.js': "require('split', { with: { host: 'wasi-wasm32' } }); require('split')"
+      }),
+    {
+      code: 'ADDON_HOST_INCOMPATIBLE',
+      message:
+        /Addons of 'file:\/\/\/node_modules\/split-wasi-wasm32\/package\.json' are already resolved for 'wasi-wasm32'/
+    }
+  )
+})
+
+test('host attribute, conditional import after default import without the webassembly fallback', (t) => {
+  t.exception(
+    () =>
+      traverseHosted(
+        {
+          'file:///foo.js': "require('split'); require('split', { with: { host: 'wasi-wasm32' } })"
+        },
+        'file:///foo.js',
+        { hosts: [host] }
+      ),
+    {
+      code: 'ADDON_HOST_INCOMPATIBLE',
+      message:
+        /Addon 'file:\/\/\/node_modules\/split-host\/prebuilds\/host\/split-host\.bare' is not a WebAssembly addon/
+    }
+  )
+})
+
+test('default import after host attribute, conditional import without the webassembly fallback', (t) => {
+  t.exception(
+    () =>
+      traverseHosted(
+        {
+          'file:///foo.js': "require('split', { with: { host: 'wasi-wasm32' } }); require('split')"
+        },
+        'file:///foo.js',
+        { hosts: [host] }
+      ),
+    { code: 'ADDON_HOST_INCOMPATIBLE' }
+  )
+})
+
+test('host attribute, shared module with native conditional imports', (t) => {
+  const result = traverseHosted({
+    'file:///foo.js': "require('platform'); require('split', { with: { host: 'wasi-wasm32' } })",
+    'file:///node_modules/split/index.js':
+      "require('platform'); module.exports = require('./binding')"
+  })
+
+  t.alike(result.imports('file:///node_modules/platform/index.js')['#impl'], {
+    host: 'file:///node_modules/platform/host.js',
+    default: 'file:///node_modules/platform/other.js'
+  })
+})
+
+test('host attribute, native conditional import', (t) => {
+  const result = traverseHosted({
+    'file:///foo.js': "require('platform', { with: { host: 'wasi-wasm32' } })"
+  })
+
+  t.is(
+    result.imports('file:///node_modules/platform/index.js')['#impl'],
+    'file:///node_modules/platform/host.js'
+  )
+  t.absent(result.values.some((value) => value.url.href.endsWith('/other.js')))
+})
+
+test('host attribute, conditional asset', (t) => {
+  const result = traverseHosted({
+    'file:///foo.js': "require('split', { with: { host: 'wasi-wasm32' } })",
+    'file:///node_modules/split/index.js':
+      "require.asset('#data'); module.exports = require('./binding')",
+    'file:///node_modules/split/package.json': JSON.stringify({
+      name: 'split',
+      imports: {
+        '#binding': { wasi: { wasm32: 'split-wasi-wasm32' }, host: 'split-host' },
+        '#data': { wasi: './wasi.txt', default: './default.txt' }
+      }
+    }),
+    'file:///node_modules/split/wasi.txt': 'wasi',
+    'file:///node_modules/split/default.txt': 'default'
+  })
+
+  t.alike(result.imports('file:///node_modules/split/index.js')['#data'], {
+    asset: 'file:///node_modules/split/wasi.txt'
+  })
+})
+
+test('resolutions map from a traversal, host attribute, conditional import', (t) => {
+  const result = roundTrip(
+    {
+      ...hostedModules,
+      'file:///foo.js': "require('split', { with: { host: 'wasi-wasm32' } })"
+    },
+    { resolve: traverse.resolve.bare, host }
+  )
+
+  t.alike(result.preresolved.values, result.recorded.values)
+  t.alike(result.preresolved.return, result.recorded.return)
+})
+
+test('resolutions map, host attribute, conditional import after default import', (t) => {
+  const recorded = traverseHosted({ 'file:///foo.js': "require('split')" })
+
+  const resolutions = {}
+
+  for (const { url, imports } of recorded.values) {
+    if (url.href.startsWith('file:///node_modules/')) resolutions[url.href] = imports
+  }
+
+  t.exception(
+    () =>
+      traverseHosted(
+        {
+          'file:///foo.js': "require('split'); require('split', { with: { host: 'wasi-wasm32' } })"
+        },
+        'file:///foo.js',
+        { resolutions }
+      ),
+    {
+      code: 'ADDON_HOST_INCOMPATIBLE',
+      message:
+        /Addons of 'file:\/\/\/node_modules\/split-wasi-wasm32\/package\.json' are already resolved for the default hosts/
+    }
+  )
+})
+
+test('resolve.bare, targeted conditions', (t) => {
+  const result = traverseHosted(
+    {
+      'file:///foo.js': "require('#bar')",
+      'file:///package.json': JSON.stringify({
+        name: 'foo',
+        imports: { '#bar': { custom: './custom.js', default: './default.js' } }
+      }),
+      'file:///custom.js': '',
+      'file:///default.js': ''
+    },
+    'file:///foo.js',
+    { conditions: ['custom'] }
+  )
+
+  t.alike(result.imports('file:///foo.js')['#bar'], 'file:///custom.js')
+})
+
 // `bar`, `qux` and `web` have addons, `bar` for both the default host and
 // `wasi-wasm32`, `qux` only for the default host and `web` only for
 // `wasi-wasm32`. `baz` and `pure` have none, and `baz` depends on `bar`.
+// `split` imports its addon from `split-host` or `split-wasi-wasm32` by
+// condition, and `platform` imports a module by the condition of the default
+// host.
 const hostedModules = {
   'file:///node_modules/bar/package.json': '{ "name": "bar" }',
   'file:///node_modules/bar/index.js': "module.exports = require('./binding')",
@@ -5867,16 +6077,38 @@ const hostedModules = {
   'file:///node_modules/pure/index.js': 'module.exports = 42',
   'file:///node_modules/web/package.json': '{ "name": "web" }',
   'file:///node_modules/web/index.js': "module.exports = require.addon('.')",
-  'file:///node_modules/web/prebuilds/wasi-wasm32/web.wasm': '<webassembly>'
+  'file:///node_modules/web/prebuilds/wasi-wasm32/web.wasm': '<webassembly>',
+  'file:///node_modules/split/package.json': JSON.stringify({
+    name: 'split',
+    imports: {
+      '#binding': { wasi: { wasm32: 'split-wasi-wasm32' }, host: 'split-host' }
+    }
+  }),
+  'file:///node_modules/split/index.js': "module.exports = require('./binding')",
+  'file:///node_modules/split/binding.js': "module.exports = require('#binding')",
+  'file:///node_modules/split-host/package.json': '{ "name": "split-host" }',
+  'file:///node_modules/split-host/index.js': "module.exports = require.addon('.')",
+  'file:///node_modules/split-host/prebuilds/host/split-host.bare': '<native code>',
+  'file:///node_modules/split-wasi-wasm32/package.json': '{ "name": "split-wasi-wasm32" }',
+  'file:///node_modules/split-wasi-wasm32/index.js': "module.exports = require.addon('.')",
+  'file:///node_modules/split-wasi-wasm32/prebuilds/wasi-wasm32/split-wasi-wasm32.wasm':
+    '<webassembly>',
+  'file:///node_modules/platform/package.json': JSON.stringify({
+    name: 'platform',
+    imports: { '#impl': { host: './host.js', default: './other.js' } }
+  }),
+  'file:///node_modules/platform/index.js': "module.exports = require('#impl')",
+  'file:///node_modules/platform/host.js': '',
+  'file:///node_modules/platform/other.js': ''
 }
 
-function traverseHosted(modules, entry = 'file:///foo.js') {
+function traverseHosted(modules, entry = 'file:///foo.js', opts = {}) {
   modules = { ...hostedModules, ...modules }
 
   const result = expandSync(
     traverse(
       new URL(entry),
-      { resolve: traverse.resolve.bare, host },
+      { resolve: traverse.resolve.bare, host, ...opts },
       (url) => modules[url.href] ?? null
     )
   )

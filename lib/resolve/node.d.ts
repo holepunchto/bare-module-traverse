@@ -4,6 +4,11 @@ import { type ResolveOptions, type Resolver } from 'bare-addon-resolve'
 interface NodeResolveOptions extends ResolveOptions {
   host?: string
   hosts?: string[]
+  /**
+   * The conditions that may be targeted in addition to those of each host,
+   * either a list or a list of lists to try in turn.
+   */
+  conditions?: string[] | string[][]
 }
 
 /**

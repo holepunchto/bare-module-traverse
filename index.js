@@ -98,7 +98,7 @@ module.exports = exports = function traverse(
       }
 
       while (queue.length > 0 || deferred.length > 0) {
-        yield* drive(queue.length > 0 ? queue.pop() : deferred.shift())
+        yield* drive(queue.length > 0 ? queue.shift() : deferred.shift())
       }
 
       return artifacts
@@ -160,7 +160,7 @@ module.exports = exports = function traverse(
       }
 
       while (queue.length > 0 || deferred.length > 0) {
-        yield* drive(queue.length > 0 ? queue.pop() : deferred.shift())
+        yield* drive(queue.length > 0 ? queue.shift() : deferred.shift())
       }
 
       return artifacts
@@ -196,10 +196,13 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
 
   if (opts.contexts === undefined) opts = { ...opts, contexts: new Map() }
   if (opts.addonContexts === undefined) opts = { ...opts, addonContexts: new Map() }
+  if (opts.resolvedImports === undefined) opts = { ...opts, resolvedImports: new Map() }
 
   // The host and WASI attributes set the context that the addons of the module
   // and everything it imports load in. A graph is walked again for each context
-  // it is imported under, even where it was visited before.
+  // it is imported under, even where it was visited before. The conditions of
+  // the host are added to those that may be targeted, so that the order of the
+  // conditions in a package still decides between them and the native ones.
   if (attributes.host !== undefined || attributes.wasi !== undefined) {
     const { addonHost = null, addonWASI = null } = opts
 
@@ -209,7 +212,11 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
     if (host !== addonHost || wasi !== addonWASI) {
       opts = { ...opts, addonHost: host, addonWASI: wasi }
 
-      visited = visitedFor(opts.contexts, contextKey(host, wasi))
+      if (host !== addonHost) {
+        opts.conditions = withConditions(opts.conditions, host.split('-'))
+      }
+
+      visited = visitedFor(opts.contexts, host, wasi)
     }
   }
 
@@ -255,9 +262,16 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
     }
   }
 
-  if (resolutions) {
+  // A module resolves its imports once, however many contexts it is loaded in,
+  // so a context that reaches it after another walks what the other resolved.
+  // The addons that are reached are then checked against the context.
+  const resolved = opts.resolvedImports.get(url.href)
+
+  const preresolved = resolved === undefined ? resolutions : { [url.href]: resolved }
+
+  if (preresolved) {
     if (
-      yield* exports.preresolved(url, source, attributes, resolutions, artifacts, visited, opts)
+      yield* exports.preresolved(url, source, attributes, preresolved, artifacts, visited, opts)
     ) {
       return true
     }
@@ -313,6 +327,10 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
     }
   }
 
+  const compressed = compressImportsMap(imports)
+
+  opts.resolvedImports.set(url.href, compressed)
+
   yield {
     dependency: withWASI(
       {
@@ -320,7 +338,7 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
         source,
         type,
         naturalType,
-        imports: compressImportsMap(imports),
+        imports: compressed,
         lexer
       },
       opts
@@ -767,16 +785,22 @@ function addonHostForAttribute(host) {
   throw errors.UNKNOWN_ADDON_HOST(`Addon host '${host}' is not supported`)
 }
 
-function contextKey(host, wasi) {
-  return JSON.stringify([host, wasi])
+function withConditions(conditions = [], added) {
+  if (conditions.every((condition) => typeof condition === 'string')) {
+    return [...conditions, ...added]
+  }
+
+  return conditions.map((subset) => [...subset, ...added])
 }
 
-function visitedFor(contexts, key) {
-  let visited = contexts.get(key)
+function visitedFor(contexts, host, wasi) {
+  const key = JSON.stringify([host, wasi])
 
-  if (visited === undefined) contexts.set(key, (visited = new Set()))
+  let context = contexts.get(key)
 
-  return visited
+  if (context === undefined) contexts.set(key, (context = { host, wasi, visited: new Set() }))
+
+  return context.visited
 }
 
 function withWASI(dependency, opts) {
