@@ -1,14 +1,16 @@
+import URL from 'bare-url'
 import { type Import } from 'bare-module-lexer'
-import { type ResolveOptions, type Resolver } from 'bare-addon-resolve'
+import { type Conditions, type ResolveOptions as ModuleResolveOptions } from 'bare-module-resolve'
+import { type ResolveOptions as AddonResolveOptions, type Resolver } from 'bare-addon-resolve'
 
-interface NodeResolveOptions extends ResolveOptions {
+interface NodeResolveOptions extends ModuleResolveOptions, AddonResolveOptions {
   host?: string
   hosts?: string[]
   /**
    * The conditions that may be targeted in addition to those of each host,
-   * either a list or a list of lists to try in turn.
+   * either a list or nested lists to try in turn.
    */
-  conditions?: string[] | string[][]
+  conditions?: Conditions
 }
 
 /**

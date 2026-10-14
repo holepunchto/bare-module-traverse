@@ -3,9 +3,10 @@ import Buffer from 'bare-buffer'
 import {
   type ConditionalSpecifier,
   type ImportsMap,
-  type ResolutionsMap
+  type ResolutionsMap,
+  type ResolveOptions as ModuleResolveOptions
 } from 'bare-module-resolve'
-import { type ResolveOptions, type Resolver } from 'bare-addon-resolve'
+import { type ResolveOptions as AddonResolveOptions, type Resolver } from 'bare-addon-resolve'
 import { type Import, type Export } from 'bare-module-lexer'
 
 interface Dependency {
@@ -40,6 +41,8 @@ type AliasableExtension =
   | '.node'
   | '.bin'
   | '.txt'
+
+interface ResolveOptions extends ModuleResolveOptions, AddonResolveOptions {}
 
 interface TraverseOptions extends ResolveOptions {
   /**

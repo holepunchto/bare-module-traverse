@@ -790,7 +790,7 @@ function withConditions(conditions = [], added) {
     return [...conditions, ...added]
   }
 
-  return conditions.map((subset) => [...subset, ...added])
+  return conditions.map((subset) => withConditions(subset, added))
 }
 
 function visitedFor(contexts, host, wasi) {

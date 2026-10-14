@@ -6055,6 +6055,48 @@ test('resolve.bare, targeted conditions', (t) => {
   t.alike(result.imports('file:///foo.js')['#bar'], 'file:///custom.js')
 })
 
+test('resolve.bare, nested targeted conditions', (t) => {
+  const modules = {
+    'file:///foo.js': "require('#bar')",
+    'file:///package.json': JSON.stringify({
+      name: 'foo',
+      imports: { '#bar': { a: './a.js', b: './b.js', c: './c.js', default: './default.js' } }
+    }),
+    'file:///a.js': '',
+    'file:///b.js': '',
+    'file:///c.js': '',
+    'file:///default.js': ''
+  }
+
+  const result = traverseHosted(modules, 'file:///foo.js', {
+    conditions: [[['a'], ['b']], [['c']]]
+  })
+
+  t.alike(
+    result.imports('file:///foo.js')['#bar'],
+    traverseHosted(modules, 'file:///foo.js', { conditions: [['a'], ['b'], ['c']] }).imports(
+      'file:///foo.js'
+    )['#bar']
+  )
+})
+
+test('host attribute, nested targeted conditions', (t) => {
+  const modules = {
+    'file:///foo.js': "require('platform', { with: { host: 'wasi-wasm32' } })"
+  }
+
+  const result = traverseHosted(modules, 'file:///foo.js', {
+    conditions: [[['a'], ['b']], [['c']]]
+  })
+
+  t.alike(
+    result.imports('file:///node_modules/platform/index.js'),
+    traverseHosted(modules, 'file:///foo.js', { conditions: [['a'], ['b'], ['c']] }).imports(
+      'file:///node_modules/platform/index.js'
+    )
+  )
+})
+
 // `bar`, `qux` and `web` have addons, `bar` for both the default host and
 // `wasi-wasm32`, `qux` only for the default host and `web` only for
 // `wasi-wasm32`. `baz` and `pure` have none, and `baz` depends on `bar`.
