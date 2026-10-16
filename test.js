@@ -1,4 +1,5 @@
 const test = require('brittle')
+const Bundle = require('bare-bundle')
 const lex = require('bare-module-lexer')
 const traverse = require('.')
 const constants = traverse.constants
@@ -4471,7 +4472,7 @@ test('require, bundle extension', (t) => {
     }
 
     if (url.href === 'file:///bar.bundle') {
-      return '<bundle>'
+      return new Bundle().toBuffer()
     }
 
     return null
@@ -4484,6 +4485,121 @@ test('require, bundle extension', (t) => {
   t.is(bar.type, constants.BUNDLE)
 })
 
+test('require, bundle with addons and assets', (t) => {
+  const bar = new Bundle()
+
+  bar.addons = ['/../prebuilds/host/bar.bare']
+  bar.assets = ['/asset.txt']
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require('./bar.bundle')"
+    }
+
+    if (url.href === 'file:///bar.bundle') {
+      return bar.toBuffer()
+    }
+
+    return null
+  }
+
+  const result = expandSync(traverse(new URL('file:///foo.js'), readModule))
+
+  t.alike(result.return.addons, [new URL('file:///prebuilds/host/bar.bare')])
+  t.alike(result.return.assets, [new URL('file:///bar.bundle/asset.txt')])
+})
+
+test('bundle entry, mount', (t) => {
+  const foo = new Bundle()
+
+  foo.addons = ['/../prebuilds/host/foo.bare']
+  foo.assets = ['/asset.txt']
+
+  function readModule(url) {
+    if (url.href === 'file:///app/foo.bundle') {
+      return foo.toBuffer()
+    }
+
+    return null
+  }
+
+  const result = expandSync(
+    traverse(new URL('file:///app/foo.bundle'), { mount: 'file:///root/' }, readModule)
+  )
+
+  t.alike(result.return.addons, [new URL('file:///prebuilds/host/foo.bare')])
+  t.alike(result.return.assets, [new URL('file:///root/asset.txt')])
+})
+
+test('mount does not apply to nested bundles', (t) => {
+  const bar = new Bundle()
+
+  bar.assets = ['/asset.txt']
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require('./bar.bundle')"
+    }
+
+    if (url.href === 'file:///bar.bundle') {
+      return bar.toBuffer()
+    }
+
+    return null
+  }
+
+  const result = expandSync(
+    traverse(new URL('file:///foo.js'), { mount: 'file:///root' }, readModule)
+  )
+
+  t.alike(result.return.assets, [new URL('file:///bar.bundle/asset.txt')])
+})
+
+test('require, bundle with addons and assets, preresolved', (t) => {
+  const bar = new Bundle()
+
+  bar.addons = ['/../prebuilds/host/bar.bare']
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require('./bar.bundle')"
+    }
+
+    if (url.href === 'file:///bar.bundle') {
+      return bar.toBuffer()
+    }
+
+    return null
+  }
+
+  const resolutions = {
+    'file:///foo.js': { './bar.bundle': 'file:///bar.bundle' },
+    'file:///bar.bundle': {}
+  }
+
+  const result = expandSync(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
+
+  t.alike(result.return.addons, [new URL('file:///prebuilds/host/bar.bare')])
+})
+
+test('require, bundle without artifacts', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require('./bar.bundle')"
+    }
+
+    if (url.href === 'file:///bar.bundle') {
+      return '<not a bundle>'
+    }
+
+    return null
+  }
+
+  t.execution(() =>
+    expandSync(traverse(new URL('file:///foo.js'), { artifacts: false }, readModule))
+  )
+})
+
 test('require with bundle type attribute', (t) => {
   function readModule(url) {
     if (url.href === 'file:///foo.js') {
@@ -4491,7 +4607,7 @@ test('require with bundle type attribute', (t) => {
     }
 
     if (url.href === 'file:///bar.js') {
-      return '<bundle>'
+      return new Bundle().toBuffer()
     }
 
     return null

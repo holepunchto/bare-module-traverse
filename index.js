@@ -1,3 +1,4 @@
+const Bundle = require('bare-bundle')
 const { lookupPackageScope, conditionMatches } = require('bare-module-resolve')
 const lex = require('bare-module-lexer')
 const MIME = require('bare-mime')
@@ -194,6 +195,11 @@ exports.alias = function alias(url, opts = {}) {
 exports.module = function* (url, source, attributes, artifacts, visited, opts = {}) {
   attributes = attributes || {}
 
+  // The mount only applies to the module the traversal starts from.
+  const { mount } = opts
+
+  if (mount !== undefined) opts = { ...opts, mount: undefined }
+
   if (opts.contexts === undefined) opts = { ...opts, contexts: new Map() }
   if (opts.addonContexts === undefined) opts = { ...opts, addonContexts: new Map() }
   if (opts.resolvedImports === undefined) opts = { ...opts, resolvedImports: new Map() }
@@ -260,6 +266,16 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
         throw errors.MODULE_NOT_FOUND(`Cannot find module '${url.href}'`, url.href)
       }
     }
+  }
+
+  // A bundle declares its own artifacts, whether or not its imports have been
+  // resolved before.
+  if (
+    asset === false &&
+    artifacts !== null &&
+    moduleType(url, attributes, null, opts) === constants.BUNDLE
+  ) {
+    addBundleArtifacts(source, mountFor(url, mount), artifacts)
   }
 
   // A module resolves its imports once, however many contexts it is loaded in,
@@ -851,6 +867,19 @@ exports.assertAddonContext = function assertAddonContext(url, scope, context, ad
       `Addons of '${scope}' are already given ${recorded.wasi === null ? 'the default WASI capabilities' : `the WASI capabilities of '${recorded.wasi}'`}`
     )
   }
+}
+
+function addBundleArtifacts(source, mount, artifacts) {
+  const bundle = Bundle.from(source).mount(mount)
+
+  for (const href of bundle.addons) addURL(artifacts.addons, new URL(href))
+  for (const href of bundle.assets) addURL(artifacts.assets, new URL(href))
+}
+
+function mountFor(url, mount) {
+  const href = mount === undefined ? url.href : new URL(mount).href
+
+  return href.endsWith('/') ? href : href + '/'
 }
 
 function isJavaScript(type) {
