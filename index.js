@@ -268,6 +268,16 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
     }
   }
 
+  // A bundle declares its own artifacts, whether or not its imports have been
+  // resolved before.
+  if (
+    asset === false &&
+    artifacts !== null &&
+    moduleType(url, attributes, null, opts) === constants.BUNDLE
+  ) {
+    addBundleArtifacts(source, mountFor(url, mount), artifacts)
+  }
+
   // A module resolves its imports once, however many contexts it is loaded in,
   // so a context that reaches it after another walks what the other resolved.
   // The addons that are reached are then checked against the context.
@@ -330,8 +340,6 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
       })
     } else if (type === constants.ADDON && artifacts !== null) {
       yield* exports.addons(url, artifacts, visited, opts)
-    } else if (type === constants.BUNDLE && artifacts !== null) {
-      addBundleArtifacts(source, mountFor(url, mount), artifacts)
     }
   }
 

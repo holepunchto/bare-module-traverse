@@ -4555,6 +4555,33 @@ test('mount does not apply to nested bundles', (t) => {
   t.alike(result.return.assets, [new URL('file:///bar.bundle/asset.txt')])
 })
 
+test('require, bundle with addons and assets, preresolved', (t) => {
+  const bar = new Bundle()
+
+  bar.addons = ['/../prebuilds/host/bar.bare']
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require('./bar.bundle')"
+    }
+
+    if (url.href === 'file:///bar.bundle') {
+      return bar.toBuffer()
+    }
+
+    return null
+  }
+
+  const resolutions = {
+    'file:///foo.js': { './bar.bundle': 'file:///bar.bundle' },
+    'file:///bar.bundle': {}
+  }
+
+  const result = expandSync(traverse(new URL('file:///foo.js'), { resolutions }, readModule))
+
+  t.alike(result.return.addons, [new URL('file:///prebuilds/host/bar.bare')])
+})
+
 test('require, bundle without artifacts', (t) => {
   function readModule(url) {
     if (url.href === 'file:///foo.js') {
