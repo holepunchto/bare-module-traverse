@@ -74,6 +74,12 @@ interface TraverseOptions extends ResolveOptions {
    * system; a tool that only links wants the error.
    */
   deferUnresolved?: boolean
+  /**
+   * The URL the entry is mounted at when it is a bundle, for consumers that
+   * load it with an explicit mount. The addons and assets it declares resolve
+   * relative to this. Defaults to the URL of the entry itself.
+   */
+  mount?: URL | string
 }
 
 /**
