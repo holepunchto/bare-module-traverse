@@ -120,7 +120,7 @@ next.value = {
 
 **Dependency node**
 
-A fully resolved node of the module graph and the traversal's output. This is what the iterable forms yield to the caller.
+A fully resolved node of the module graph and the traversal's output. This is what the iterable forms yield to the caller. A module imported under several `host` or `wasi` attributes is walked once for each, so the same URL may be yielded more than once.
 
 ```js
 next.value = {
@@ -141,7 +141,10 @@ next.value = {
       exports: [
         // See https://github.com/holepunchto/bare-module-lexer#api
       ]
-    }
+    },
+    // The URL of the WASI provider of a WebAssembly addon, if its importer
+    // named one with the `wasi` attribute.
+    wasi: 'string'
   }
 }
 ```
@@ -206,7 +209,7 @@ function drive(generator) {
 }
 
 while (queue.length > 0 || deferred.length > 0) {
-  drive(queue.length > 0 ? queue.pop() : deferred.shift())
+  drive(queue.length > 0 ? queue.shift() : deferred.shift())
 }
 ```
 
