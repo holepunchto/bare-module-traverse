@@ -26,6 +26,11 @@ interface Dependency {
     imports: Import[]
     exports: Export[]
   }
+  /**
+   * The URL of the WASI provider of a WebAssembly addon, if its importer named
+   * one with the `wasi` attribute.
+   */
+  wasi?: string
 }
 
 type AliasableExtension =

@@ -203,6 +203,7 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
   if (opts.contexts === undefined) opts = { ...opts, contexts: new Map() }
   if (opts.addonContexts === undefined) opts = { ...opts, addonContexts: new Map() }
   if (opts.resolvedImports === undefined) opts = { ...opts, resolvedImports: new Map() }
+  if (opts.lexers === undefined) opts = { ...opts, lexers: new Map() }
 
   // The host and WASI attributes set the context that the addons of the module
   // and everything it imports load in. A graph is walked again for each context
@@ -338,6 +339,8 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
         ...opts,
         importType: 0
       })
+
+      opts.lexers.set(url.href, lexer)
     } else if (type === constants.ADDON && artifacts !== null) {
       yield* exports.addons(url, artifacts, visited, opts)
     }
@@ -425,11 +428,13 @@ exports.preresolved = function* (
 
   const parentURL = url
 
+  const { lexers = null } = opts
+
   // The resolutions map leaves out the import attributes, so they are read
-  // from the source instead.
+  // from the source instead, unless another context already lexed it.
   const lexed =
     opts.asset !== true && isJavaScript(moduleType(url, attributes, null, opts))
-      ? lex(source)
+      ? (lexers !== null && lexers.get(url.href)) || lex(source)
       : null
 
   let info = null
