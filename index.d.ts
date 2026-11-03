@@ -77,6 +77,11 @@ interface TraverseOptions extends ResolveOptions {
    * than throwing, leaving it for whoever names it to resolve when they get
    * there. Only for callers that reach a resolver again, such as a module
    * system; a tool that only links wants the error.
+   *
+   * An addon resolved for several `hosts` must resolve for each of the native
+   * ones, as WebAssembly hosts are only a fallback. A host that it resolves
+   * nothing for is unresolved, and is deferred under its own conditions or
+   * else fails with `ADDON_NOT_FOUND`.
    */
   deferUnresolved?: boolean
   /**

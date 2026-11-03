@@ -1295,6 +1295,250 @@ test('require.addon, hosts list, linked', (t) => {
   t.alike(result.return.addons, [new URL('linked:foo.framework/foo'), new URL('linked:libfoo.so')])
 })
 
+test('require.addon, hosts list, addon missing for one host', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "module.exports = require.addon('.')"
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    if (url.href === 'file:///prebuilds/host-a/foo.bare') {
+      return '<native code a>'
+    }
+
+    return null
+  }
+
+  try {
+    expandSync(
+      traverse(
+        new URL('file:///foo.js'),
+        { hosts: ['host-a', 'host-b'], extensions: ['.bare'] },
+        readModule
+      )
+    )
+
+    t.fail('should have thrown')
+  } catch (err) {
+    t.is(err.code, 'ADDON_NOT_FOUND')
+    t.is(
+      err.message,
+      "ADDON_NOT_FOUND: Cannot find addon '.' imported from 'file:///foo.js' for host 'host-b'\n" +
+        'Candidates:\n' +
+        '- file:///prebuilds/host-b/foo.bare'
+    )
+  }
+})
+
+test('require.addon, hosts list, addon missing for one host, deferred', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "module.exports = require.addon('.')"
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    if (url.href === 'file:///prebuilds/host-a/foo.bare') {
+      return '<native code a>'
+    }
+
+    return null
+  }
+
+  const result = expandSync(
+    traverse(
+      new URL('file:///foo.js'),
+      { hosts: ['host-a', 'host-b'], extensions: ['.bare'], deferUnresolved: true },
+      readModule
+    )
+  )
+
+  t.alike(result.values[0].imports, {
+    '#package': 'file:///package.json',
+    '.': {
+      addon: {
+        a: 'file:///prebuilds/host-a/foo.bare',
+        b: 'deferred:.'
+      }
+    }
+  })
+
+  t.alike(result.return.addons, [new URL('file:///prebuilds/host-a/foo.bare')])
+})
+
+test('require.addon, hosts list, addon missing for a host that prefixes another, deferred', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "module.exports = require.addon('.')"
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    if (url.href === 'file:///prebuilds/host-a/foo.bare') {
+      return '<native code a>'
+    }
+
+    return null
+  }
+
+  const result = expandSync(
+    traverse(
+      new URL('file:///foo.js'),
+      { hosts: ['host', 'host-a'], extensions: ['.bare'], deferUnresolved: true },
+      readModule
+    )
+  )
+
+  t.alike(result.values[0].imports['.'], {
+    addon: {
+      a: 'file:///prebuilds/host-a/foo.bare',
+      default: 'deferred:.'
+    }
+  })
+})
+
+test('require.addon, hosts list, no webassembly addon', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "module.exports = require.addon('.')"
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    if (url.href === 'file:///prebuilds/host-a/foo.bare') {
+      return '<native code a>'
+    }
+
+    if (url.href === 'file:///prebuilds/host-b/foo.bare') {
+      return '<native code b>'
+    }
+
+    return null
+  }
+
+  const result = expandSync(
+    traverse(
+      new URL('file:///foo.js'),
+      { hosts: ['host-a', 'host-b', 'wasi-wasm32'], extensions: ['.bare'] },
+      readModule
+    )
+  )
+
+  t.alike(result.return.addons, [
+    new URL('file:///prebuilds/host-a/foo.bare'),
+    new URL('file:///prebuilds/host-b/foo.bare')
+  ])
+})
+
+test('require.addon, hosts list, webassembly fallback for one host', (t) => {
+  const result = roundTrip(
+    {
+      'file:///foo.js': "require.addon('.')",
+      'file:///package.json': '{ "name": "foo" }',
+      'file:///prebuilds/host-a/foo.bare': '<native code a>',
+      'file:///prebuilds/wasi-wasm32/foo.wasm': '<webassembly>'
+    },
+    { hosts: ['host-a', 'host-b', 'wasi-wasm32'], extensions: ['.bare'] }
+  )
+
+  t.alike(result.imports['.'], {
+    addon: {
+      host: {
+        a: 'file:///prebuilds/host-a/foo.bare',
+        b: 'file:///prebuilds/wasi-wasm32/foo.wasm'
+      },
+      wasi: 'file:///prebuilds/wasi-wasm32/foo.wasm'
+    }
+  })
+  t.alike(result.recorded.return.addons, [
+    new URL('file:///prebuilds/host-a/foo.bare'),
+    new URL('file:///prebuilds/wasi-wasm32/foo.wasm')
+  ])
+  t.alike(result.preresolved.values, result.recorded.values)
+  t.alike(result.preresolved.return, result.recorded.return)
+})
+
+test('require.addon, hosts list, webassembly fallback missing for one host', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "module.exports = require.addon('.')"
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    if (url.href === 'file:///prebuilds/host-a/foo.bare') {
+      return '<native code a>'
+    }
+
+    return null
+  }
+
+  try {
+    expandSync(
+      traverse(
+        new URL('file:///foo.js'),
+        { hosts: ['host-a', 'host-b', 'wasi-wasm32'], extensions: ['.bare'] },
+        readModule
+      )
+    )
+
+    t.fail('should have thrown')
+  } catch (err) {
+    t.is(err.code, 'ADDON_NOT_FOUND')
+    t.is(
+      err.message,
+      "ADDON_NOT_FOUND: Cannot find addon '.' imported from 'file:///foo.js' for host 'host-b'\n" +
+        'Candidates:\n' +
+        '- file:///prebuilds/host-b/foo.bare\n' +
+        '- file:///prebuilds/wasi-wasm32/foo.wasm'
+    )
+  }
+})
+
+test('require.addon, hosts list, linked for one host', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "module.exports = require.addon('.')"
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    if (url.href === 'file:///prebuilds/darwin-arm64/foo.bare') {
+      return '<native code>'
+    }
+
+    return null
+  }
+
+  const result = expandSync(
+    traverse(
+      new URL('file:///foo.js'),
+      { hosts: ['darwin-arm64', 'darwin-x64'], extensions: ['.bare'] },
+      readModule
+    )
+  )
+
+  t.alike(result.values[0].imports['.'], {
+    addon: {
+      arm64: 'file:///prebuilds/darwin-arm64/foo.bare',
+      default: 'linked:foo.framework/foo'
+    }
+  })
+})
+
 test('require.addon, sibling addons', (t) => {
   function readModule(url) {
     if (url.href === 'file:///foo.js') {
