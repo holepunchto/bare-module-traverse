@@ -54,7 +54,7 @@
   },
   "homepage": "https://github.com/holepunchto/bare-module-traverse#readme",
   "dependencies": {
-    "bare-addon-resolve": "^1.11.0",
+    "bare-addon-resolve": "^1.11.1",
     "bare-bundle": "^1.11.0",
     "bare-mime": "^1.0.0",
     "bare-module-lexer": "^1.6.0",

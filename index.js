@@ -634,6 +634,18 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
   )
   const candidates = []
 
+  // An addon resolved for several native hosts must resolve for each of them.
+  // The conditions of a native resolution say which of them it covers.
+  const native =
+    condition === 'addon' && !opts.addonHost && Array.isArray(opts.hosts)
+      ? opts.hosts.filter((host) => !isWebAssemblyHost(host))
+      : []
+  const covered = new Set()
+  const missed = []
+  const prefix = matchedConditions.length
+
+  let fallback = null
+
   let next = resolver.next()
   let resolutions = 0
 
@@ -738,7 +750,12 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
       if (resolved) {
         if (condition === 'addon' && artifacts !== null) addURL(artifacts.addons, resolution)
 
+        if (isWebAssembly(resolution)) fallback = resolution
+        else cover(native, matchedConditions.slice(prefix), covered)
+
         resolutions++
+      } else {
+        missed.push(url)
       }
 
       next = resolver.next(resolved)
@@ -749,6 +766,35 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
     addResolution(imports, specifier, matchedConditions, new URL(deferredProtocol + specifier))
 
     resolutions++
+  }
+
+  const uncovered =
+    native.length > 1 && resolutions > 0 ? native.filter((host) => !covered.has(host)) : []
+
+  // The WebAssembly fallback is resolved for the WebAssembly host, so it is
+  // also recorded for each native host that falls back to it, which would
+  // otherwise match the addon of another native host. Without one, those hosts
+  // are deferred or fail.
+  const substitute =
+    fallback !== null
+      ? exports.alias(fallback, opts)
+      : deferUnresolved
+        ? new URL(deferredProtocol + specifier)
+        : null
+
+  if (substitute !== null) {
+    for (const host of uncovered) {
+      addResolution(imports, specifier, [...matchedConditions, ...host.split('-')], substitute)
+    }
+  } else if (uncovered.length > 0) {
+    const hosts = uncovered.map((host) => `'${host}'`).join(', ')
+
+    let message = `Cannot find addon '${specifier}' imported from '${parentURL.href}' for ${uncovered.length === 1 ? 'host' : 'hosts'} ${hosts}`
+
+    message += '\nCandidates:'
+    message += '\n' + missed.map((url) => '- ' + url.href).join('\n')
+
+    throw errors.ADDON_NOT_FOUND(message, specifier, parentURL, missed)
   }
 
   matchedConditions.pop()
@@ -770,6 +816,20 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
         throw errors.MODULE_NOT_FOUND(message, specifier, parentURL, candidates)
     }
   }
+}
+
+// A resolution covers the native hosts whose conditions start with its own,
+// such as both architectures of a platform for a linked addon.
+function cover(hosts, conditions, covered) {
+  for (const host of hosts) {
+    const parts = host.split('-')
+
+    if (conditions.every((condition, i) => parts[i] === condition)) covered.add(host)
+  }
+}
+
+function isWebAssemblyHost(host) {
+  return host.startsWith('wasi-')
 }
 
 const ADDON_EXTENSION = /\.(bare|node|wasm)$/
@@ -1380,7 +1440,11 @@ function addResolution(imports, specifier, conditions, url) {
 
   const last = conditions[conditions.length - 1]
 
-  current[last] = url.href
+  // A resolution for fewer conditions than one already recorded, such as a
+  // linked module for the platform of a host that another host has a prebuild
+  // for, must not replace it.
+  if (typeof current[last] === 'object') current[last].default = url.href
+  else current[last] = url.href
 
   if ('default' in current) {
     const value = current.default
