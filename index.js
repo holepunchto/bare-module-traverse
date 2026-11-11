@@ -2,6 +2,7 @@ const Bundle = require('bare-bundle')
 const { lookupPackageScope, conditionMatches } = require('bare-module-resolve')
 const lex = require('bare-module-lexer')
 const MIME = require('bare-mime')
+const hostParser = require('bare-host-parser')
 const resolve = require('./lib/resolve')
 const errors = require('./lib/errors')
 
@@ -220,7 +221,7 @@ exports.module = function* (url, source, attributes, artifacts, visited, opts = 
       opts = { ...opts, addonHost: host, addonWASI: wasi }
 
       if (host !== addonHost) {
-        opts.conditions = withConditions(opts.conditions, host.split('-'))
+        opts.conditions = withConditions(opts.conditions, hostParser.conditions(host))
       }
 
       visited = visitedFor(opts.contexts, host, wasi)
@@ -784,7 +785,12 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
 
   if (substitute !== null) {
     for (const host of uncovered) {
-      addResolution(imports, specifier, [...matchedConditions, ...host.split('-')], substitute)
+      addResolution(
+        imports,
+        specifier,
+        [...matchedConditions, ...hostParser.conditions(host)],
+        substitute
+      )
     }
   } else if (uncovered.length > 0) {
     const hosts = uncovered.map((host) => `'${host}'`).join(', ')
@@ -822,7 +828,7 @@ function* resolveImport(entry, specifier, condition, parentURL, imports, artifac
 // such as both architectures of a platform for a linked addon.
 function cover(hosts, conditions, covered) {
   for (const host of hosts) {
-    const parts = host.split('-')
+    const parts = hostParser.conditions(host)
 
     if (conditions.every((condition, i) => parts[i] === condition)) covered.add(host)
   }

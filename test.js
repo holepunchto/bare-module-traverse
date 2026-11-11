@@ -1333,6 +1333,38 @@ test('require.addon, hosts list, addon missing for one host', (t) => {
   }
 })
 
+test('require.addon, hosts list, addon missing for host with a hyphenated architecture', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "module.exports = require.addon('.')"
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    if (url.href === 'file:///prebuilds/watchos-arm64/foo.bare') {
+      return '<native code arm64>'
+    }
+
+    return null
+  }
+
+  try {
+    expandSync(
+      traverse(
+        new URL('file:///foo.js'),
+        { hosts: ['watchos-arm64', 'watchos-arm64-32'], extensions: ['.bare'], linked: false },
+        readModule
+      )
+    )
+
+    t.fail('should have thrown')
+  } catch (err) {
+    t.is(err.code, 'ADDON_NOT_FOUND')
+  }
+})
+
 test('require.addon, hosts list, addon missing for one host, deferred', (t) => {
   function readModule(url) {
     if (url.href === 'file:///foo.js') {
