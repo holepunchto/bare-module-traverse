@@ -1067,6 +1067,36 @@ test('require.addon, webassembly fallback', (t) => {
   t.alike(result.return.addons, [new URL('file:///prebuilds/wasi-wasm32/foo.wasm')])
 })
 
+test('require.addon, no webassembly fallback on freertos', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return "const bar = require.addon('.')"
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo" }'
+    }
+
+    if (url.href === 'file:///prebuilds/wasi-wasm32/foo.wasm') {
+      return '<webassembly>'
+    }
+
+    return null
+  }
+
+  t.exception(
+    () =>
+      expandSync(
+        traverse(
+          new URL('file:///foo.js'),
+          { resolve: traverse.resolve.bare, host: 'freertos-riscv32' },
+          readModule
+        )
+      ),
+    { code: 'ADDON_NOT_FOUND' }
+  )
+})
+
 test('require.addon, addon not loadable', (t) => {
   function readModule(url) {
     if (url.href === 'file:///foo.js') {
