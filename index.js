@@ -1187,7 +1187,7 @@ function naturalModuleType(url, attributes, info, type, opts) {
 }
 
 function moduleType(url, attributes, info, opts = {}) {
-  const { defaultType = constants.SCRIPT, aliases = null } = opts
+  const { defaultType = constants.SCRIPT, aliases = null, typeFor = null } = opts
 
   if (url.protocol === 'data:') {
     return dataURLModuleType(url, attributes, opts)
@@ -1195,6 +1195,12 @@ function moduleType(url, attributes, info, opts = {}) {
 
   if (typeof attributes.type === 'string') {
     return typeForAttribute(attributes.type)
+  }
+
+  if (typeFor !== null) {
+    const type = typeFor(url)
+
+    if (type !== undefined && type !== 0) return type
   }
 
   const match = url.pathname.match(/\.[a-z]+$/)
