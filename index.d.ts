@@ -172,14 +172,106 @@ declare function traverse(
 declare namespace traverse {
   export { type TraverseOptions }
 
+  /**
+   * A module to be read. The driver returns its source if it exists, otherwise
+   * `null`.
+   */
+  export interface SourceModule {
+    module: URL
+    /**
+     * Whether the module is an addon or asset whose contents are loaded lazily
+     * and referenced by path. A driver that only needs to locate such
+     * artifacts, such as a module loader, may return `null` without reading,
+     * having already established existence by probing. A driver that embeds
+     * their contents, such as a bundler, reads them as normal.
+     */
+    artifact: boolean
+  }
+
+  /**
+   * A module whose existence is to be tested without reading its full source,
+   * such as when locating an addon or asset. The driver returns `true` if it
+   * exists, `false` if it doesn't, or `undefined` if probing isn't supported,
+   * in which case existence is instead determined by reading the module.
+   */
+  export interface ProbedModule {
+    probe: URL
+  }
+
+  /**
+   * A resolved, existing module whose URL is to be transformed. The driver
+   * returns the URL to use in its place, applying any post-resolution
+   * transform, such as canonicalizing symlinks with `realpath`, or the URL
+   * unchanged.
+   */
+  export interface ResolvedModule {
+    resolution: URL
+  }
+
+  /**
+   * A prefix to be listed. The driver returns an array of the URLs that have it
+   * as a prefix, of which there may be none. If the driver sets
+   * `resolved = true` on the array, the listed URLs are used as they are
+   * instead of being yielded as resolved modules to be transformed.
+   */
+  export interface FilePrefix {
+    prefix: URL
+    /**
+     * Whether every URL with the prefix is needed. If `false`, only whether any
+     * URL has the prefix matters, so the driver may stop after the first one.
+     */
+    expand: boolean
+  }
+
+  /**
+   * A set of independent imports to resolve. Each generator must be driven to
+   * completion before the parent generator is resumed, since the parent's
+   * resolved imports aren't complete until they are. The generators yield the
+   * same values as any other and may themselves yield dependency subgraphs to
+   * be traversed. A driver may drive them one at a time or, as their
+   * resolutions are independent, concurrently.
+   */
+  export interface ImportSet {
+    links: Traversal[]
+  }
+
+  /**
+   * A child subgraph to be traversed by driving its generator as the parent is
+   * driven.
+   */
+  export interface DependencySubgraph {
+    children: Traversal
+    /**
+     * Whether the subgraph must be traversed only once all non-deferred
+     * subgraphs have been. This ensures, for example, that a module reached
+     * both as an import and as an asset is claimed by the import traversal
+     * first.
+     */
+    deferred: boolean
+  }
+
+  /**
+   * A fully resolved node of the module graph and the traversal's output. This
+   * is what the iterable forms of `traverse()` yield to the caller. A module
+   * imported under several `host` or `wasi` attributes is walked once for
+   * each, so the same URL may be yielded more than once.
+   */
+  export interface DependencyNode {
+    dependency: Dependency
+  }
+
+  /**
+   * A generator that implements part of the traversal algorithm. The driver
+   * passes back the value that each yielded value asks for.
+   */
   export type Traversal = Generator<
-    | { module: URL; artifact: boolean }
-    | { probe: URL }
-    | { resolution: URL }
-    | { prefix: URL; expand: boolean }
-    | { links: Traversal[] }
-    | { children: Traversal; deferred: boolean }
-    | { dependency: Dependency },
+    | SourceModule
+    | ProbedModule
+    | ResolvedModule
+    | FilePrefix
+    | ImportSet
+    | DependencySubgraph
+    | DependencyNode,
     boolean,
     void | URL | (URL[] & { resolved?: boolean }) | Buffer | string | boolean | null
   >
@@ -386,7 +478,7 @@ declare namespace traverse {
     parentURL: URL,
     matches: URL[],
     opts?: TraverseOptions
-  ): Generator<{ prefix: URL; expand: boolean }, URL[], URL[]>
+  ): Generator<FilePrefix, URL[], URL[] & { resolved?: boolean }>
 }
 
 export = traverse

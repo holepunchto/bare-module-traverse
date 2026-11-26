@@ -48,7 +48,7 @@ for await (const dependency of traverse(
 }
 ```
 
-`listPrefix` is called with the prefix and the `expand` flag described under [File prefix](#algorithm). To have the listed URLs used as they are, without passing them to `resolveModule`, return an array or other iterable with `resolved = true` set on it. If `listPrefix` isn't provided, `readModule` is called with the prefix instead, and the prefix itself is listed if it exists.
+`listPrefix` is called with the prefix and whether every URL with the prefix is needed or only whether one exists, as documented for `FilePrefix` in [`index.d.ts`](index.d.ts). To have the listed URLs used as they are, without passing them to `resolveModule`, return an array or other iterable with `resolved = true` set on it. If `listPrefix` isn't provided, `readModule` is called with the prefix instead, and the prefix itself is listed if it exists.
 
 ## API
 
@@ -56,103 +56,7 @@ See the [`bare-module-traverse` reference](https://docs.pears.com/reference/bare
 
 ## Algorithm
 
-The following generator functions implement the traversal algorithm. The yielded values have the following shape:
-
-**Source module**
-
-A module to be read. The driver returns its source if it exists, otherwise `null`. When `artifact` is `true`, the module is an addon or asset whose contents are loaded lazily and referenced by path. A driver that only needs to locate such artifacts, such as a module loader, may return `null` without reading, having already established existence by probing; a driver that embeds their contents, such as a bundler, reads them as normal.
-
-```js
-next.value = {
-  module: URL,
-  artifact: boolean
-}
-```
-
-**Probed module**
-
-A module whose existence is to be tested without reading its full source, such as when locating an addon or asset. The driver returns `true` if it exists, `false` if it doesn't, or `undefined` if probing isn't supported, in which case existence is instead determined by reading the module.
-
-```js
-next.value = {
-  probe: URL
-}
-```
-
-**Resolved module**
-
-A resolved, existing module whose URL is to be transformed. The driver returns the URL to use in its place, applying any post-resolution transform, such as canonicalizing symlinks with `realpath`, or the URL unchanged.
-
-```js
-next.value = {
-  resolution: URL
-}
-```
-
-**File prefix**
-
-A prefix to be listed. The driver returns the URLs that have it as a prefix, of which there may be none. If `expand` is `true`, every URL with the prefix is needed. If `expand` is `false`, only whether any URL has the prefix matters, so the driver may stop after the first one. If the driver sets `resolved = true` on the returned list, the listed URLs are used as they are instead of being yielded as resolved modules to be transformed.
-
-```js
-next.value = {
-  prefix: URL,
-  expand: boolean
-}
-```
-
-**Import set**
-
-A set of independent imports to resolve. Each generator must be driven to completion before the parent generator is resumed, since the parent's resolved imports aren't complete until they are. The generators yield the same values as any other and may themselves yield dependency subgraphs to be traversed. A driver may drive them one at a time or, as their resolutions are independent, concurrently.
-
-```js
-next.value = {
-  links: [Generator]
-}
-```
-
-**Dependency subgraph**
-
-A child subgraph to be traversed by driving its generator as the parent is driven. If `deferred` is `true`, it must be traversed only once all non-deferred subgraphs have been, ensuring, for example, that a module reached both as an import and as an asset is claimed by the import traversal first.
-
-```js
-next.value = {
-  children: Generator,
-  deferred: boolean
-}
-```
-
-**Dependency node**
-
-A fully resolved node of the module graph and the traversal's output. This is what the iterable forms yield to the caller. A module imported under several `host` or `wasi` attributes is walked once for each, so the same URL may be yielded more than once.
-
-```js
-next.value = {
-  dependency: {
-    url: URL,
-    source: 'string' | Buffer,
-    type: constants.SCRIPT,
-    // The type the module has on its own, ignoring import attributes, or 0 if
-    // it has no type of its own.
-    naturalType: constants.SCRIPT,
-    imports: {
-      // See https://github.com/holepunchto/bare-module#imports
-    },
-    lexer: {
-      imports: [
-        // See https://github.com/holepunchto/bare-module-lexer#api
-      ],
-      exports: [
-        // See https://github.com/holepunchto/bare-module-lexer#api
-      ]
-    },
-    // The URL of the WASI provider of a WebAssembly addon, if its importer
-    // named one with the `wasi` attribute.
-    wasi: 'string'
-  }
-}
-```
-
-To drive the generator functions, a recursive routine like the following can be used:
+The traversal algorithm is implemented by the generator functions documented in [`index.d.ts`](index.d.ts). Each yields values that ask the driver to read, probe, transform, or list modules, or that hand it subgraphs to traverse and dependencies of the module graph. The `Traversal` type documents what each value is and what the driver must pass back. To drive the generator functions, a recursive routine like the following can be used:
 
 ```js
 const artifacts = { addons: [], assets: [] }
@@ -217,8 +121,6 @@ while (queue.length > 0 || deferred.length > 0) {
   drive(queue.length > 0 ? queue.shift() : deferred.shift())
 }
 ```
-
-The generator functions are documented in [`index.d.ts`](index.d.ts).
 
 ## License
 
