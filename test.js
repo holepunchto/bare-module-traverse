@@ -4269,6 +4269,53 @@ test('aliases, .mts to .mjs', (t) => {
   ])
 })
 
+test('typeFor takes precedence over the extension but not over a type attribute', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.mjs') {
+      return "import './bar.mjs'\nimport './baz.mjs' with { type: 'module' }"
+    }
+
+    if (url.href === 'file:///bar.mjs' || url.href === 'file:///baz.mjs') {
+      return 'module.exports = 42'
+    }
+
+    return null
+  }
+
+  const result = expandSync(
+    traverse(new URL('file:///foo.mjs'), { typeFor: () => constants.SCRIPT }, readModule)
+  )
+
+  t.alike(
+    Object.fromEntries(
+      result.values.map(({ url, type, naturalType }) => [url.href, { type, naturalType }])
+    ),
+    {
+      'file:///foo.mjs': { type: constants.SCRIPT, naturalType: constants.SCRIPT },
+      'file:///bar.mjs': { type: constants.SCRIPT, naturalType: constants.SCRIPT },
+      'file:///baz.mjs': { type: constants.MODULE, naturalType: constants.SCRIPT }
+    }
+  )
+})
+
+test('typeFor falls back to the extension when no type is recorded', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.mjs') {
+      return 'export default 42'
+    }
+
+    return null
+  }
+
+  for (const type of [undefined, 0]) {
+    const result = expandSync(
+      traverse(new URL('file:///foo.mjs'), { typeFor: () => type }, readModule)
+    )
+
+    t.is(result.values[0].type, constants.MODULE, `typeFor returns ${type}`)
+  }
+})
+
 test('aliases, .ts to .js with defaultType MODULE', (t) => {
   function readModule(url) {
     if (url.href === 'file:///foo.ts') {

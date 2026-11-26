@@ -63,6 +63,13 @@ interface TraverseOptions extends ResolveOptions {
    * attribute.
    */
   importType?: number
+  /**
+   * The type recorded for a module, such as by the bundle that contains it,
+   * or `undefined` or `0` if none is recorded. A recorded type takes
+   * precedence over the type implied by the extension of the module, but not
+   * over a `type` import attribute. See `constants` for possible values.
+   */
+  typeFor?: (url: URL) => number | undefined
   artifacts?: boolean
   aliases?: Record<string, AliasableExtension>
   /**
