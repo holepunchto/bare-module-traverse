@@ -2802,6 +2802,167 @@ test('package.json#assets, conditional pattern', (t) => {
   }
 })
 
+test('package.json#assets, top-level conditional pattern', (t) => {
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return ''
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo", "assets": { "darwin": "darwin/", "linux": "linux/" } }'
+    }
+
+    if (url.href === 'file:///darwin/baz.txt') {
+      return 'hello darwin'
+    }
+
+    return null
+  }
+
+  function listPrefix(url) {
+    if (url.href === 'file:///darwin/') {
+      return [new URL('file:///darwin/baz.txt')]
+    }
+
+    if (url.href === 'file:///linux/') {
+      return [new URL('file:///linux/baz.txt')]
+    }
+
+    return []
+  }
+
+  const result = expandSync(
+    traverse(new URL('file:///foo.js'), { conditions: ['darwin'] }, readModule, listPrefix)
+  )
+
+  t.alike(
+    result.values.map((value) => value.url.href),
+    ['file:///foo.js', 'file:///package.json', 'file:///darwin/baz.txt']
+  )
+
+  t.alike(result.return.assets, [new URL('file:///darwin/baz.txt')])
+})
+
+function patternMatches(pattern, listed, opts) {
+  const generator = traverse.patternMatches(pattern, new URL('file:///package.json'), [], opts)
+
+  let next = generator.next()
+
+  while (next.done !== true) {
+    next = generator.next(listed[next.value.prefix.href] || [])
+  }
+
+  return next.value
+}
+
+test('patternMatches, conditional pattern', (t) => {
+  const listed = {
+    'file:///darwin/': [new URL('file:///darwin/a.txt'), new URL('file:///darwin/b.bin')],
+    'file:///other/': [new URL('file:///other/c.txt')],
+    'file:///shared/': [new URL('file:///shared/d.txt')]
+  }
+
+  const opts = { conditions: ['darwin'] }
+
+  t.alike(patternMatches({ darwin: 'darwin/', default: 'other/' }, listed, opts), [
+    new URL('file:///darwin/a.txt'),
+    new URL('file:///darwin/b.bin')
+  ])
+
+  t.alike(patternMatches([{ darwin: ['darwin/', '!darwin/*.bin'] }, 'shared/'], listed, opts), [
+    new URL('file:///darwin/a.txt'),
+    new URL('file:///shared/d.txt')
+  ])
+
+  t.alike(
+    patternMatches({ darwin: { arm64: 'darwin/' }, default: 'other/' }, listed, opts),
+    [new URL('file:///other/c.txt')],
+    'falls through to the next condition'
+  )
+
+  t.alike(
+    patternMatches({ darwin: 'darwin/', linux: 'other/' }, listed, {
+      conditions: [['darwin'], ['linux']]
+    }),
+    [
+      new URL('file:///darwin/a.txt'),
+      new URL('file:///darwin/b.bin'),
+      new URL('file:///other/c.txt')
+    ],
+    'matches each condition subset'
+  )
+})
+
+test('patternMatches, negate', (t) => {
+  const listed = {
+    'file:///bar/': [
+      new URL('file:///bar/a.txt'),
+      new URL('file:///bar/b.txt'),
+      new URL('file:///bar/c.txt')
+    ],
+    'file:///bar/b.txt': [new URL('file:///bar/b.txt')],
+    'file:///baz/': [new URL('file:///baz/d.txt')]
+  }
+
+  t.alike(
+    patternMatches(['bar/', '!bar/b.txt'], listed),
+    [new URL('file:///bar/a.txt'), new URL('file:///bar/c.txt')],
+    'removes a match between others'
+  )
+
+  t.alike(
+    patternMatches(['bar/', '!baz/'], listed),
+    [new URL('file:///bar/a.txt'), new URL('file:///bar/b.txt'), new URL('file:///bar/c.txt')],
+    'ignores a URL that was never matched'
+  )
+
+  t.alike(patternMatches(['!bar/'], listed), [], 'ignores a negation with no matches')
+})
+
+test('package.json#assets, listed as resolved', (t) => {
+  const resolutions = []
+
+  function readModule(url) {
+    if (url.href === 'file:///foo.js') {
+      return ''
+    }
+
+    if (url.href === 'file:///package.json') {
+      return '{ "name": "foo", "assets": ["bar/"] }'
+    }
+
+    if (url.href === 'file:///bar/a.txt') {
+      return 'hello a'
+    }
+
+    return null
+  }
+
+  function listPrefix(url) {
+    if (url.href !== 'file:///bar/') return []
+
+    const urls = [new URL('file:///bar/a.txt')]
+
+    urls.resolved = true
+
+    return urls
+  }
+
+  function resolveModule(url) {
+    resolutions.push(url.href)
+
+    return url
+  }
+
+  const result = expandSync(
+    traverse(new URL('file:///foo.js'), readModule, listPrefix, null, resolveModule)
+  )
+
+  t.alike(result.return.assets, [new URL('file:///bar/a.txt')])
+
+  t.alike(resolutions, [], 'the listed assets are not postresolved')
+})
+
 test('package.json#assets, also imported as module with type attribute', (t) => {
   function readModule(url) {
     if (url.href === 'file:///foo.js') {

@@ -17,7 +17,7 @@ function readModule(url) {
   // Read `url` if it exists, otherwise `null`
 }
 
-function* listPrefix(url) {
+function* listPrefix(url, expand) {
   // Yield URLs that have `url` as a prefix. The list may be empty.
 }
 
@@ -35,7 +35,7 @@ async function readModule(url) {
   // Read `url` if it exists, otherwise `null`
 }
 
-async function* listPrefix(url) {
+async function* listPrefix(url, expand) {
   // Yield URLs that have `url` as a prefix. The list may be empty.
 }
 
@@ -47,6 +47,8 @@ for await (const dependency of traverse(
   console.log(dependency)
 }
 ```
+
+`listPrefix` is called with the prefix and the `expand` flag described under [File prefix](#algorithm). To have the listed URLs used as they are, without passing them to `resolveModule`, return an array or other iterable with `resolved = true` set on it. If `listPrefix` isn't provided, `readModule` is called with the prefix instead, and the prefix itself is listed if it exists.
 
 ## API
 
@@ -89,11 +91,12 @@ next.value = {
 
 **File prefix**
 
-A prefix to be listed. The driver returns the URLs that have it as a prefix, of which there may be none.
+A prefix to be listed. The driver returns the URLs that have it as a prefix, of which there may be none. If `expand` is `true`, every URL with the prefix is needed. If `expand` is `false`, only whether any URL has the prefix matters, so the driver may stop after the first one. If the driver sets `resolved = true` on the returned list, the listed URLs are used as they are instead of being yielded as resolved modules to be transformed.
 
 ```js
 next.value = {
-  prefix: URL
+  prefix: URL,
+  expand: boolean
 }
 ```
 
@@ -184,7 +187,9 @@ function drive(generator) {
 
       next = generator.next(resolution)
     } else if (value.prefix) {
-      // List the modules that have `value.prefix` as a prefix
+      // List the modules that have `value.prefix` as a prefix, stopping after
+      // the first one if `value.expand` is `false`. Set `modules.resolved` to
+      // `true` if the listed modules are already transformed
       let modules
 
       next = generator.next(modules)
@@ -213,28 +218,7 @@ while (queue.length > 0 || deferred.length > 0) {
 }
 ```
 
-Options are the same as `traverse()` for all functions.
-
-> [!WARNING]
-> These functions are currently subject to change between minor releases. If using them directly, make sure to specify a tilde range (`~1.2.3`) when declaring the module dependency.
-
-### `const generator = traverse.module(url, source, attributes, artifacts, visited[, options])`
-
-### `const generator = traverse.package(url, source, artifacts, visited[, options])`
-
-### `const generator = traverse.preresolved(url, source, attributes, resolutions, artifacts, visited[, options])`
-
-### `const generator = traverse.imports(parentURL, source, imports, artifacts, lexer, visited[, options])`
-
-### `const generator = traverse.link(entry, specifier, condition, parentURL, imports, artifacts, visited[, options])`
-
-### `traverse.assertAddonContext(url, scope, context, addonContexts)`
-
-Record in `addonContexts` that the package at `scope` loads its addons in `context`, an object of the `host` and the URL of the `wasi` provider, either `null` for the defaults. Throws if it was recorded for another context, or if `url` doesn't load on `context.host`.
-
-### `const generator = traverse.addons(parentURL, artifacts, visited[, options])`
-
-### `const generator = traverse.assets(patterns, parentURL, artifacts, visited[, options])`
+The generator functions are documented in [`index.d.ts`](index.d.ts).
 
 ## License
 

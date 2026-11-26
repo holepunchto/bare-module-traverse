@@ -1,5 +1,5 @@
 const Bundle = require('bare-bundle')
-const { lookupPackageScope, conditionMatches } = require('bare-module-resolve')
+const { lookupPackageScope } = require('bare-module-resolve')
 const lex = require('bare-module-lexer')
 const MIME = require('bare-mime')
 const hostParser = require('bare-host-parser')
@@ -989,12 +989,15 @@ exports.addons = function* (parentURL, artifacts, visited, opts = {}) {
 }
 
 exports.assets = function* (patterns, parentURL, artifacts, visited, opts = {}) {
-  const matches = yield* exports.patternMatches(patterns, parentURL, [], opts)
+  const matches = []
+  const resolved = new Set()
+
+  yield* matchPattern(patterns, parentURL, matches, resolved, opts)
 
   let yielded = false
 
   for (const url of matches) {
-    const resolution = yield* postresolve(url)
+    const resolution = resolved.has(url.href) ? url : yield* postresolve(url)
 
     addURL(artifacts.assets, resolution)
 
@@ -1013,65 +1016,71 @@ exports.assets = function* (patterns, parentURL, artifacts, visited, opts = {}) 
 }
 
 exports.patternMatches = function* patternMatches(pattern, parentURL, matches, opts = {}) {
-  const { conditions = [], matchedConditions = [] } = opts
-
-  if (typeof pattern === 'string') {
-    let patternNegate = false
-    let patternBase
-    let patternTrailer
-
-    if (pattern[0] === '!') {
-      pattern = pattern.substring(1)
-      patternNegate = true
-    }
-
-    const patternIndex = pattern.indexOf('*')
-
-    if (patternIndex === -1) {
-      patternBase = pattern
-      patternTrailer = ''
-    } else {
-      patternBase = pattern.substring(0, patternIndex)
-      patternTrailer = pattern.substring(patternIndex + 1)
-    }
-
-    const prefix = new URL(patternBase, parentURL)
-
-    for (const url of yield { prefix, expand: true }) {
-      if (patternIndex === -1) {
-        if (patternNegate) removeURL(matches, url)
-        else addURL(matches, url)
-      } else if (patternTrailer === '' || url.href.endsWith(patternTrailer)) {
-        if (patternNegate) removeURL(matches, url)
-        else addURL(matches, url)
-      }
-    }
-  } else if (Array.isArray(pattern)) {
-    for (const patternValue of pattern) {
-      yield* patternMatches(patternValue, parentURL, matches, opts)
-    }
-  } else if (typeof pattern === 'object' && pattern !== null) {
-    let yielded = false
-
-    for (const [condition, patternValue, subset] of conditionMatches(pattern, conditions, opts)) {
-      matchedConditions.push(condition)
-
-      if (
-        yield* patternMatches(patternValue, parentURL, matches, {
-          ...opts,
-          conditions: subset
-        })
-      ) {
-        yielded = true
-      }
-
-      matchedConditions.pop()
-    }
-
-    if (yielded) return true
-  }
+  yield* matchPattern(pattern, parentURL, matches, new Set(), opts)
 
   return matches
+}
+
+// Returns whether a path pattern was reached, which decides if a condition
+// falls through to the next one, as with conditional exports.
+function* matchPattern(pattern, parentURL, matches, resolved, opts) {
+  const { conditions = [] } = opts
+
+  if (typeof pattern === 'string') {
+    const negate = pattern[0] === '!'
+
+    if (negate) pattern = pattern.substring(1)
+
+    const index = pattern.indexOf('*')
+
+    const base = index === -1 ? pattern : pattern.substring(0, index)
+    const trailer = index === -1 ? '' : pattern.substring(index + 1)
+
+    const listed = yield { prefix: new URL(base, parentURL), expand: true }
+
+    for (const url of listed) {
+      if (!url.href.endsWith(trailer)) continue
+
+      if (negate) {
+        removeURL(matches, url)
+      } else {
+        addURL(matches, url)
+
+        if (listed.resolved === true) resolved.add(url.href)
+      }
+    }
+
+    return true
+  }
+
+  let reached = false
+
+  if (Array.isArray(pattern)) {
+    for (const patternValue of pattern) {
+      if (yield* matchPattern(patternValue, parentURL, matches, resolved, opts)) reached = true
+    }
+  } else if (typeof pattern === 'object' && pattern !== null) {
+    if (conditions.every((condition) => typeof condition === 'string')) {
+      for (const [condition, patternValue] of Object.entries(pattern)) {
+        if (condition !== 'default' && !conditions.includes(condition)) continue
+
+        if (yield* matchPattern(patternValue, parentURL, matches, resolved, opts)) return true
+      }
+    } else {
+      for (const subset of conditions) {
+        if (
+          yield* matchPattern(pattern, parentURL, matches, resolved, {
+            ...opts,
+            conditions: subset
+          })
+        ) {
+          reached = true
+        }
+      }
+    }
+  }
+
+  return reached
 }
 
 function* readPackage(url, opts) {
@@ -1421,7 +1430,10 @@ function removeURL(array, url) {
     const mid = lo + ((hi - lo) >> 1)
     const found = array[mid]
 
-    if (found.href === url.href) break
+    if (found.href === url.href) {
+      array.splice(mid, 1)
+      return
+    }
 
     if (found.href < url.href) {
       lo = mid + 1
@@ -1429,8 +1441,6 @@ function removeURL(array, url) {
       hi = mid - 1
     }
   }
-
-  if (array[lo].href === url.href) array.splice(lo, 1)
 }
 
 function addResolution(imports, specifier, conditions, url) {
